@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jblunch.netlify-autodeploy</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/netlify-deploy.sh</string>
+    </array>
+
+    <!-- index.html이 변경되면 자동 실행 -->
+    <key>WatchPaths</key>
+    <array>
+        <string>/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/index.html</string>
+    </array>
+
+    <!-- 로그 파일 -->
+    <key>StandardOutPath</key>
+    <string>/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/deploy.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/deploy-error.log</string>
+
+    <!-- 시스템 시작 시 자동 등록 -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

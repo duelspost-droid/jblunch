@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍽️ 여의나루 점심 맛집 트래커</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #f5f6fa;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+  .app-header {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 14px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .app-header .logo { font-size: 1.5rem; }
+  .app-header .title-block h1 { font-size: 1.05rem; font-weight: 700; }
+  .app-header .title-block p { font-size: 0.76rem; color: #999; margin-top: 1px; }
+  .sync-badge {
+    margin-left: auto;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .sync-badge.ok { background: #c6f6d5; color: #22543d; }
+  .sync-badge.loading { background: #ebf8ff; color: #2b6cb0; }
+  .sync-badge.err { background: #fff5f5; color: #c53030; }
+
+  .tabs {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 0 16px;
+  }
+  .tab {
+    padding: 11px 16px;
+    border: none;
+    background: none;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab.active { color: #e85d04; border-bottom-color: #e85d04; }
+
+  .content { padding: 14px; max-width: 640px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .date-group { margin-bottom: 22px; }
+  .date-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.05em;
+    margin-bottom: 9px;
+  }
+  .cards { display: flex; flex-direction: column; gap: 9px; }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 13px 13px 13px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.1); }
+  .card-stripe {
+    width: 4px;
+    flex-shrink: 0;
+    background: #e2e8f0;
+    margin-right: 11px;
+  }
+  .card.visited .card-stripe { background: #48bb78; }
+
+  .card-emoji { font-size: 1.6rem; flex-shrink: 0; margin-right: 9px; align-self: flex-start; padding-top: 2px; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+  .card-name { font-weight: 700; font-size: 0.95rem; }
+  .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
+  .badge-visited { background: #c6f6d5; color: #22543d; }
+  .badge-unvisited { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; }
+
+  .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
+  .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
+
+  /* 다중 리뷰 블록 */
+  .reviews-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f3f3f3;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .review-item {
+    background: #fafafa;
+    border-radius: 9px;
+    padding: 8px 10px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    position: relative;
+  }
+  .review-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #e85d04;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .review-right { flex: 1; min-width: 0; }
+  .review-header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; flex-wrap: wrap; }
+  .review-name { font-size: 0.8rem; font-weight: 700; color: #333; }
+  .review-stars { font-size: 0.75rem; }
+  .review-date { font-size: 0.68rem; color: #bbb; }
+  .review-content { font-size: 0.8rem; color: #555; line-height: 1.5; }
+  .btn-del-review {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.13s, background 0.13s;
+    line-height: 1;
+  }
+  .btn-del-review:hover { color: #e53e3e; background: #fff0f0; }
+  .no-reviews { font-size: 0.76rem; color: #ccc; padding: 2px 0; }
+
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+    padding-left: 9px;
+    align-self: flex-start;
+    padding-top: 2px;
+  }
+  .btn-visit, .btn-review {
+    font-size: 0.71rem;
+    padding: 5px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.13s;
+  }
+  .btn-visit { border: 1.5px solid #48bb78; background: #fff; color: #48bb78; }
+  .btn-visit:hover, .btn-visit.on { background: #48bb78; color: #fff; }
+  .btn-review { border: 1.5px solid #e85d04; background: #fff; color: #e85d04; }
+  .btn-review:hover { background: #e85d04; color: #fff; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media(min-width:400px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .stat-num { font-size: 1.8rem; font-weight: 800; color: #e85d04; line-height: 1; }
+  .stat-label { font-size: 0.72rem; color: #999; margin-top: 4px; }
+
+  .top-list { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .top-list h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 11px; }
+  .top-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
+  .top-item:last-child { border-bottom: none; }
+  .top-rank { font-size: 0.95rem; font-weight: 800; color: #e85d04; width: 20px; text-align: center; }
+  .top-info { flex: 1; }
+  .top-name { font-weight: 600; font-size: 0.86rem; }
+  .top-cuisine { font-size: 0.73rem; color: #aaa; }
+  .top-stars { font-size: 0.82rem; }
+
+  .skeleton { background: #eee; border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* 리뷰 작성 모달 */
+  .modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  @media(min-width:480px) { .modal-bg { align-items: center; } }
+  .modal {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px;
+    width: 100%;
+    max-width: 460px;
+  }
+  @media(min-width:480px) { .modal { border-radius: 18px; } }
+  .modal h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 14px; }
+  .modal-field { margin-bottom: 11px; }
+  .modal-field label { font-size: 0.78rem; font-weight: 600; color: #555; display: block; margin-bottom: 5px; }
+  .modal-field input[type="text"] {
+    width: 100%;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 11px; font-size: 0.86rem;
+    font-family: inherit; color: #333;
+  }
+  .modal-field input[type="text"]:focus { outline: none; border-color: #e85d04; }
+  .modal-stars { display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; }
+  .modal-stars span { opacity: 0.22; transition: opacity 0.1s; }
+  .modal-stars span.lit { opacity: 1; }
+  .modal textarea {
+    width: 100%; height: 80px;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 11px; font-size: 0.86rem; resize: none;
+    font-family: inherit; color: #333; line-height: 1.5;
+  }
+  .modal textarea:focus { outline: none; border-color: #e85d04; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 11px; justify-content: flex-end; }
+  .btn-cancel { background: #f5f5f5; color: #666; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
+  .btn-save { background: #e85d04; color: #fff; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
+  .saving-msg { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: right; min-height: 18px; }
+
+  .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
+
+  /* 삭제 확인 토스트 */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1a1a2e; color: #fff;
+    padding: 10px 18px; border-radius: 12px;
+    font-size: 0.83rem; font-weight: 500;
+    z-index: 100; display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    white-space: nowrap;
+  }
+  .toast.show { display: block; animation: fadeInUp 0.2s ease; }
+  @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <span class="logo">🍽️</span>
+  <div class="title-block">
+    <h1>여의나루 점심 맛집 트래커</h1>
+    <p>여의나루로 77 근처 · 추천 이력 & 리뷰</p>
+  </div>
+  <span class="sync-badge loading" id="sync-badge">동기화 중…</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('history',this)">📋 추천 이력</button>
+  <button class="tab" onclick="showTab('stats',this)">📊 통계</button>
+</div>
+
+<div class="content">
+  <div id="tab-history" class="section active"></div>
+  <div id="tab-stats" class="section"></div>
+</div>
+
+<!-- 리뷰 작성 모달 -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3 id="modal-title">📝 리뷰 남기기</h3>
+    <div class="modal-field">
+      <label>이름</label>
+      <input type="text" id="modal-name" placeholder="이름을 입력하세요" maxlength="20">
+    </div>
+    <div class="modal-field">
+      <label>별점</label>
+      <div class="modal-stars" id="modal-stars">
+        <span data-v="1">⭐</span><span data-v="2">⭐</span>
+        <span data-v="3">⭐</span><span data-v="4">⭐</span><span data-v="5">⭐</span>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>리뷰 내용</label>
+      <textarea id="modal-text" placeholder="방문 소감을 자유롭게 적어주세요…"></textarea>
+    </div>
+    <div class="saving-msg" id="saving-msg"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" id="btn-save" onclick="saveReview()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Supabase 설정 ─────────────────────────────────────────────
+const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM';
+const SB_HEADERS = {
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json'
+};
+
+// ── 추천 이력 데이터 (SKILL이 매일 자동 업데이트) ──────────────
+const HISTORY_DATA = [{"date":"2026-05-28","restaurants":[{"id":"20260528-1","name":"오키보루","cuisine":"일식 - 츠케멘/라멘","feature":"뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문. 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 목요일 점심 웨이팅 대비 11시 전후 방문 추천","price":"보통 (1.3만~1.8만원대)","distance":"도보 약 3분 (여의나루로 77-1 1층)"},{"id":"20260528-2","name":"본토박이","cuisine":"한식 - 쌈밥","feature":"신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표. 따뜻한 목요일엔 채소 듬뿍 쌈밥 한 상","price":"보통 (1.2만~1.5만원대)","distance":"도보 약 6분 (여의도동 백상빌딩 3층)"},{"id":"20260528-3","name":"희정식당","cuisine":"한식 - 부대찌개","feature":"20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 저렴하고 든든한 한 끼","price":"저렴 (1인 약 1.3만원)","distance":"도보 약 5분 (여의나루로 117, 공작상가 지하)"},{"id":"20260528-4","name":"소몽","cuisine":"일식 - 소바/덮밥","feature":"직접 끓인 육수로 만드는 정통 소바 전문. 고등어 온소바·새우장 냉소바 인기. 5월 말 날씨에 냉소바 한 그릇 딱","price":"보통 (1만~1.6만원대)","distance":"도보 약 5분 (여의나루로 113, 공작상가 2층)"},{"id":"20260528-5","name":"사천화가","cuisine":"중식 - 마라탕면","feature":"더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 목요일 오후는 대기 없이 여유롭게 식사 가능","price":"보통 (1.7만~2.1만원)","distance":"도보 약 10분 (더현대서울 6층)"}]},{"date":"2026-05-27","restaurants":[{"id":"20260527-1","name":"오키보루","cuisine":"일식 - 츠케멘/라멘","feature":"뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문으로 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 점심 웨이팅 명소","price":"보통 (1.3만~1.8만원대)","distance":"도보 약 3분 (여의나루로 77-1 1층)"},{"id":"20260527-2","name":"본토박이","cuisine":"한식 - 쌈밥","feature":"신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표 메뉴. 인근 직장인 줄 서는 집밥 맛집","price":"보통 (1.2만~1.5만원대)","distance":"도보 약 6분 (여의도동 백상빌딩 3층)"},{"id":"20260527-3","name":"희정식당","cuisine":"한식 - 부대찌개","feature":"20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 직장인 단골 맛집","price":"저렴 (1인 약 1.3만원)","distance":"도보 약 5분 (여의나루로 117, 공작상가 지하)"},{"id":"20260527-4","name":"소몽","cuisine":"일식 - 소바/덮밥","feature":"직접 끓인 육수로 만드는 정통 소바 전문점. 고등어 온소바와 새우장 냉소바가 인기. 평일 점심 웨이팅 있을 정도로 꾸준한 인기","price":"보통 (1만~1.6만원대)","distance":"도보 약 5분 (여의나루로 113, 공작상가 2층)"},{"id":"20260527-5","name":"사천화가","cuisine":"중식 - 마라탕면","feature":"더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 1~2인석 구성으로 혼밥도 OK. 오픈 직후 or 13시 이후 방문 추천","price":"보통 (1.7만~2.1만원)","distance":"도보 약 10분 (더현대서울 6층)"}]}];
+
+// ── 인메모리 상태 ─────────────────────────────────────────────
+let visitState = {};   // { restaurantId: boolean }
+let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating, created_at}] }
+
+// ── Supabase API ──────────────────────────────────────────────
+async function loadAll() {
+  setBadge('loading', '동기화 중…');
+  try {
+    // 방문 여부
+    const r1 = await fetch(`${SB_URL}/rest/v1/reviews?select=id,visited`, { headers: SB_HEADERS });
+    if (!r1.ok) throw new Error(r1.status);
+    const visits = await r1.json();
+    visitState = {};
+    visits.forEach(v => { visitState[v.id] = v.visited; });
+
+    // 댓글 (다중 리뷰)
+    const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&order=created_at.asc`, { headers: SB_HEADERS });
+    if (!r2.ok) throw new Error(r2.status);
+    const comments = await r2.json();
+    commentsState = {};
+    comments.forEach(c => {
+      if (!commentsState[c.restaurant_id]) commentsState[c.restaurant_id] = [];
+      commentsState[c.restaurant_id].push(c);
+    });
+
+    setBadge('ok', '☁️ 동기화됨');
+  } catch(e) {
+    setBadge('err', '⚠️ 오프라인');
+  }
+  renderHistory();
+  renderStats();
+}
+
+async function upsertVisit(id, visited) {
+  const res = await fetch(`${SB_URL}/rest/v1/reviews`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ id, visited, updated_at: new Date().toISOString() })
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+async function insertComment(restaurantId, reviewerName, content, rating) {
+  const body = {
+    restaurant_id: restaurantId,
+    reviewer_name: reviewerName,
+    content: content || null,
+    rating: rating || null,
+    created_at: new Date().toISOString()
+  };
+  const res = await fetch(`${SB_URL}/rest/v1/comments`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0];
+}
+
+async function deleteComment(commentId) {
+  const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
+    method: 'DELETE',
+    headers: SB_HEADERS
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+function setBadge(type, text) {
+  const b = document.getElementById('sync-badge');
+  b.className = 'sync-badge ' + type;
+  b.textContent = text;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── 이모지 ────────────────────────────────────────────────────
+function emo(c) {
+  if (!c) return '🍽️';
+  if (c.includes('일식')) return '🍜';
+  if (c.includes('한식')) return '🍲';
+  if (c.includes('중식')) return '🥢';
+  if (c.includes('버거')) return '🍔';
+  return '🍽️';
+}
+
+function avatarColor(name) {
+  const colors = ['#e85d04','#3182ce','#38a169','#805ad5','#d69e2e','#e53e3e','#319795'];
+  let h = 0;
+  for (let i=0; i<name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return colors[Math.abs(h) % colors.length];
+}
+
+function starsHtml(rating) {
+  if (!rating) return '';
+  return '⭐'.repeat(rating) + '<span style="opacity:0.3">☆</span>'.repeat(5 - rating);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── 이력 렌더 ─────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('tab-history');
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  if (!sorted.length) { el.innerHTML = '<div class="empty">추천 이력이 없습니다.</div>'; return; }
+
+  el.innerHTML = sorted.map(group => {
+    const d = new Date(group.date);
+    const days = ['일','월','화','수','목','금','토'];
+    const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+    const cards = group.restaurants.map(r => {
+      const visited = !!visitState[r.id];
+      const cms = commentsState[r.id] || [];
+
+      const reviewsHtml = cms.length
+        ? cms.map(c => {
+            const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+            const color = avatarColor(c.reviewer_name||'?');
+            return `<div class="review-item">
+              <div class="review-avatar" style="background:${color}">${initial}</div>
+              <div class="review-right">
+                <div class="review-header">
+                  <span class="review-name">${escHtml(c.reviewer_name)}</span>
+                  ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+                  <span class="review-date">${fmtDate(c.created_at)}</span>
+                </div>
+                ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+              </div>
+              <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${r.id}')">✕</button>
+            </div>`;
+          }).join('')
+        : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
+
+      return `<div class="card ${visited?'visited':''}" id="c-${r.id}">
+        <div class="card-stripe"></div>
+        <div class="card-emoji">${emo(r.cuisine)}</div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="card-name">${r.name}</span>
+            <span class="badge badge-cuisine">${r.cuisine}</span>
+            <span class="badge ${visited?'badge-visited':'badge-unvisited'}">${visited?'✅ 방문함':'미방문'}</span>
+          </div>
+          <div class="card-feature">${r.feature}</div>
+          <div class="card-meta">
+            <span>💰 ${r.price}</span>
+            <span>🚶 ${r.distance}</span>
+          </div>
+          <div class="reviews-block">${reviewsHtml}</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-visit ${visited?'on':''}" onclick="toggleVisit('${r.id}')">${visited?'✅ 방문':'방문 체크'}</button>
+          <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="date-group">
+      <div class="date-label">📅 ${label}</div>
+      <div class="cards">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/'/g,"\\'");
+}
+
+// ── 방문 토글 ─────────────────────────────────────────────────
+async function toggleVisit(id) {
+  visitState[id] = !visitState[id];
+  renderHistory(); renderStats();
+  setBadge('loading', '저장 중…');
+  try {
+    await upsertVisit(id, visitState[id]);
+    setBadge('ok', '☁️ 동기화됨');
+  } catch {
+    setBadge('err', '⚠️ 저장 실패');
+  }
+}
+
+// ── 리뷰 모달 ─────────────────────────────────────────────────
+let mId = null, mRating = 0;
+
+function openModal(id, name) {
+  mId = id; mRating = 0;
+  document.getElementById('modal-title').textContent = `📝 ${name} 리뷰 남기기`;
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-text').value = '';
+  document.getElementById('saving-msg').textContent = '';
+  document.getElementById('btn-save').disabled = false;
+  renderModalStars();
+  document.getElementById('modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); mId = null; }
+
+function renderModalStars() {
+  document.querySelectorAll('#modal-stars span').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.v) <= mRating);
+  });
+}
+document.querySelectorAll('#modal-stars span').forEach(s => {
+  s.addEventListener('click', () => { mRating = parseInt(s.dataset.v); renderModalStars(); });
+});
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+async function saveReview() {
+  if (!mId) return;
+  const name = document.getElementById('modal-name').value.trim();
+  const text = document.getElementById('modal-text').value.trim();
+  if (!name) {
+    document.getElementById('saving-msg').textContent = '⚠️ 이름을 입력해주세요.';
+    document.getElementById('modal-name').focus();
+    return;
+  }
+  if (!text && !mRating) {
+    document.getElementById('saving-msg').textContent = '⚠️ 별점 또는 리뷰 내용을 입력해주세요.';
+    return;
+  }
+
+  const btn = document.getElementById('btn-save');
+  const msg = document.getElementById('saving-msg');
+  btn.disabled = true;
+  msg.textContent = '저장 중…';
+
+  try {
+    const newComment = await insertComment(mId, name, text, mRating);
+    if (!commentsState[mId]) commentsState[mId] = [];
+    commentsState[mId].push(newComment);
+    // 리뷰 남기면 방문 체크도 자동
+    if (!visitState[mId]) {
+      visitState[mId] = true;
+      await upsertVisit(mId, true);
+    }
+    setBadge('ok', '☁️ 동기화됨');
+    closeModal();
+    renderHistory(); renderStats();
+    showToast('✅ 리뷰가 저장되었습니다!');
+  } catch(e) {
+    msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
+    btn.disabled = false;
+    setBadge('err', '⚠️ 저장 실패');
+  }
+}
+
+// ── 리뷰 삭제 ─────────────────────────────────────────────────
+async function confirmDelete(commentId, restaurantId) {
+  if (!confirm('이 리뷰를 삭제하시겠습니까?')) return;
+  setBadge('loading', '삭제 중…');
+  try {
+    await deleteComment(commentId);
+    if (commentsState[restaurantId]) {
+      commentsState[restaurantId] = commentsState[restaurantId].filter(c => c.id !== commentId);
+    }
+    renderHistory(); renderStats();
+    setBadge('ok', '☁️ 동기화됨');
+    showToast('🗑️ 리뷰가 삭제되었습니다.');
+  } catch {
+    setBadge('err', '⚠️ 삭제 실패');
+    showToast('⚠️ 삭제에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+// ── 통계 ──────────────────────────────────────────────────────
+function renderStats() {
+  const all = HISTORY_DATA.flatMap(g => g.restaurants);
+  const visited = all.filter(r => visitState[r.id]).length;
+  const allComments = Object.values(commentsState).flat();
+  const reviewed = new Set(allComments.map(c => c.restaurant_id)).size;
+  const ratings = allComments.map(c => c.rating).filter(Boolean);
+  const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
+
+  // TOP 맛집: 평균 별점 기준
+  const ratingMap = {};
+  allComments.forEach(c => {
+    if (!c.rating) return;
+    if (!ratingMap[c.restaurant_id]) ratingMap[c.restaurant_id] = [];
+    ratingMap[c.restaurant_id].push(c.rating);
+  });
+  const topList = all
+    .filter(r => ratingMap[r.id])
+    .map(r => ({
+      ...r,
+      avg: ratingMap[r.id].reduce((a,b)=>a+b,0)/ratingMap[r.id].length,
+      cnt: ratingMap[r.id].length
+    }))
+    .sort((a,b) => b.avg - a.avg).slice(0,5);
+
+  document.getElementById('tab-stats').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">총 추천 수</div></div>
+      <div class="stat-card"><div class="stat-num">${visited}</div><div class="stat-label">방문한 곳</div></div>
+      <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
+      <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
+    </div>
+    <div class="top-list">
+      <h3>⭐ TOP 맛집 (평균 별점순)</h3>
+      ${topList.length ? topList.map((r,i) => `<div class="top-item">
+        <div class="top-rank">${i+1}</div>
+        <div class="top-info">
+          <div class="top-name">${emo(r.cuisine)} ${r.name}</div>
+          <div class="top-cuisine">${r.cuisine} · 리뷰 ${r.cnt}개</div>
+        </div>
+        <div class="top-stars">${'⭐'.repeat(Math.round(r.avg))} <small style="color:#aaa">${r.avg.toFixed(1)}</small></div>
+      </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
+    </div>`;
+}
+
+// ── 탭 전환 ───────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── 초기화 ────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
