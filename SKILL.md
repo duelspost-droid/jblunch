@@ -3,7 +3,6 @@ name: lunch-restaurant-yeouinaeru
 description: 매일 오전 11시 여의나루로 77 근처 점심 맛집 5곳 추천
 ---
 
-
 오늘 점심 메뉴를 고르는 데 도움이 되도록, 서울 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.
 
 웹 검색을 활용해서 현재 인기 있거나 평점이 좋은 음식점을 찾아줘. 각 음식점에 대해 다음 정보를 간단히 요약해줘:
@@ -25,7 +24,7 @@ description: 매일 오전 11시 여의나루로 77 근처 점심 맛집 5곳 �
 이메일 전송 후, 오늘 추천한 5개 맛집 정보를 아래 JSON 파일에 누적 저장해줘:
 /Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/history.json
 
-파일이 없으면 새로 만들고, 있으면 기존 recommendations 배열에 오늘 항목을 추가해줘.
+파일이 없으면 새로 만들고, 있으면 기존 recommendations 배열 맨 앞에 오늘 항목을 추가해줘.
 각 음식점 항목의 JSON 형식:
 {
   "date": "YYYY-MM-DD",
@@ -49,31 +48,18 @@ history.json 파일 전체를 읽어서 아티팩트 HTML 안의
   const HISTORY_DATA = [...];
 줄을 새 데이터(JSON.stringify 형태)로 교체한 뒤 update_artifact를 호출해줘.
 
-## B. Netlify 웹페이지 자동 업데이트
-Netlify 사이트 URL: https://jblunch.netlify.app
-Netlify 사이트 ID: jblunch
+## B. index.html 업데이트
+/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/index.html 파일을 읽어서
+`const HISTORY_DATA = [...];` 줄을 새 history.json 데이터로 교체 후 저장.
 
-아래 순서로 index.html 파일을 업데이트하고 Netlify에 재배포해줘:
+## C. Netlify 자동 배포 (computer-use)
+index.html 업데이트 완료 후, computer-use로 Finder를 사용해서 netlify.command를 실행해줘:
 
-1. /Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru/index.html 파일을 읽어서
-   `const HISTORY_DATA = [...];` 줄을 새 history.json 데이터로 교체 후 저장
+1. Finder를 열고 (이미 열려 있으면 앞으로 가져오기)
+2. 메뉴 이동 → 폴더로 이동 (Cmd+Shift+G) → `/Users/hk/Documents/Claude/Scheduled/lunch-restaurant-yeouinaeru` 입력 후 Return
+3. `netlify.command` 파일을 더블클릭
+4. 터미널 창에 "배포 성공" 또는 "uploaded" 메시지가 나타날 때까지 5초 대기 후 스크린샷으로 결과 확인
 
-2. 아래 bash 명령으로 Netlify API에 재배포:
-```bash
-NETLIFY_TOKEN="newtech"
-SITE_ID="jblunch"
-cd /sessions/determined-dazzling-tesla/mnt/lunch-restaurant-yeouinaeru
-zip -j /tmp/netlify_deploy.zip index.html
-curl -s -X POST \
-  -H "Authorization: Bearer $NETLIFY_TOKEN" \
-  -H "Content-Type: application/zip" \
-  --data-binary @/tmp/netlify_deploy.zip \
-  "https://api.netlify.com/api/v1/sites/${SITE_ID}/deploys"
-```
-
-※ NETLIFY_PERSONAL_ACCESS_TOKEN 값은 아래에서 발급:
-   https://app.netlify.com/user/applications#personal-access-tokens
-   토큰을 발급받으면 이 SKILL.md의 <NETLIFY_PERSONAL_ACCESS_TOKEN> 부분을 실제 값으로 교체해줘.
-   토큰이 없으면 Netlify 재배포 단계는 건너뛰어도 됨.
+netlify.command 실행 시 Netlify API 토큰과 SITE_ID가 이미 설정되어 있으므로 추가 입력 없이 자동 배포됩니다.
 
 모든 작업 완료 후 한국어로 완료 메시지를 표시해줘.

@@ -1,0 +1,56 @@
+name: 🍽️ Daily Lunch Recommendation
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 매일 오전 11:00 KST (= 02:00 UTC)
+  workflow_dispatch:        # 수동 실행 버튼
+
+jobs:
+  generate-recommendation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate lunch recommendations
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/generate_lunch.py
+
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+        run: |
+          echo "📦 압축 중..."
+          zip -j /tmp/deploy.zip index.html _headers
+          echo "🚀 Netlify 배포 중..."
+          RESULT=$(curl -s -X POST \
+            -H "Authorization: Bearer $NETLIFY_TOKEN" \
+            -H "Content-Type: application/zip" \
+            --data-binary @/tmp/deploy.zip \
+            "https://api.netlify.com/api/v1/sites/jblunch.netlify.app/deploys")
+          STATE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('state','error'))" 2>/dev/null)
+          if [ "$STATE" = "ready" ] || [ "$STATE" = "uploaded" ] || [ "$STATE" = "processing" ]; then
+            echo "✅ Netlify 배포 성공! 상태: $STATE"
+            echo "🌐 https://jblunch.netlify.app"
+          else
+            echo "❌ 배포 실패. 응답: $RESULT"
+            exit 1
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add history.json index.html
+          git diff --staged --quiet || git commit -m "🍽️ $(TZ=Asia/Seoul date +'%Y-%m-%d') 점심 맛집 추천 업데이트"
+          git push
