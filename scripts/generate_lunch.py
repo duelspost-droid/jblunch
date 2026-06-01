@@ -117,7 +117,7 @@ def update_history(new_entry, history_path="history.json"):
     return history
 
 
-def send_email(restaurants, today, full_text):
+def send_email(restaurants, today, full_text, comment=""):
     """Gmail SMTP로 점심 추천 이메일 발송."""
     gmail_user = os.environ.get("GMAIL_USER")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
@@ -143,8 +143,9 @@ def send_email(restaurants, today, full_text):
             f"   • 가격대: {r['price']}",
             f"   • 도보 거리: {r['distance']}",
         ]
+    weather_line = comment if comment else "오늘도 맛있는 점심 되세요!"
     lines += ["\n" + "─" * 40,
-              "\n🌞 오늘의 한마디: 새로운 하루도 맛있는 점심으로 에너지를 충전하세요!",
+              f"\n🌤️ {weather_line}",
               "\n—\nClaude AI 자동 발송"]
     body = "\n".join(lines)
 
@@ -199,7 +200,7 @@ def main():
 
     print(f"📅 오늘 날짜 (KST): {today}")
 
-    prompt = f"""오늘({today}) 점심 메뉴를 고르는 데 도움이 되도록, 서울 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.
+    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인하고, 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.
 
 웹 검색을 활용해서 현재 인기 있거나 평점이 좋은 음식점을 찾아줘. 각 음식점에 대해:
 1. 음식점 이름
@@ -208,11 +209,13 @@ def main():
 4. 가격대 (저렴 / 보통 / 비쌈)
 5. 도보 거리 (여의나루로 77 기준)
 
-반드시 응답 마지막에 아래 형식의 JSON 블록을 포함해줘:
+반드시 응답 마지막에 아래 형식의 JSON 블록을 포함해줘.
+comment는 오늘 날씨(기온, 맑음/흐림/비 등)를 반영해서 점심 메뉴 선택에 도움이 되는 한 문장으로 작성해줘:
 
 ```json
 {{
   "date": "{today}",
+  "comment": "날씨 기반 오늘의 한마디 (예: 오늘 여의도는 맑고 26°C예요. 시원한 냉소바 어떠세요?)",
   "restaurants": [
     {{"id": "{date_compact}-1", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
     {{"id": "{date_compact}-2", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
@@ -255,7 +258,7 @@ def main():
     update_index_html(history)
 
     print("\n📧 이메일 발송 중...")
-    send_email(new_entry.get("restaurants", []), today, text)
+    send_email(new_entry.get("restaurants", []), today, text, new_entry.get("comment", ""))
 
     print("\n✨ 완료!")
 
