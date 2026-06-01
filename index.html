@@ -295,6 +295,38 @@
   }
   .toast.show { display: block; animation: fadeInUp 0.2s ease; }
   @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  /* 컨디션 입력 */
+  .pref-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+  }
+  .pref-title { font-size: 0.82rem; font-weight: 700; color: #333; margin-bottom: 10px; }
+  .pref-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+  .pref-chip {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-size: 0.76rem; font-weight: 600; color: #888;
+    cursor: pointer; transition: all 0.13s;
+  }
+  .pref-chip.on { border-color: #e85d04; background: #e85d04; color: #fff; }
+  .pref-input-row { display: flex; gap: 8px; }
+  .pref-input {
+    flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 8px 11px; font-size: 0.84rem; font-family: inherit; color: #333;
+  }
+  .pref-input:focus { outline: none; border-color: #e85d04; }
+  .pref-submit {
+    background: #e85d04; color: #fff; border: none;
+    border-radius: 10px; padding: 8px 14px;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer;
+    white-space: nowrap;
+  }
+  .pref-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pref-saved { font-size: 0.76rem; color: #48bb78; margin-top: 7px; min-height: 16px; }
 </style>
 </head>
 <body>
@@ -531,8 +563,68 @@ function renderGroup(group) {
 function renderHistory() {
   const el = document.getElementById('tab-history');
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  if (!sorted.length) { el.innerHTML = '<div class="empty">오늘의 추천이 없습니다.</div>'; return; }
-  el.innerHTML = renderGroup(sorted[0]);
+  const prefHtml = `
+    <div class="pref-card">
+      <div class="pref-title">🙋 오늘 컨디션을 알려주세요 <span style="font-weight:400;color:#aaa">(내일 추천에 반영)</span></div>
+      <div class="pref-chips">
+        <button class="pref-chip" onclick="toggleChip(this)">🍜 해장 필요</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🌶️ 매콤하게</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🥗 가볍게</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🍖 든든하게</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🍣 일식</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🍚 한식</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🥩 고기</button>
+        <button class="pref-chip" onclick="toggleChip(this)">🚶 혼밥</button>
+      </div>
+      <div class="pref-input-row">
+        <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 술 먹어서 국물이 당겨요)" maxlength="80">
+        <button class="pref-submit" id="pref-btn" onclick="savePref()">저장</button>
+      </div>
+      <div class="pref-saved" id="pref-saved"></div>
+    </div>`;
+  if (!sorted.length) { el.innerHTML = prefHtml + '<div class="empty">오늘의 추천이 없습니다.</div>'; return; }
+  el.innerHTML = prefHtml + renderGroup(sorted[0]);
+  loadTodayPref();
+}
+
+function toggleChip(el) {
+  el.classList.toggle('on');
+  const chips = [...document.querySelectorAll('.pref-chip.on')].map(c => c.textContent.trim());
+  document.getElementById('pref-text').value = chips.join(', ');
+}
+
+async function loadTodayPref() {
+  const today = new Date().toLocaleDateString('sv-SE');
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/daily_preference?date=eq.${today}&select=preference`, { headers: SB_HEADERS });
+    const rows = await res.json();
+    if (rows.length) {
+      document.getElementById('pref-saved').textContent = `✅ 오늘 저장된 컨디션: "${rows[0].preference}"`;
+      document.getElementById('pref-text').value = rows[0].preference;
+    }
+  } catch(e) {}
+}
+
+async function savePref() {
+  const pref = document.getElementById('pref-text').value.trim();
+  if (!pref) return;
+  const btn = document.getElementById('pref-btn');
+  const msg = document.getElementById('pref-saved');
+  btn.disabled = true;
+  msg.textContent = '저장 중…';
+  const today = new Date().toLocaleDateString('sv-SE');
+  try {
+    await fetch(`${SB_URL}/rest/v1/daily_preference`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ date: today, preference: pref })
+    });
+    msg.textContent = `✅ 저장 완료! 내일 오전 11시 추천에 반영됩니다.`;
+    showToast('✅ 컨디션이 저장되었습니다!');
+  } catch(e) {
+    msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
+  }
+  btn.disabled = false;
 }
 
 function escHtml(s) {

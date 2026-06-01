@@ -10,14 +10,37 @@ import re
 import os
 import sys
 import smtplib
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
+
+SB_URL = "https://nrdapzgtibbusvoaceuh.supabase.co"
+SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM"
 
 
 def get_today_kst():
     kst = timezone(timedelta(hours=9))
     return datetime.now(kst).strftime("%Y-%m-%d")
+
+
+def get_today_preference(today):
+    """Supabase에서 오늘 저장된 컨디션/선호도 조회."""
+    try:
+        url = f"{SB_URL}/rest/v1/daily_preference?date=eq.{today}&select=preference"
+        req = urllib.request.Request(url, headers={
+            "apikey": SB_KEY,
+            "Authorization": f"Bearer {SB_KEY}"
+        })
+        with urllib.request.urlopen(req) as r:
+            rows = json.loads(r.read())
+        if rows:
+            pref = rows[0]["preference"]
+            print(f"✅ 오늘 컨디션 발견: {pref}")
+            return pref
+    except Exception as e:
+        print(f"⚠️  컨디션 조회 실패 (무시): {e}")
+    return None
 
 
 def call_claude(client, prompt):
@@ -200,7 +223,10 @@ def main():
 
     print(f"📅 오늘 날짜 (KST): {today}")
 
-    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인하고, 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.
+    preference = get_today_preference(today)
+    pref_line = f"\n\n⚠️ 오늘 사용자 컨디션/선호도: {preference}\n이를 최우선으로 반영해서 맞춤 추천해줘. (예: 해장 필요→국물요리, 매콤→매운 음식 위주)" if preference else ""
+
+    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인하고, 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.{pref_line}
 
 웹 검색을 활용해서 현재 인기 있거나 평점이 좋은 음식점을 찾아줘. 각 음식점에 대해:
 1. 음식점 이름
