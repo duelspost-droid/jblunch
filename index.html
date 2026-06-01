@@ -63,6 +63,24 @@
   .section { display: none; }
   .section.active { display: block; }
 
+  .sub-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .sub-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #aaa;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sub-tab.active { background: #e85d04; border-color: #e85d04; color: #fff; }
+
   .date-group { margin-bottom: 22px; }
   .date-label {
     font-size: 0.74rem;
@@ -648,14 +666,7 @@ function renderStats() {
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  const historyHtml = sorted.length > 1
-    ? `<div style="margin-top:20px">
-        <div style="font-size:0.78rem;font-weight:700;color:#999;letter-spacing:0.05em;margin-bottom:12px">📋 과거 추천 이력</div>
-        ${sorted.slice(1).map(g => renderGroup(g)).join('')}
-      </div>`
-    : '';
-
-  document.getElementById('tab-stats').innerHTML = `
+  const statsHtml = `
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">총 추천 수</div></div>
       <div class="stat-card"><div class="stat-num">${visited}</div><div class="stat-label">방문한 곳</div></div>
@@ -672,8 +683,29 @@ function renderStats() {
         </div>
         <div class="top-stars">${'⭐'.repeat(Math.round(r.avg))} <small style="color:#aaa">${r.avg.toFixed(1)}</small></div>
       </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
+    </div>`;
+
+  const historyHtml = sorted.length > 1
+    ? sorted.slice(1).map(g => renderGroup(g)).join('')
+    : '<div class="empty">과거 이력이 없습니다.</div>';
+
+  document.getElementById('tab-stats').innerHTML = `
+    <div class="sub-tabs">
+      <button class="sub-tab active" id="sub-stats-btn" onclick="showSubTab('sub-stats')">📊 통계</button>
+      <button class="sub-tab" id="sub-history-btn" onclick="showSubTab('sub-history')">📋 과거 이력</button>
     </div>
-    ${historyHtml}`;
+    <div id="sub-stats">${statsHtml}</div>
+    <div id="sub-history" style="display:none">${historyHtml}</div>`;
+}
+
+// ── 서브탭 전환 ───────────────────────────────────────────────
+function showSubTab(name) {
+  ['sub-stats', 'sub-history'].forEach(id => {
+    const el = document.getElementById(id);
+    const btn = document.getElementById(id + '-btn');
+    if (el) el.style.display = id === name ? '' : 'none';
+    if (btn) btn.classList.toggle('active', id === name);
+  });
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────────
