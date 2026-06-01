@@ -51,7 +51,7 @@ def call_claude(client, prompt):
     for iteration in range(10):
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=4000,
+            max_tokens=8000,
             tools=tools,
             messages=messages,
         )
@@ -108,13 +108,26 @@ def extract_json(text):
     # ```json ... ``` 블록
     match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
     if match:
-        return json.loads(match.group(1))
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
 
-    # 날 JSON
-    match = re.search(r'\{[^{}]*"restaurants"\s*:\s*\[.*?\]\s*\}', text, re.DOTALL)
-    if match:
-        return json.loads(match.group(0))
-
+    # 중괄호 깊이 기반으로 JSON 블록 추출
+    start = text.find('{')
+    if start == -1:
+        return None
+    depth = 0
+    for i, c in enumerate(text[start:], start):
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start:i+1])
+                except json.JSONDecodeError:
+                    break
     return None
 
 
@@ -223,36 +236,41 @@ def main():
 
     print(f"📅 오늘 날짜 (KST): {today}")
 
-    preference = get_today_preference(today)
-    pref_line = f"\n\n⚠️ 오늘 사용자 컨디션/선호도: {preference}\n이를 최우선으로 반영해서 맞춤 추천해줘. (예: 해장 필요→국물요리, 매콤→매운 음식 위주)" if preference else ""
+    CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥"]
 
-    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인하고, 여의나루로 77 (영등포구 여의도동) 근처에서 점심을 먹을 수 있는 음식점 5곳을 추천해줘.{pref_line}
+    def restaurant_template(prefix):
+        return "\n".join([
+            f'    {{"id": "{prefix}-{i}", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}}'
+            for i in range(1, 6)
+        ])
 
-웹 검색을 활용해서 현재 인기 있거나 평점이 좋은 음식점을 찾아줘. 각 음식점에 대해:
-1. 음식점 이름
-2. 음식 종류 (한식, 일식, 중식 등)
-3. 특징/추천 메뉴 (1~2줄)
-4. 가격대 (저렴 / 보통 / 비쌈)
-5. 도보 거리 (여의나루로 77 기준)
+    by_cond_template = ",\n".join([
+        f'    "{c}": [\n{restaurant_template(f"{date_compact}-{c[:2]}")}\n    ]'
+        for c in CONDITIONS
+    ])
 
-반드시 응답 마지막에 아래 형식의 JSON 블록을 포함해줘.
-comment는 오늘 날씨(기온, 맑음/흐림/비 등)를 반영해서 점심 메뉴 선택에 도움이 되는 한 문장으로 작성해줘:
+    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인한 후, 여의나루로 77 (영등포구 여의도동) 근처 음식점을 컨디션별로 추천해줘.
+
+웹 검색으로 여의도/여의나루 인기 맛집을 먼저 조사하고, 아래 형식의 JSON을 반드시 응답 마지막에 포함해줘.
+
+- restaurants: 날씨/요일 기반 기본 추천 5곳
+- by_condition: 각 컨디션별 맞춤 추천 5곳씩 (컨디션마다 다른 음식점 조합으로)
+- comment: 오늘 날씨와 날짜에 맞는 한마디
 
 ```json
 {{
   "date": "{today}",
-  "comment": "날씨 기반 오늘의 한마디 (예: 오늘 여의도는 맑고 26°C예요. 시원한 냉소바 어떠세요?)",
+  "comment": "날씨 기반 오늘의 한마디",
   "restaurants": [
-    {{"id": "{date_compact}-1", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
-    {{"id": "{date_compact}-2", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
-    {{"id": "{date_compact}-3", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
-    {{"id": "{date_compact}-4", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}},
-    {{"id": "{date_compact}-5", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}}
-  ]
+{restaurant_template(date_compact)}
+  ],
+  "by_condition": {{
+{by_cond_template}
+  }}
 }}
 ```"""
 
-    print("🔍 맛집 검색 및 추천 생성 중...")
+    print("🔍 날씨 + 전체 컨디션별 맛집 생성 중...")
     text = call_claude(client, prompt)
 
     if not text:
@@ -271,10 +289,15 @@ comment는 오늘 날씨(기온, 맑음/흐림/비 등)를 반영해서 점심 �
     new_entry["date"] = today
     for idx, r in enumerate(new_entry.get("restaurants", [])):
         r["id"] = f"{date_compact}-{idx + 1}"
+    for cond, rlist in new_entry.get("by_condition", {}).items():
+        prefix = cond[:2].replace(" ", "")
+        for idx, r in enumerate(rlist):
+            r["id"] = f"{date_compact}-{prefix}-{idx + 1}"
 
-    print(f"✅ {len(new_entry.get('restaurants', []))}개 음식점 추천 완료")
-    for r in new_entry.get("restaurants", []):
-        print(f"  • {r['name']} ({r['cuisine']}) | {r['price']} | {r['distance']}")
+    print(f"✅ 기본 {len(new_entry.get('restaurants', []))}곳 + 컨디션별 {len(new_entry.get('by_condition', {}))}종류 추천 완료")
+    for cond, rlist in new_entry.get("by_condition", {}).items():
+        names = ", ".join(r['name'] for r in rlist[:3])
+        print(f"  [{cond}] {names}…")
 
     print("\n📂 history.json 업데이트 중...")
     history = update_history(new_entry)

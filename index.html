@@ -565,112 +565,43 @@ function renderHistory() {
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   const prefHtml = `
     <div class="pref-card">
-      <div class="pref-title">🙋 오늘 컨디션을 알려주세요 <span style="font-weight:400;color:#aaa">(저장하면 즉시 재추천)</span></div>
+      <div class="pref-title">🙋 오늘 컨디션은?</div>
       <div class="pref-chips">
-        <button class="pref-chip" onclick="toggleChip(this)">🍜 해장 필요</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🌶️ 매콤하게</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🥗 가볍게</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🍖 든든하게</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🍣 일식</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🍚 한식</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🥩 고기</button>
-        <button class="pref-chip" onclick="toggleChip(this)">🚶 혼밥</button>
+        <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
+        <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
+        <button class="pref-chip" data-cond="매콤하게" onclick="selectCond(this)">🌶️ 매콤하게</button>
+        <button class="pref-chip" data-cond="가볍게" onclick="selectCond(this)">🥗 가볍게</button>
+        <button class="pref-chip" data-cond="든든하게" onclick="selectCond(this)">🍖 든든하게</button>
+        <button class="pref-chip" data-cond="일식" onclick="selectCond(this)">🍣 일식</button>
+        <button class="pref-chip" data-cond="한식" onclick="selectCond(this)">🍚 한식</button>
+        <button class="pref-chip" data-cond="고기" onclick="selectCond(this)">🥩 고기</button>
+        <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
       </div>
-      <div class="pref-input-row">
-        <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 술 먹어서 국물이 당겨요)" maxlength="80">
-        <button class="pref-submit" id="pref-btn" onclick="savePref()">추천 받기</button>
-      </div>
-      <div class="pref-saved" id="pref-saved"></div>
-    </div>`;
-  if (!sorted.length) { el.innerHTML = prefHtml + '<div class="empty">오늘의 추천이 없습니다.</div>'; return; }
-  el.innerHTML = prefHtml + renderGroup(sorted[0]);
-  loadTodayPref();
+    </div>
+    <div id="today-group"></div>`;
+  if (!sorted.length) { el.innerHTML = prefHtml; return; }
+  el.innerHTML = prefHtml;
+  renderCondGroup();
 }
 
-function toggleChip(el) {
-  el.classList.toggle('on');
-  const chips = [...document.querySelectorAll('.pref-chip.on')].map(c => c.textContent.trim());
-  document.getElementById('pref-text').value = chips.join(', ');
+let currentCond = '';  // 선택된 컨디션 ('': 기본)
+
+function selectCond(el) {
+  document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  currentCond = el.dataset.cond;
+  renderCondGroup();
 }
 
-async function loadTodayPref() {
-  const today = new Date().toLocaleDateString('sv-SE');
-  try {
-    const res = await fetch(`${SB_URL}/rest/v1/daily_preference?date=eq.${today}&select=preference`, { headers: SB_HEADERS });
-    const rows = await res.json();
-    if (rows.length) {
-      document.getElementById('pref-saved').textContent = `✅ 오늘 저장된 컨디션: "${rows[0].preference}"`;
-      document.getElementById('pref-text').value = rows[0].preference;
-    }
-  } catch(e) {}
-}
-
-const GH_TOKEN = ['ghp_Q5miJ7XGxgbw4', 'PzwtsIWOgjFKy9ouk1yry4W'].join('');
-const GH_WORKFLOW_ID = '286646589';
-
-async function savePref() {
-  const pref = document.getElementById('pref-text').value.trim();
-  if (!pref) return;
-  const btn = document.getElementById('pref-btn');
-  const msg = document.getElementById('pref-saved');
-  btn.disabled = true;
-
-  // 1. Supabase 저장
-  msg.textContent = '💾 저장 중…';
-  const today = new Date().toLocaleDateString('sv-SE');
-  try {
-    await fetch(`${SB_URL}/rest/v1/daily_preference`, {
-      method: 'POST',
-      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ date: today, preference: pref })
-    });
-  } catch(e) {
-    msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
-    btn.disabled = false;
-    return;
-  }
-
-  // 2. GitHub Actions 트리거
-  msg.textContent = '🚀 맞춤 추천 생성 중… (약 40초 소요)';
-  try {
-    await fetch(`https://api.github.com/repos/duelspost-droid/jblunch/actions/workflows/${GH_WORKFLOW_ID}/dispatches`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GH_TOKEN}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ref: 'master' })
-    });
-  } catch(e) {
-    msg.textContent = '⚠️ 추천 생성 요청 실패.';
-    btn.disabled = false;
-    return;
-  }
-
-  // 3. 완료 폴링 (최대 90초)
-  let elapsed = 0;
-  const poll = setInterval(async () => {
-    elapsed += 5;
-    msg.textContent = `⏳ 추천 생성 중… (${elapsed}초)`;
-    try {
-      const r = await fetch(`https://api.github.com/repos/duelspost-droid/jblunch/actions/runs?per_page=1`, {
-        headers: { 'Authorization': `Bearer ${GH_TOKEN}`, 'Accept': 'application/vnd.github+json' }
-      });
-      const d = await r.json();
-      const run = d.workflow_runs?.[0];
-      if (run?.status === 'completed' && run?.conclusion === 'success') {
-        clearInterval(poll);
-        msg.textContent = '✅ 맞춤 추천 완료! 페이지를 새로고침합니다…';
-        showToast('✅ 컨디션 맞춤 추천이 완료되었습니다!');
-        setTimeout(() => location.reload(), 1500);
-      } else if (elapsed >= 90) {
-        clearInterval(poll);
-        msg.textContent = '✅ 저장 완료! 잠시 후 새로고침해 주세요.';
-        btn.disabled = false;
-      }
-    } catch(e) {}
-  }, 5000);
+function renderCondGroup() {
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  if (!sorted.length) return;
+  const group = sorted[0];
+  const restaurants = currentCond && group.by_condition?.[currentCond]
+    ? group.by_condition[currentCond]
+    : group.restaurants;
+  const target = {...group, restaurants};
+  document.getElementById('today-group').innerHTML = renderGroup(target);
 }
 
 function escHtml(s) {
