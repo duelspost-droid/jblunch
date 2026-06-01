@@ -9,6 +9,9 @@ import json
 import re
 import os
 import sys
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 
 
@@ -114,6 +117,55 @@ def update_history(new_entry, history_path="history.json"):
     return history
 
 
+def send_email(restaurants, today, full_text):
+    """Gmail SMTP로 점심 추천 이메일 발송."""
+    gmail_user = os.environ.get("GMAIL_USER")
+    gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
+    if not gmail_user or not gmail_password:
+        print("⚠️  GMAIL_USER / GMAIL_APP_PASSWORD 미설정 — 이메일 생략")
+        return
+
+    # 요일 한국어
+    weekdays = ["월", "화", "수", "목", "금", "토", "일"]
+    kst = timezone(timedelta(hours=9))
+    dt = datetime.now(kst)
+    wd = weekdays[dt.weekday()]
+    date_label = f"{dt.year}년 {dt.month}월 {dt.day}일 ({wd}요일)"
+
+    lines = [f"🍽️ 오늘의 여의나루 점심 맛집 추천 ({date_label})\n",
+             "서울 영등포구 여의나루로 77 근처 추천 음식점 5곳입니다.\n",
+             "─" * 40]
+    for i, r in enumerate(restaurants, 1):
+        lines += [
+            f"\n{i}. {r['name']}",
+            f"   • 음식 종류: {r['cuisine']}",
+            f"   • 특징/추천 메뉴: {r['feature']}",
+            f"   • 가격대: {r['price']}",
+            f"   • 도보 거리: {r['distance']}",
+        ]
+    lines += ["\n" + "─" * 40,
+              "\n🌞 오늘의 한마디: 새로운 하루도 맛있는 점심으로 에너지를 충전하세요!",
+              "\n—\nClaude AI 자동 발송"]
+    body = "\n".join(lines)
+
+    msg = MIMEMultipart()
+    msg["From"] = gmail_user
+    msg["To"] = "duels@jbfg.com"
+    msg["Cc"] = "duels@hanmail.net"
+    msg["Subject"] = "🍽️ 오늘의 여의나루 점심 맛집 추천"
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    recipients = ["duels@jbfg.com", "duels@hanmail.net"]
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(gmail_user, gmail_password)
+            server.sendmail(gmail_user, recipients, msg.as_string())
+        print(f"✅ 이메일 발송 완료 → {', '.join(recipients)}")
+    except Exception as e:
+        print(f"⚠️  이메일 발송 실패: {e}")
+
+
 def update_index_html(history, html_path="index.html"):
     """index.html의 HISTORY_DATA 교체."""
     with open(html_path, "r", encoding="utf-8") as f:
@@ -201,6 +253,9 @@ def main():
 
     print("\n🌐 index.html 업데이트 중...")
     update_index_html(history)
+
+    print("\n📧 이메일 발송 중...")
+    send_email(new_entry.get("restaurants", []), today, text)
 
     print("\n✨ 완료!")
 
