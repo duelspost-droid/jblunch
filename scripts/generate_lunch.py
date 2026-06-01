@@ -263,9 +263,24 @@ def main():
     print("📝 JSON 파싱 중...")
     new_entry = extract_json(text)
 
+    # JSON이 없으면 2차 호출로 JSON만 추출 요청
     if not new_entry:
-        print("❌ JSON 파싱 실패. 응답 내용:")
-        print(text[:2000])
+        print("⚠️  JSON 없음 — 2차 JSON 추출 요청 중...")
+        cond_list = " / ".join(CONDITIONS)
+        fallback_prompt = f"""아래 정보를 바탕으로 반드시 JSON만 출력해줘. 다른 설명 없이 JSON 블록만.
+
+앞서 조사한 여의나루 맛집 정보:
+{text[:3000]}
+
+아래 형식으로 출력:
+```json
+{{"date":"{today}","comment":"날씨 한마디","restaurants":[{{"id":"{date_compact}-1","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-2","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-3","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-4","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-5","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}}],"by_condition":{{"해장 필요":[5곳],"매콤하게":[5곳],"가볍게":[5곳],"든든하게":[5곳],"일식":[5곳],"한식":[5곳],"고기":[5곳],"혼밥":[5곳]}}}}
+```"""
+        text2 = call_claude(client, fallback_prompt)
+        new_entry = extract_json(text2) if text2 else None
+
+    if not new_entry:
+        print("❌ JSON 파싱 최종 실패.")
         sys.exit(1)
 
     # date / id 보정
