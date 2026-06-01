@@ -1,9 +1,9 @@
-name: 🍽️ Daily Lunch Recommendation
+name: Daily Lunch Recommendation
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # 매일 오전 11:00 KST (= 02:00 UTC)
-  workflow_dispatch:        # 수동 실행 버튼
+    - cron: '0 2 * * 1-5'  # 매일(평일) 오전 11:00 KST (= 02:00 UTC)
+  workflow_dispatch:
 
 jobs:
   generate-recommendation:
