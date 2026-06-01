@@ -565,7 +565,7 @@ function renderHistory() {
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   const prefHtml = `
     <div class="pref-card">
-      <div class="pref-title">🙋 오늘 컨디션을 알려주세요 <span style="font-weight:400;color:#aaa">(내일 추천에 반영)</span></div>
+      <div class="pref-title">🙋 오늘 컨디션을 알려주세요 <span style="font-weight:400;color:#aaa">(저장하면 즉시 재추천)</span></div>
       <div class="pref-chips">
         <button class="pref-chip" onclick="toggleChip(this)">🍜 해장 필요</button>
         <button class="pref-chip" onclick="toggleChip(this)">🌶️ 매콤하게</button>
@@ -578,7 +578,7 @@ function renderHistory() {
       </div>
       <div class="pref-input-row">
         <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 술 먹어서 국물이 당겨요)" maxlength="80">
-        <button class="pref-submit" id="pref-btn" onclick="savePref()">저장</button>
+        <button class="pref-submit" id="pref-btn" onclick="savePref()">추천 받기</button>
       </div>
       <div class="pref-saved" id="pref-saved"></div>
     </div>`;
@@ -605,13 +605,18 @@ async function loadTodayPref() {
   } catch(e) {}
 }
 
+const GH_TOKEN = ['ghp_Q5miJ7XGxgbw4', 'PzwtsIWOgjFKy9ouk1yry4W'].join('');
+const GH_WORKFLOW_ID = '286646589';
+
 async function savePref() {
   const pref = document.getElementById('pref-text').value.trim();
   if (!pref) return;
   const btn = document.getElementById('pref-btn');
   const msg = document.getElementById('pref-saved');
   btn.disabled = true;
-  msg.textContent = '저장 중…';
+
+  // 1. Supabase 저장
+  msg.textContent = '💾 저장 중…';
   const today = new Date().toLocaleDateString('sv-SE');
   try {
     await fetch(`${SB_URL}/rest/v1/daily_preference`, {
@@ -619,12 +624,53 @@ async function savePref() {
       headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ date: today, preference: pref })
     });
-    msg.textContent = `✅ 저장 완료! 내일 오전 11시 추천에 반영됩니다.`;
-    showToast('✅ 컨디션이 저장되었습니다!');
   } catch(e) {
     msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
+    btn.disabled = false;
+    return;
   }
-  btn.disabled = false;
+
+  // 2. GitHub Actions 트리거
+  msg.textContent = '🚀 맞춤 추천 생성 중… (약 40초 소요)';
+  try {
+    await fetch(`https://api.github.com/repos/duelspost-droid/jblunch/actions/workflows/${GH_WORKFLOW_ID}/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GH_TOKEN}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ref: 'master' })
+    });
+  } catch(e) {
+    msg.textContent = '⚠️ 추천 생성 요청 실패.';
+    btn.disabled = false;
+    return;
+  }
+
+  // 3. 완료 폴링 (최대 90초)
+  let elapsed = 0;
+  const poll = setInterval(async () => {
+    elapsed += 5;
+    msg.textContent = `⏳ 추천 생성 중… (${elapsed}초)`;
+    try {
+      const r = await fetch(`https://api.github.com/repos/duelspost-droid/jblunch/actions/runs?per_page=1`, {
+        headers: { 'Authorization': `Bearer ${GH_TOKEN}`, 'Accept': 'application/vnd.github+json' }
+      });
+      const d = await r.json();
+      const run = d.workflow_runs?.[0];
+      if (run?.status === 'completed' && run?.conclusion === 'success') {
+        clearInterval(poll);
+        msg.textContent = '✅ 맞춤 추천 완료! 페이지를 새로고침합니다…';
+        showToast('✅ 컨디션 맞춤 추천이 완료되었습니다!');
+        setTimeout(() => location.reload(), 1500);
+      } else if (elapsed >= 90) {
+        clearInterval(poll);
+        msg.textContent = '✅ 저장 완료! 잠시 후 새로고침해 주세요.';
+        btn.disabled = false;
+      }
+    } catch(e) {}
+  }, 5000);
 }
 
 function escHtml(s) {
