@@ -291,8 +291,8 @@
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showTab('history',this)">📋 추천 이력</button>
-  <button class="tab" onclick="showTab('stats',this)">📊 통계</button>
+  <button class="tab active" onclick="showTab('history',this)">🍽️ 오늘의 추천</button>
+  <button class="tab" onclick="showTab('stats',this)">📊 통계 & 이력</button>
 </div>
 
 <div class="content">
@@ -451,72 +451,70 @@ function fmtDate(iso) {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// ── 이력 렌더 ─────────────────────────────────────────────────
+// ── 카드 그룹 렌더 (공통) ────────────────────────────────────
+function renderGroup(group) {
+  const d = new Date(group.date);
+  const days = ['일','월','화','수','목','금','토'];
+  const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  const cards = group.restaurants.map(r => {
+    const visited = !!visitState[r.id];
+    const cms = commentsState[r.id] || [];
+    const reviewsHtml = cms.length
+      ? cms.map(c => {
+          const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+          const color = avatarColor(c.reviewer_name||'?');
+          return `<div class="review-item">
+            <div class="review-avatar" style="background:${color}">${initial}</div>
+            <div class="review-right">
+              <div class="review-header">
+                <span class="review-name">${escHtml(c.reviewer_name)}</span>
+                ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+                <span class="review-date">${fmtDate(c.created_at)}</span>
+              </div>
+              ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+            </div>
+            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${r.id}')">✕</button>
+          </div>`;
+        }).join('')
+      : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
+    return `<div class="card ${visited?'visited':''}" id="c-${r.id}">
+      <div class="card-stripe"></div>
+      <div class="card-emoji">${emo(r.cuisine)}</div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-name">${r.name}</span>
+          <span class="badge badge-cuisine">${r.cuisine}</span>
+          <span class="badge ${visited?'badge-visited':'badge-unvisited'}">${visited?'✅ 방문함':'미방문'}</span>
+        </div>
+        <div class="card-feature">${r.feature}</div>
+        <div class="card-meta">
+          <span>💰 ${r.price}</span>
+          <span>🚶 ${r.distance}</span>
+        </div>
+        <div class="reviews-block">${reviewsHtml}</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-visit ${visited?'on':''}" onclick="toggleVisit('${r.id}')">${visited?'✅ 방문':'방문 체크'}</button>
+        <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
+      </div>
+    </div>`;
+  }).join('');
+  const commentHtml = group.comment
+    ? `<div class="weather-comment">🌤️ ${escHtml(group.comment)}</div>`
+    : '';
+  return `<div class="date-group">
+    <div class="date-label">📅 ${label}</div>
+    ${commentHtml}
+    <div class="cards">${cards}</div>
+  </div>`;
+}
+
+// ── 오늘의 추천 (홈) ──────────────────────────────────────────
 function renderHistory() {
   const el = document.getElementById('tab-history');
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  if (!sorted.length) { el.innerHTML = '<div class="empty">추천 이력이 없습니다.</div>'; return; }
-
-  el.innerHTML = sorted.map(group => {
-    const d = new Date(group.date);
-    const days = ['일','월','화','수','목','금','토'];
-    const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
-    const cards = group.restaurants.map(r => {
-      const visited = !!visitState[r.id];
-      const cms = commentsState[r.id] || [];
-
-      const reviewsHtml = cms.length
-        ? cms.map(c => {
-            const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
-            const color = avatarColor(c.reviewer_name||'?');
-            return `<div class="review-item">
-              <div class="review-avatar" style="background:${color}">${initial}</div>
-              <div class="review-right">
-                <div class="review-header">
-                  <span class="review-name">${escHtml(c.reviewer_name)}</span>
-                  ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
-                  <span class="review-date">${fmtDate(c.created_at)}</span>
-                </div>
-                ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
-              </div>
-              <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${r.id}')">✕</button>
-            </div>`;
-          }).join('')
-        : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
-
-      return `<div class="card ${visited?'visited':''}" id="c-${r.id}">
-        <div class="card-stripe"></div>
-        <div class="card-emoji">${emo(r.cuisine)}</div>
-        <div class="card-body">
-          <div class="card-top">
-            <span class="card-name">${r.name}</span>
-            <span class="badge badge-cuisine">${r.cuisine}</span>
-            <span class="badge ${visited?'badge-visited':'badge-unvisited'}">${visited?'✅ 방문함':'미방문'}</span>
-          </div>
-          <div class="card-feature">${r.feature}</div>
-          <div class="card-meta">
-            <span>💰 ${r.price}</span>
-            <span>🚶 ${r.distance}</span>
-          </div>
-          <div class="reviews-block">${reviewsHtml}</div>
-        </div>
-        <div class="card-actions">
-          <button class="btn-visit ${visited?'on':''}" onclick="toggleVisit('${r.id}')">${visited?'✅ 방문':'방문 체크'}</button>
-          <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
-        </div>
-      </div>`;
-    }).join('');
-
-    const commentHtml = group.comment
-      ? `<div class="weather-comment">🌤️ ${escHtml(group.comment)}</div>`
-      : '';
-
-    return `<div class="date-group">
-      <div class="date-label">📅 ${label}</div>
-      ${commentHtml}
-      <div class="cards">${cards}</div>
-    </div>`;
-  }).join('');
+  if (!sorted.length) { el.innerHTML = '<div class="empty">오늘의 추천이 없습니다.</div>'; return; }
+  el.innerHTML = renderGroup(sorted[0]);
 }
 
 function escHtml(s) {
@@ -649,6 +647,14 @@ function renderStats() {
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  const historyHtml = sorted.length > 1
+    ? `<div style="margin-top:20px">
+        <div style="font-size:0.78rem;font-weight:700;color:#999;letter-spacing:0.05em;margin-bottom:12px">📋 과거 추천 이력</div>
+        ${sorted.slice(1).map(g => renderGroup(g)).join('')}
+      </div>`
+    : '';
+
   document.getElementById('tab-stats').innerHTML = `
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">총 추천 수</div></div>
@@ -666,7 +672,8 @@ function renderStats() {
         </div>
         <div class="top-stars">${'⭐'.repeat(Math.round(r.avg))} <small style="color:#aaa">${r.avg.toFixed(1)}</small></div>
       </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
-    </div>`;
+    </div>
+    ${historyHtml}`;
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────────
