@@ -237,37 +237,17 @@ def main():
     print(f"📅 오늘 날짜 (KST): {today}")
 
     CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥"]
+    r = '{{"id":"ID","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}}'
+    r5 = f"[{r},{r},{r},{r},{r}]"
+    by_cond_ex = ",".join([f'"{c}":{r5}' for c in CONDITIONS])
 
-    def restaurant_template(prefix):
-        return "\n".join([
-            f'    {{"id": "{prefix}-{i}", "name": "음식점 이름", "cuisine": "음식 종류", "feature": "특징/추천 메뉴", "price": "저렴/보통/비쌈", "distance": "도보 N분"}}'
-            for i in range(1, 6)
-        ])
+    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인한 후, 여의나루로 77 근처 음식점을 컨디션별로 각 5곳씩 추천해줘.
 
-    by_cond_template = ",\n".join([
-        f'    "{c}": [\n{restaurant_template(f"{date_compact}-{c[:2]}")}\n    ]'
-        for c in CONDITIONS
-    ])
-
-    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 먼저 확인한 후, 여의나루로 77 (영등포구 여의도동) 근처 음식점을 컨디션별로 추천해줘.
-
-웹 검색으로 여의도/여의나루 인기 맛집을 먼저 조사하고, 아래 형식의 JSON을 반드시 응답 마지막에 포함해줘.
-
-- restaurants: 날씨/요일 기반 기본 추천 5곳
-- by_condition: 각 컨디션별 맞춤 추천 5곳씩 (컨디션마다 다른 음식점 조합으로)
-- comment: 오늘 날씨와 날짜에 맞는 한마디
+웹 검색으로 여의도/여의나루 인기 맛집을 조사하고 아래 JSON 형식으로 반드시 응답 마지막에 포함해줘.
+restaurants: 날씨/요일 기반 기본 5곳 / by_condition: 각 컨디션별 맞춤 5곳 (컨디션마다 다른 조합) / comment: 날씨 한마디
 
 ```json
-{{
-  "date": "{today}",
-  "comment": "날씨 기반 오늘의 한마디",
-  "restaurants": [
-{restaurant_template(date_compact)}
-  ],
-  "by_condition": {{
-{by_cond_template}
-  }}
-}}
+{{"date":"{today}","comment":"날씨 한마디","restaurants":{r5},"by_condition":{{{by_cond_ex}}}}}
 ```"""
 
     print("🔍 날씨 + 전체 컨디션별 맛집 생성 중...")
