@@ -596,7 +596,8 @@ function selectCond(el) {
 function renderCondGroup() {
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   if (!sorted.length) return;
-  const group = sorted[0];
+  // by_condition 있는 가장 최근 항목 우선 사용
+  const group = sorted.find(g => g.by_condition) || sorted[0];
   const restaurants = currentCond && group.by_condition?.[currentCond]
     ? group.by_condition[currentCond]
     : group.restaurants;
