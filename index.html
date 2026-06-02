@@ -327,6 +327,42 @@
   }
   .pref-submit:disabled { opacity: 0.5; cursor: not-allowed; }
   .pref-saved { font-size: 0.76rem; color: #48bb78; margin-top: 7px; min-height: 16px; }
+
+  /* 진행 프로그래스 + 답변 코멘트 */
+  .pref-progress {
+    margin-top: 10px;
+    display: none;
+  }
+  .pref-progress.show { display: block; }
+  .pref-progress-label {
+    font-size: 0.78rem; color: #e85d04; font-weight: 600;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .pref-progress-bar {
+    height: 6px; background: #f0f0f0; border-radius: 6px; overflow: hidden;
+  }
+  .pref-progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #e85d04, #f6a04d);
+    border-radius: 6px; transition: width 0.25s ease;
+  }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid #f6cdae; border-top-color: #e85d04;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pref-answer {
+    margin-top: 11px; padding: 11px 13px;
+    background: linear-gradient(135deg, #fff7f0, #fff1e6);
+    border: 1px solid #ffd9b3; border-radius: 12px;
+    font-size: 0.83rem; color: #5a4030; line-height: 1.55;
+    display: none; animation: fadeInUp 0.25s ease;
+  }
+  .pref-answer.show { display: block; }
+  .pref-answer .pa-head { font-weight: 700; color: #e85d04; margin-bottom: 3px; }
 </style>
 </head>
 <body>
@@ -580,9 +616,13 @@ function renderHistory() {
       <div class="pref-input-row">
         <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 과음했어 / 얼큰한거 / 빨리 먹고싶어)"
                maxlength="40" onkeydown="if(event.key==='Enter')applyFreeText()">
-        <button class="pref-submit" onclick="applyFreeText()">추천</button>
+        <button class="pref-submit" id="pref-btn" onclick="applyFreeText()">추천</button>
       </div>
-      <div class="pref-saved" id="pref-match"></div>
+      <div class="pref-progress" id="pref-progress">
+        <div class="pref-progress-label"><span class="spinner"></span><span id="pref-progress-text">분석 중…</span></div>
+        <div class="pref-progress-bar"><div class="pref-progress-fill" id="pref-progress-fill"></div></div>
+      </div>
+      <div class="pref-answer" id="pref-answer"></div>
     </div>
     <div id="today-group"></div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
@@ -604,6 +644,18 @@ const COND_KEYWORDS = {
   '혼밥': ['혼밥','혼자','빨리','빠르','간편','대기싫','웨이팅싫','후딱'],
 };
 
+// 컨디션별 답변 코멘트
+const COND_ANSWERS = {
+  '해장 필요': { emoji:'🍜', head:'해장이 필요하시군요!', body:'속을 따뜻하게 풀어줄 국물 요리 위주로 골라봤어요. 뜨끈한 국밥 한 그릇 어떠세요?' },
+  '매콤하게': { emoji:'🌶️', head:'매콤한 게 당기시네요!', body:'스트레스엔 역시 매운맛이죠. 얼큰하고 칼칼한 메뉴로 추천드려요.' },
+  '가볍게': { emoji:'🥗', head:'가볍게 드시고 싶으시군요!', body:'부담 없이 즐길 수 있는 산뜻한 메뉴 위주로 준비했어요.' },
+  '든든하게': { emoji:'🍖', head:'든든하게 채우고 싶으시죠!', body:'배부르게 먹을 수 있는 푸짐한 메뉴로 골라봤어요. 오후도 힘내세요!' },
+  '일식': { emoji:'🍣', head:'일식 기분이시네요!', body:'정갈한 일식 맛집들로 추천드려요. 소바부터 돈카츠까지 골라보세요.' },
+  '한식': { emoji:'🍚', head:'역시 한식이죠!', body:'든든한 집밥 같은 한식 맛집으로 준비했어요.' },
+  '고기': { emoji:'🥩', head:'고기가 당기시는군요!', body:'육즙 가득한 고기 맛집으로 추천드려요. 점심부터 든든하게!' },
+  '혼밥': { emoji:'🚶', head:'혼밥 모드시네요!', body:'빠르고 편하게 먹기 좋은, 혼자서도 부담 없는 곳들로 골랐어요.' },
+};
+
 function matchCondition(text) {
   const t = text.replace(/\s/g, '');
   let best = '', bestScore = 0;
@@ -618,16 +670,60 @@ function matchCondition(text) {
 function applyFreeText() {
   const input = document.getElementById('pref-text');
   const text = input.value.trim();
-  const matchEl = document.getElementById('pref-match');
-  if (!text) { matchEl.textContent = ''; return; }
+  const answerEl = document.getElementById('pref-answer');
+  const progEl = document.getElementById('pref-progress');
+  const fill = document.getElementById('pref-progress-fill');
+  const progText = document.getElementById('pref-progress-text');
+  const btn = document.getElementById('pref-btn');
+  if (!text) return;
+
+  // 진행 시작
+  answerEl.classList.remove('show');
+  btn.disabled = true;
+  progEl.classList.add('show');
+  fill.style.width = '0%';
+
+  const steps = [
+    { t: '입력 분석 중…', w: 30 },
+    { t: '컨디션 파악 중…', w: 65 },
+    { t: '맞춤 맛집 선별 중…', w: 100 },
+  ];
+  let i = 0;
+  const tick = () => {
+    if (i < steps.length) {
+      progText.textContent = steps[i].t;
+      fill.style.width = steps[i].w + '%';
+      i++;
+      setTimeout(tick, 350);
+    } else {
+      finishFreeText(text);
+    }
+  };
+  setTimeout(tick, 50);
+}
+
+function finishFreeText(text) {
+  const answerEl = document.getElementById('pref-answer');
+  const progEl = document.getElementById('pref-progress');
+  const btn = document.getElementById('pref-btn');
   const cond = matchCondition(text);
+
   // 칩 하이라이트 동기화
   document.querySelectorAll('.pref-chip').forEach(c =>
     c.classList.toggle('on', c.dataset.cond === cond));
   currentCond = cond;
-  matchEl.textContent = cond
-    ? `✅ "${text}" → '${cond}' 추천을 보여드려요`
-    : `🤔 "${text}" — 딱 맞는 분류가 없어 기본 추천을 보여드려요`;
+
+  // 답변 코멘트
+  if (cond && COND_ANSWERS[cond]) {
+    const a = COND_ANSWERS[cond];
+    answerEl.innerHTML = `<div class="pa-head">${a.emoji} ${a.head}</div>${a.body}`;
+  } else {
+    answerEl.innerHTML = `<div class="pa-head">🤔 음… 딱 맞는 분류를 못 찾았어요</div>"${escHtml(text)}" 는 분석이 어려워 오늘의 기본 추천을 보여드릴게요.`;
+  }
+
+  progEl.classList.remove('show');
+  answerEl.classList.add('show');
+  btn.disabled = false;
   renderCondGroup();
 }
 
@@ -636,9 +732,11 @@ function selectCond(el) {
   el.classList.add('on');
   currentCond = el.dataset.cond;
   const input = document.getElementById('pref-text');
-  const matchEl = document.getElementById('pref-match');
+  const answerEl = document.getElementById('pref-answer');
+  const progEl = document.getElementById('pref-progress');
   if (input) input.value = '';
-  if (matchEl) matchEl.textContent = '';
+  if (answerEl) answerEl.classList.remove('show');
+  if (progEl) progEl.classList.remove('show');
   renderCondGroup();
 }
 
