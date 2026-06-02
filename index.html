@@ -706,7 +706,7 @@ function renderHistory() {
   el.innerHTML = prefHtml;
   updateCondChips();
   renderCondGroup();        // 시간대별 미리 생성된 데이터
-  renderSearchHistory();
+  loadHistory();           // 공유 검색기록 서버에서 불러오기
 }
 
 // 시간대 기반 기본 선택: ~15시 점심, 15~18시 저녁, 18시~ 술집
@@ -757,46 +757,61 @@ function matchCondition(text) {
 const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
 const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
 
-// ── 검색 히스토리 (localStorage) ─────────────────────────────
-const HIST_KEY = 'jblunch_search_history';
+// ── 검색 히스토리 (Supabase 공유) ────────────────────────────
 const HIST_MAX = 20;
+let historyCache = [];   // [{id, text, created_at}]
 
-function getHistory() {
-  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; }
-}
-function addHistory(text, cond) {
-  let h = getHistory().filter(x => x.text !== text);  // 중복 제거
-  h.unshift({ text, cond, ts: Date.now() });
-  h = h.slice(0, HIST_MAX);
-  localStorage.setItem(HIST_KEY, JSON.stringify(h));
+async function loadHistory() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/search_history?select=*&order=created_at.desc&limit=${HIST_MAX}`, { headers: SB_HEADERS });
+    historyCache = res.ok ? await res.json() : [];
+  } catch { historyCache = []; }
   renderSearchHistory();
 }
-function clearHistory() {
-  if (!confirm('검색 기록을 모두 삭제할까요?')) return;
-  localStorage.removeItem(HIST_KEY);
-  renderSearchHistory();
+
+async function addHistory(text, cond) {
+  try {
+    // 같은 검색어 중복 제거(서버)
+    await fetch(`${SB_URL}/rest/v1/search_history?text=eq.${encodeURIComponent(text)}`, { method: 'DELETE', headers: SB_HEADERS });
+    await fetch(`${SB_URL}/rest/v1/search_history`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ text })
+    });
+  } catch {}
+  loadHistory();
 }
-function removeHistory(ts) {
-  const h = getHistory().filter(x => String(x.ts) !== String(ts));
-  localStorage.setItem(HIST_KEY, JSON.stringify(h));
-  renderSearchHistory();
+
+async function removeHistory(id) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/search_history?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+  } catch {}
+  loadHistory();
 }
+
+async function clearHistory() {
+  if (!confirm('모두가 보는 공유 검색 기록을 전체 삭제할까요?')) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/search_history?id=gt.0`, { method: 'DELETE', headers: SB_HEADERS });
+  } catch {}
+  loadHistory();
+}
+
 function renderSearchHistory() {
   const wrap = document.getElementById('pref-history');
   const chips = document.getElementById('pref-history-chips');
   if (!wrap || !chips) return;
-  const h = getHistory();
-  if (!h.length) { wrap.style.display = 'none'; return; }
+  if (!historyCache.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
-  chips.innerHTML = h.map(item => {
-    return `<span class="hist-chip">
+  chips.innerHTML = historyCache.map(item => `
+    <span class="hist-chip">
       <span class="hc-main" onclick="rerunHistory('${escAttr(item.text)}')">
         <span class="hc-text">🔎 ${escHtml(item.text)}</span>
       </span>
-      <button class="hc-del" title="삭제" onclick="removeHistory('${item.ts}')">✕</button>
-    </span>`;
-  }).join('');
+      <button class="hc-del" title="삭제" onclick="removeHistory(${item.id})">✕</button>
+    </span>`).join('');
 }
+
 function rerunHistory(text) {
   const input = document.getElementById('pref-text');
   if (input) input.value = text;
