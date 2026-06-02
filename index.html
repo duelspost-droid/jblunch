@@ -132,6 +132,14 @@
   .card-name { font-weight: 700; font-size: 0.95rem; }
   .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
   .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
+  .badge-review { background: #fff4d6; color: #b7791f; }
+  .card.has-review .card-stripe { background: #f6b73c; }
+  .modal-intro {
+    background: #f0f5fb; border-radius: 10px; padding: 10px 12px;
+    font-size: 0.83rem; color: #44566b; line-height: 1.5; margin-bottom: 12px;
+  }
+  .modal-reviews { margin-bottom: 14px; max-height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+  .modal-reviews .mr-head { font-size: 0.78rem; font-weight: 700; color: #0a3d7a; margin-bottom: 2px; }
 
   .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
   .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
@@ -461,6 +469,8 @@
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">📝 리뷰 남기기</h3>
+    <div class="modal-intro" id="modal-intro"></div>
+    <div class="modal-reviews" id="modal-reviews"></div>
     <div class="modal-field">
       <label>이름</label>
       <input type="text" id="modal-name" placeholder="이름을 입력하세요" maxlength="20">
@@ -604,7 +614,7 @@ function renderGroup(group, bare) {
   const days = ['일','월','화','수','목','금','토'];
   const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
   const cards = group.restaurants.map(r => {
-    const cms = commentsState[r.id] || [];
+    const cms = commentsState[r.name] || [];
     const reviewsHtml = cms.length
       ? cms.map(c => {
           const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
@@ -619,17 +629,22 @@ function renderGroup(group, bare) {
               </div>
               ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
             </div>
-            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${r.id}')">✕</button>
+            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
           </div>`;
         }).join('')
       : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
-    return `<div class="card" id="c-${r.id}">
+    const cnt = cms.length;
+    const ratings = cms.map(c => c.rating).filter(Boolean);
+    const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
+    const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
+    return `<div class="card ${cnt?'has-review':''}" id="c-${escAttr(r.name)}">
       <div class="card-stripe"></div>
       <div class="card-emoji">${emo(r.cuisine)}</div>
       <div class="card-body">
         <div class="card-top">
           <span class="card-name">${r.name}</span>
           <span class="badge badge-cuisine">${r.cuisine}</span>
+          ${reviewBadge}
         </div>
         <div class="card-feature">${r.feature}</div>
         <div class="card-meta">
@@ -640,7 +655,7 @@ function renderGroup(group, bare) {
       </div>
       <div class="card-actions">
         <a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>
-        <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
+        <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
       </div>
     </div>`;
   }).join('');
@@ -992,9 +1007,37 @@ function escAttr(s) {
 // ── 리뷰 모달 ─────────────────────────────────────────────────
 let mId = null, mRating = 0;
 
-function openModal(id, name) {
-  mId = id; mRating = 0;
-  document.getElementById('modal-title').textContent = `📝 ${name} 리뷰 남기기`;
+function openModal(name, feature) {
+  mId = name; mRating = 0;
+  document.getElementById('modal-title').textContent = `🍽️ ${name}`;
+  // 맛집 소개
+  const introEl = document.getElementById('modal-intro');
+  introEl.innerHTML = feature ? `💬 ${escHtml(feature)}` : '';
+  introEl.style.display = feature ? 'block' : 'none';
+  // 기존 리뷰 목록
+  const cms = commentsState[name] || [];
+  const revEl = document.getElementById('modal-reviews');
+  if (cms.length) {
+    revEl.innerHTML = `<div class="mr-head">📝 리뷰 ${cms.length}개</div>` + cms.map(c => {
+      const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+      const color = avatarColor(c.reviewer_name||'?');
+      return `<div class="review-item">
+        <div class="review-avatar" style="background:${color}">${initial}</div>
+        <div class="review-right">
+          <div class="review-header">
+            <span class="review-name">${escHtml(c.reviewer_name)}</span>
+            ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+            <span class="review-date">${fmtDate(c.created_at)}</span>
+          </div>
+          ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    revEl.style.display = 'block';
+  } else {
+    revEl.innerHTML = '';
+    revEl.style.display = 'none';
+  }
   document.getElementById('modal-name').value = '';
   document.getElementById('modal-text').value = '';
   document.getElementById('saving-msg').textContent = '';
@@ -1088,22 +1131,22 @@ function allRestaurants() {
 
 function renderStats() {
   const allR = allRestaurants();
-  const byId = {};
-  allR.forEach(r => { if (r.id) byId[r.id] = r; });
+  const byName = {};
+  allR.forEach(r => { if (r.name && !byName[r.name]) byName[r.name] = r; });
   const uniqueNames = new Set(allR.map(r => r.name)).size;
-  const days = HISTORY_DATA.length;
 
   const allComments = Object.values(commentsState).flat();
   const ratings = allComments.map(c => c.rating).filter(Boolean);
   const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
 
-  // TOP 맛집: 평균 별점 기준 (id로 맛집 매칭)
+  // TOP 맛집: 평균 별점 기준 (이름으로 맛집 매칭)
   const ratingMap = {};
   allComments.forEach(c => {
     if (!c.rating) return;
     if (!ratingMap[c.restaurant_id]) ratingMap[c.restaurant_id] = [];
     ratingMap[c.restaurant_id].push(c.rating);
   });
+  const byId = byName;  // restaurant_id에는 이제 이름이 저장됨
   const topList = Object.keys(ratingMap)
     .filter(id => byId[id])
     .map(id => ({
