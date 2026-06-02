@@ -30,24 +30,23 @@ def refresh_access_token(refresh_token):
         return json.loads(r.read())
 
 
+SITE_URL = "https://duelspost-droid.github.io/jblunch/"
+
+
 def send_to_me(access_token, restaurants, today, comment):
-    """나에게 보내기 (메모) API로 점심 추천 발송."""
-    lines = [f"🍽️ 오늘의 여의나루 점심 추천 ({today})"]
+    """나에게 보내기 (메모) API로 점심 추천 발송. 본문에 링크 직접 노출."""
+    lines = [f"🍽️ 오늘의 여의나루 점심 추천 ({today})", ""]
     if comment:
-        lines.append(f"\n🌤️ {comment}")
-    lines.append("")
+        lines += [f"🌤️ {comment}", ""]
     for i, r in enumerate(restaurants[:5], 1):
         lines.append(f"{i}. {r['name']} ({r['cuisine']}) · {r['price']} · {r['distance']}")
+    lines += ["", "👉 전체보기 / 컨디션별 추천:", SITE_URL]
     text = "\n".join(lines)
 
     template = {
         "object_type": "text",
         "text": text,
-        "link": {
-            "web_url": "https://duelspost-droid.github.io/jblunch/",
-            "mobile_web_url": "https://duelspost-droid.github.io/jblunch/",
-        },
-        "button_title": "맛집 트래커 보기",
+        "link": {"web_url": SITE_URL, "mobile_web_url": SITE_URL},
     }
 
     data = urllib.parse.urlencode({
