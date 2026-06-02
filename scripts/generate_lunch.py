@@ -258,7 +258,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions):
         hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
         weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
-        prompt = f"""{weather_line}여의도 JB빌딩 (영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
+        prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 시간대({meal})에 어울리는 기본 추천 5곳
@@ -271,7 +271,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions):
 {{"comment":"...","restaurants":[...],"by_condition":{{{cond_json}}}}}
 ```"""
     else:
-        prompt = f"""여의도 JB빌딩 (영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
+        prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
 
