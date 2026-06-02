@@ -449,7 +449,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('history',this)">🍽️ 오늘의 추천</button>
-  <button class="tab" onclick="showTab('stats',this)">📊 통계 & 이력</button>
+  <button class="tab" onclick="showTab('stats',this)">📊 통계</button>
 </div>
 
 <div class="content">
@@ -1113,10 +1113,8 @@ function renderStats() {
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
-  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  const statsHtml = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-num">${days}</div><div class="stat-label">추천 일수</div></div>
+  document.getElementById('tab-stats').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="stat-card"><div class="stat-num">${uniqueNames}</div><div class="stat-label">맛집 수</div></div>
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
@@ -1132,28 +1130,6 @@ function renderStats() {
         <div class="top-stars">${'⭐'.repeat(Math.round(r.avg))} <small style="color:#aaa">${r.avg.toFixed(1)}</small></div>
       </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
     </div>`;
-
-  const historyHtml = sorted.length > 1
-    ? sorted.slice(1).map(g => renderGroup(g)).join('')
-    : '<div class="empty">과거 이력이 없습니다.</div>';
-
-  document.getElementById('tab-stats').innerHTML = `
-    <div class="sub-tabs">
-      <button class="sub-tab active" id="sub-stats-btn" onclick="showSubTab('sub-stats')">📊 통계</button>
-      <button class="sub-tab" id="sub-history-btn" onclick="showSubTab('sub-history')">📋 과거 이력</button>
-    </div>
-    <div id="sub-stats">${statsHtml}</div>
-    <div id="sub-history" style="display:none">${historyHtml}</div>`;
-}
-
-// ── 서브탭 전환 ───────────────────────────────────────────────
-function showSubTab(name) {
-  ['sub-stats', 'sub-history'].forEach(id => {
-    const el = document.getElementById(id);
-    const btn = document.getElementById(id + '-btn');
-    if (el) el.style.display = id === name ? '' : 'none';
-    if (btn) btn.classList.toggle('active', id === name);
-  });
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────────
