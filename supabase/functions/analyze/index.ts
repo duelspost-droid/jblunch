@@ -1,5 +1,4 @@
-// Supabase Edge Function: 자유 입력 → 맞춤 맛집 실시간 생성
-// 사용자의 자유 텍스트를 Claude가 분석해 여의나루 근처 맞춤 맛집 5곳 + 코멘트를 새로 생성
+// Supabase Edge Function: 시간대(점심/저녁/술집) + 자유 입력 → 맞춤 맛집 실시간 생성
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const CORS = {
@@ -8,27 +7,34 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const MEAL_DESC: Record<string, string> = {
+  "점심": "점심 식사로 좋은 음식점",
+  "저녁": "저녁 식사로 좋은 음식점 (점심보다 분위기 있거나 회식·모임에도 좋은 곳 포함)",
+  "술집": "술 한잔 하기 좋은 술집 (이자카야, 호프, 포차, 와인바, 안주 맛집 등)",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
-    const { text } = await req.json();
-    if (!text || typeof text !== "string") {
-      return json({ error: "text required" }, 400);
-    }
+    const body = await req.json();
+    const text = (body.text || "").toString().trim();
+    const meal = MEAL_DESC[body.meal] ? body.meal : "점심";
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "API key not set" }, 500);
 
-    const prompt = `너는 서울 여의도 여의나루로 77 (영등포구 여의도동) 근처 점심 맛집 큐레이터야.
-사용자가 오늘 점심 컨디션/기분을 자유롭게 입력했어. 이 입력에 딱 맞는 실제 여의도/여의나루 근처 점심 맛집 5곳을 추천해줘.
+    const condLine = text
+      ? `\n사용자가 입력한 오늘의 컨디션/취향: "${text}" — 이걸 최우선으로 반영해줘.`
+      : "";
 
-사용자 입력: "${text}"
+    const prompt = `너는 서울 여의도 여의나루로 77 (영등포구 여의도동) 근처 맛집 큐레이터야.
+사용자에게 오늘 ${meal} 자리로 갈 만한, ${MEAL_DESC[meal]} 5곳을 추천해줘.${condLine}
 
 규칙:
-- 실제 존재하는 여의도/여의나루 근처 맛집으로, 입력한 기분·상황·취향에 맞게 골라.
-- comment: 입력에 공감하고 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
-- 각 맛집: name(이름), cuisine(음식종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분 형태).
+- 실제 존재하는 여의도/여의나루 근처 가게로, 시간대(${meal})에 어울리게 골라.
+- comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
+- 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
 - 반드시 JSON만 출력:
 {"comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개]}`;
 
@@ -57,7 +63,6 @@ Deno.serve(async (req) => {
     if (!match) return json({ error: "parse failed", raw: content }, 502);
 
     const parsed = JSON.parse(match[0]);
-    // id 부여 (리뷰/방문 키용)
     const stamp = Date.now();
     (parsed.restaurants || []).forEach((r: Record<string, unknown>, i: number) => {
       r.id = `custom-${stamp}-${i + 1}`;

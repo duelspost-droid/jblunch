@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍽️ 여의나루 점심 맛집 트래커</title>
+<title>🍽️ JB 맛집 트래커</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -292,6 +292,30 @@
   .toast.show { display: block; animation: fadeInUp 0.2s ease; }
   @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
 
+  /* 상단 날짜+날씨 배너 */
+  .top-banner {
+    background: linear-gradient(135deg, #e85d04, #f6904d);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(232,93,4,0.25);
+  }
+  .top-banner .tb-date { font-size: 0.95rem; font-weight: 800; margin-bottom: 5px; }
+  .top-banner .tb-weather { font-size: 0.83rem; line-height: 1.5; opacity: 0.97; }
+
+  /* 시간대(점심/저녁/술집) 토글 */
+  .meal-toggle {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .meal-btn {
+    flex: 1; padding: 11px 0; border-radius: 12px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-size: 0.9rem; font-weight: 700; color: #999;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .meal-btn.on { background: #1a1a2e; border-color: #1a1a2e; color: #fff; }
+
   /* 컨디션 입력 */
   .pref-card {
     background: #fff;
@@ -393,8 +417,8 @@
 <div class="app-header">
   <span class="logo">🍽️</span>
   <div class="title-block">
-    <h1>여의나루 점심 맛집 트래커</h1>
-    <p>여의나루로 77 근처 · 추천 이력 & 리뷰</p>
+    <h1>JB 맛집 트래커</h1>
+    <p>여의나루로 77 근처 · 점심·저녁·술집 추천</p>
   </div>
   <span class="sync-badge loading" id="sync-badge">동기화 중…</span>
 </div>
@@ -544,7 +568,8 @@ function fmtDate(iso) {
 }
 
 // ── 카드 그룹 렌더 (공통) ────────────────────────────────────
-function renderGroup(group) {
+// bare=true: 날짜/날씨 헤더 없이 카드만 (홈 today-group용, 상단 배너와 중복 방지)
+function renderGroup(group, bare) {
   const d = new Date(group.date);
   const days = ['일','월','화','수','목','금','토'];
   const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
@@ -588,6 +613,9 @@ function renderGroup(group) {
       </div>
     </div>`;
   }).join('');
+  if (bare) {
+    return `<div class="cards">${cards}</div>`;
+  }
   const commentHtml = group.comment
     ? `<div class="weather-comment">🌤️ ${escHtml(group.comment)}</div>`
     : '';
@@ -602,7 +630,25 @@ function renderGroup(group) {
 function renderHistory() {
   const el = document.getElementById('tab-history');
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  const prefHtml = `
+
+  // 상단 날짜 + 날씨 배너
+  const today = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  const dateLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일 (${days[today.getDay()]})`;
+  const todayData = sorted.find(g => g.by_condition) || sorted[0];
+  const weather = todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
+  const bannerHtml = `
+    <div class="top-banner">
+      <div class="tb-date">📅 ${dateLabel}</div>
+      <div class="tb-weather">🌤️ ${escHtml(weather)}</div>
+    </div>
+    <div class="meal-toggle">
+      <button class="meal-btn on" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>
+      <button class="meal-btn" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
+      <button class="meal-btn" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
+    </div>`;
+
+  const prefHtml = bannerHtml + `
     <div class="pref-card">
       <div class="pref-title">🙋 오늘 컨디션은?</div>
       <div class="pref-chips">
@@ -720,34 +766,38 @@ function rerunHistory(text) {
   applyFreeText();
 }
 
-async function applyFreeText() {
-  const input = document.getElementById('pref-text');
-  const text = input.value.trim();
+let currentMeal = '점심';     // 점심 / 저녁 / 술집
+let customResult = null;       // {label, comment, restaurants}
+const MEAL_EMOJI = { '점심':'🍚', '저녁':'🌙', '술집':'🍺' };
+
+// 자유 입력 추천
+function applyFreeText() {
+  const text = document.getElementById('pref-text').value.trim();
+  if (!text) return;
+  generateRecommend(text, currentMeal, true);
+}
+
+// 백엔드(Edge Function) 호출로 맞춤 맛집 생성 후 화면 업데이트
+async function generateRecommend(text, meal, saveHist) {
   const answerEl = document.getElementById('pref-answer');
   const progEl = document.getElementById('pref-progress');
   const fill = document.getElementById('pref-progress-fill');
   const progText = document.getElementById('pref-progress-text');
   const btn = document.getElementById('pref-btn');
-  if (!text) return;
 
   answerEl.classList.remove('show');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   progEl.classList.add('show');
   fill.style.width = '0%';
 
-  // 프로그래스 애니메이션 (AI 응답 대기 동안)
   const steps = [
-    { t: '입력 분석 중…', w: 30 },
-    { t: 'AI가 컨디션 파악 중…', w: 60 },
+    { t: `${MEAL_EMOJI[meal]} ${meal} 자리 분석 중…`, w: 30 },
+    { t: 'AI가 취향 파악 중…', w: 60 },
     { t: '맞춤 맛집 선별 중…', w: 85 },
   ];
   let i = 0;
   let progTimer = setInterval(() => {
-    if (i < steps.length) {
-      progText.textContent = steps[i].t;
-      fill.style.width = steps[i].w + '%';
-      i++;
-    }
+    if (i < steps.length) { progText.textContent = steps[i].t; fill.style.width = steps[i].w + '%'; i++; }
   }, 400);
 
   let comment = '', restaurants = null, ok = false;
@@ -755,7 +805,7 @@ async function applyFreeText() {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, meal })
     });
     const data = await res.json();
     comment = data.comment || '';
@@ -768,63 +818,73 @@ async function applyFreeText() {
   progText.textContent = '완료!';
 
   setTimeout(() => {
-    document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
     progEl.classList.remove('show');
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
 
     if (ok) {
-      // 백엔드가 생성한 맞춤 맛집으로 화면 업데이트
-      customResult = { text, comment, restaurants };
-      answerEl.innerHTML = `<div class="pa-head">🔎 "${escHtml(text)}" 맞춤 추천</div>${escHtml(comment)}`;
+      const label = text ? `🔎 "${text}" 맞춤 추천` : `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
+      customResult = { label, comment, restaurants };
+      answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
       answerEl.classList.add('show');
       renderCustomGroup();
-      addHistory(text);
+      if (saveHist && text) addHistory(text);
     } else {
-      answerEl.innerHTML = `<div class="pa-head">⚠️ 분석에 실패했어요</div>네트워크 문제로 맞춤 추천을 못 가져왔어요. 잠시 후 다시 시도해주세요.`;
+      answerEl.innerHTML = `<div class="pa-head">⚠️ 추천 생성 실패</div>네트워크 문제로 맞춤 추천을 못 가져왔어요. 잠시 후 다시 시도해주세요.`;
       answerEl.classList.add('show');
     }
   }, 300);
 }
 
-let customResult = null;  // {text, comment, restaurants}
-
 function renderCustomGroup() {
   if (!customResult) return;
-  const today = new Date();
-  const days = ['일','월','화','수','목','금','토'];
-  const target = {
-    date: today.toLocaleDateString('sv-SE'),
-    comment: `🔎 "${customResult.text}" 맞춤 추천 · ${customResult.comment}`,
-    restaurants: customResult.restaurants,
-  };
-  document.getElementById('today-group').innerHTML = renderGroup(target);
+  document.getElementById('today-group').innerHTML =
+    renderGroup({ date: new Date().toLocaleDateString('sv-SE'), restaurants: customResult.restaurants }, true);
+}
+
+// 시간대 토글 (점심/저녁/술집)
+function selectMeal(el) {
+  document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  currentMeal = el.dataset.meal;
+  currentCond = '';
+  customResult = null;
+  document.querySelectorAll('.pref-chip').forEach(c => c.classList.toggle('on', c.dataset.cond === ''));
+  const input = document.getElementById('pref-text');
+  if (input) input.value = '';
+  document.getElementById('pref-answer').classList.remove('show');
+  if (currentMeal === '점심') {
+    renderCondGroup();                       // 미리 생성된 점심 데이터
+  } else {
+    generateRecommend('', currentMeal, false); // 저녁/술집은 백엔드 생성
+  }
 }
 
 function selectCond(el) {
   document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
   currentCond = el.dataset.cond;
-  customResult = null;  // 칩 선택 시 맞춤 결과 해제
   const input = document.getElementById('pref-text');
-  const answerEl = document.getElementById('pref-answer');
-  const progEl = document.getElementById('pref-progress');
   if (input) input.value = '';
-  if (answerEl) answerEl.classList.remove('show');
-  if (progEl) progEl.classList.remove('show');
-  renderCondGroup();
+  if (currentMeal === '점심') {
+    customResult = null;
+    document.getElementById('pref-answer').classList.remove('show');
+    document.getElementById('pref-progress').classList.remove('show');
+    renderCondGroup();
+  } else {
+    // 저녁/술집: 컨디션을 입력으로 백엔드 생성
+    generateRecommend(currentCond, currentMeal, false);
+  }
 }
 
 function renderCondGroup() {
   if (customResult) { renderCustomGroup(); return; }
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   if (!sorted.length) return;
-  // by_condition 있는 가장 최근 항목 우선 사용
   const group = sorted.find(g => g.by_condition) || sorted[0];
   const restaurants = currentCond && group.by_condition?.[currentCond]
     ? group.by_condition[currentCond]
     : group.restaurants;
-  const target = {...group, restaurants};
-  document.getElementById('today-group').innerHTML = renderGroup(target);
+  document.getElementById('today-group').innerHTML = renderGroup({...group, restaurants}, true);
 }
 
 function escHtml(s) {
