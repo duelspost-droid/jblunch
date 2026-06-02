@@ -363,6 +363,33 @@
   }
   .pref-answer.show { display: block; }
   .pref-answer .pa-head { font-weight: 700; color: #e85d04; margin-bottom: 3px; }
+
+  /* 검색 히스토리 */
+  .pref-history {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px dashed #eee;
+  }
+  .pref-history-head {
+    font-size: 0.72rem; color: #aaa; font-weight: 600;
+    margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .pref-history-clear {
+    background: none; border: none; color: #ccc; cursor: pointer;
+    font-size: 0.7rem; padding: 0;
+  }
+  .pref-history-clear:hover { color: #e53e3e; }
+  .pref-history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 16px;
+    background: #f7f7f9; border: 1px solid #ececf0;
+    font-size: 0.74rem; color: #555; cursor: pointer;
+    transition: all 0.13s; max-width: 200px;
+  }
+  .hist-chip:hover { background: #fff3e6; border-color: #ffd1a3; color: #e85d04; }
+  .hist-chip .hc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-chip .hc-cond { font-size: 0.68rem; color: #aaa; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -623,11 +650,19 @@ function renderHistory() {
         <div class="pref-progress-bar"><div class="pref-progress-fill" id="pref-progress-fill"></div></div>
       </div>
       <div class="pref-answer" id="pref-answer"></div>
+      <div class="pref-history" id="pref-history" style="display:none">
+        <div class="pref-history-head">
+          <span>🕘 최근 검색</span>
+          <button class="pref-history-clear" onclick="clearHistory()">전체 삭제</button>
+        </div>
+        <div class="pref-history-chips" id="pref-history-chips"></div>
+      </div>
     </div>
     <div id="today-group"></div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
   renderCondGroup();
+  renderSearchHistory();
 }
 
 let currentCond = '';  // 선택된 컨디션 ('': 기본)
@@ -669,6 +704,45 @@ function matchCondition(text) {
 
 const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
 const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
+
+// ── 검색 히스토리 (localStorage) ─────────────────────────────
+const HIST_KEY = 'jblunch_search_history';
+const HIST_MAX = 8;
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; }
+}
+function addHistory(text, cond) {
+  let h = getHistory().filter(x => x.text !== text);  // 중복 제거
+  h.unshift({ text, cond, ts: Date.now() });
+  h = h.slice(0, HIST_MAX);
+  localStorage.setItem(HIST_KEY, JSON.stringify(h));
+  renderSearchHistory();
+}
+function clearHistory() {
+  localStorage.removeItem(HIST_KEY);
+  renderSearchHistory();
+}
+function renderSearchHistory() {
+  const wrap = document.getElementById('pref-history');
+  const chips = document.getElementById('pref-history-chips');
+  if (!wrap || !chips) return;
+  const h = getHistory();
+  if (!h.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  chips.innerHTML = h.map(item => {
+    const emoji = COND_EMOJI[item.cond] || '🍽️';
+    return `<button class="hist-chip" onclick="rerunHistory('${escAttr(item.text)}')">
+      <span class="hc-text">${escHtml(item.text)}</span>
+      <span class="hc-cond">${emoji}${item.cond ? ' ' + escHtml(item.cond) : ''}</span>
+    </button>`;
+  }).join('');
+}
+function rerunHistory(text) {
+  const input = document.getElementById('pref-text');
+  if (input) input.value = text;
+  applyFreeText();
+}
 
 async function applyFreeText() {
   const input = document.getElementById('pref-text');
@@ -736,6 +810,7 @@ async function applyFreeText() {
     answerEl.classList.add('show');
     btn.disabled = false;
     renderCondGroup();
+    addHistory(text, cond);  // 검색 기록 저장
   }, 300);
 }
 
