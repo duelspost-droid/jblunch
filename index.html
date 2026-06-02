@@ -635,6 +635,8 @@ function renderHistory() {
   const today = new Date();
   const days = ['일','월','화','수','목','금','토'];
   const dateLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일 (${days[today.getDay()]})`;
+  const defMeal = getDefaultMeal();
+  currentMeal = defMeal;
   const todayData = sorted.find(g => g.by_condition) || sorted[0];
   const weather = todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
   const bannerHtml = `
@@ -643,9 +645,9 @@ function renderHistory() {
       <div class="tb-weather">🌤️ ${escHtml(weather)}</div>
     </div>
     <div class="meal-toggle">
-      <button class="meal-btn on" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>
-      <button class="meal-btn" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
-      <button class="meal-btn" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
+      <button class="meal-btn${defMeal==='점심'?' on':''}" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>
+      <button class="meal-btn${defMeal==='저녁'?' on':''}" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
+      <button class="meal-btn${defMeal==='술집'?' on':''}" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
     </div>`;
 
   const prefHtml = bannerHtml + `
@@ -683,8 +685,20 @@ function renderHistory() {
     <div id="today-group"></div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
-  renderCondGroup();
+  if (defMeal === '점심') {
+    renderCondGroup();                         // 점심: 미리 생성된 데이터
+  } else {
+    generateRecommend('', defMeal, false);     // 저녁/술집: 백엔드 생성
+  }
   renderSearchHistory();
+}
+
+// 시간대 기반 기본 선택: ~15시 점심, 15~18시 저녁, 18시~ 술집
+function getDefaultMeal() {
+  const h = new Date().getHours();
+  if (h < 15) return '점심';
+  if (h < 18) return '저녁';
+  return '술집';
 }
 
 let currentCond = '';  // 선택된 컨디션 ('': 기본)
