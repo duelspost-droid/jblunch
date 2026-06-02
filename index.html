@@ -667,7 +667,10 @@ function matchCondition(text) {
   return bestScore > 0 ? best : '';
 }
 
-function applyFreeText() {
+const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
+const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
+
+async function applyFreeText() {
   const input = document.getElementById('pref-text');
   const text = input.value.trim();
   const answerEl = document.getElementById('pref-answer');
@@ -677,54 +680,63 @@ function applyFreeText() {
   const btn = document.getElementById('pref-btn');
   if (!text) return;
 
-  // 진행 시작
   answerEl.classList.remove('show');
   btn.disabled = true;
   progEl.classList.add('show');
   fill.style.width = '0%';
 
+  // 프로그래스 애니메이션 (AI 응답 대기 동안)
   const steps = [
     { t: '입력 분석 중…', w: 30 },
-    { t: '컨디션 파악 중…', w: 65 },
-    { t: '맞춤 맛집 선별 중…', w: 100 },
+    { t: 'AI가 컨디션 파악 중…', w: 60 },
+    { t: '맞춤 맛집 선별 중…', w: 85 },
   ];
   let i = 0;
-  const tick = () => {
+  let progTimer = setInterval(() => {
     if (i < steps.length) {
       progText.textContent = steps[i].t;
       fill.style.width = steps[i].w + '%';
       i++;
-      setTimeout(tick, 350);
-    } else {
-      finishFreeText(text);
     }
-  };
-  setTimeout(tick, 50);
-}
+  }, 400);
 
-function finishFreeText(text) {
-  const answerEl = document.getElementById('pref-answer');
-  const progEl = document.getElementById('pref-progress');
-  const btn = document.getElementById('pref-btn');
-  const cond = matchCondition(text);
-
-  // 칩 하이라이트 동기화
-  document.querySelectorAll('.pref-chip').forEach(c =>
-    c.classList.toggle('on', c.dataset.cond === cond));
-  currentCond = cond;
-
-  // 답변 코멘트
-  if (cond && COND_ANSWERS[cond]) {
-    const a = COND_ANSWERS[cond];
-    answerEl.innerHTML = `<div class="pa-head">${a.emoji} ${a.head}</div>${a.body}`;
-  } else {
-    answerEl.innerHTML = `<div class="pa-head">🤔 음… 딱 맞는 분류를 못 찾았어요</div>"${escHtml(text)}" 는 분석이 어려워 오늘의 기본 추천을 보여드릴게요.`;
+  let cond = '', comment = '';
+  try {
+    const res = await fetch(ANALYZE_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    cond = data.condition || '';
+    comment = data.comment || '';
+  } catch (e) {
+    // 실패 시 키워드 매칭 폴백
+    cond = matchCondition(text);
   }
 
-  progEl.classList.remove('show');
-  answerEl.classList.add('show');
-  btn.disabled = false;
-  renderCondGroup();
+  clearInterval(progTimer);
+  fill.style.width = '100%';
+  progText.textContent = '완료!';
+
+  setTimeout(() => {
+    document.querySelectorAll('.pref-chip').forEach(c =>
+      c.classList.toggle('on', c.dataset.cond === cond));
+    currentCond = cond;
+
+    const emoji = COND_EMOJI[cond] || '🍽️';
+    if (cond) {
+      const head = comment ? '' : `${cond} 추천`;
+      answerEl.innerHTML = `<div class="pa-head">${emoji} ${cond}</div>${escHtml(comment || COND_ANSWERS[cond]?.body || '')}`;
+    } else {
+      answerEl.innerHTML = `<div class="pa-head">🍽️ 오늘의 기본 추천</div>${escHtml(comment || '입력에 딱 맞는 분류를 찾지 못해 기본 추천을 보여드려요.')}`;
+    }
+
+    progEl.classList.remove('show');
+    answerEl.classList.add('show');
+    btn.disabled = false;
+    renderCondGroup();
+  }, 300);
 }
 
 function selectCond(el) {
