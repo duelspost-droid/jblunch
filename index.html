@@ -126,8 +126,6 @@
   .card-name { font-weight: 700; font-size: 0.95rem; }
   .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
   .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
-  .badge-visited { background: #c6f6d5; color: #22543d; }
-  .badge-unvisited { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; }
 
   .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
   .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
@@ -191,7 +189,7 @@
     align-self: flex-start;
     padding-top: 2px;
   }
-  .btn-visit, .btn-review {
+  .btn-review {
     font-size: 0.71rem;
     padding: 5px 9px;
     border-radius: 8px;
@@ -199,10 +197,8 @@
     font-weight: 600;
     white-space: nowrap;
     transition: all 0.13s;
+    border: 1.5px solid #e85d04; background: #fff; color: #e85d04;
   }
-  .btn-visit { border: 1.5px solid #48bb78; background: #fff; color: #48bb78; }
-  .btn-visit:hover, .btn-visit.on { background: #48bb78; color: #fff; }
-  .btn-review { border: 1.5px solid #e85d04; background: #fff; color: #e85d04; }
   .btn-review:hover { background: #e85d04; color: #fff; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -456,20 +452,12 @@ const SB_HEADERS = {
 const HISTORY_DATA = [{"date": "2026-06-02", "weather": "웹 검색 제한으로 실시간 날씨 정보 미확인 - 기상청 앱 확인 권장", "comment": "여의나루역 주변 명실상부 맛집들로 구성했습니다. 날씨에 관계없이 즐길 수 있는 다양한 음식점을 준비했습니다.", "restaurants": [{"id": "20260602-1", "name": "소몽", "cuisine": "일식/소바", "feature": "직접 끓인 소바육수, 웨이팅 잦음", "price": "보통", "distance": "도보 3분"}, {"id": "20260602-2", "name": "카츠아지", "cuisine": "일식/돈카츠", "feature": "미네랄 포크, 280시간 숙성", "price": "보통", "distance": "도보 5분"}, {"id": "20260602-3", "name": "로바", "cuisine": "양식/파스타", "feature": "퓨전 파스타, 룸 이용 가능", "price": "보통", "distance": "더현대서울 내"}, {"id": "20260602-4", "name": "잠수교집", "cuisine": "고기/냉동삼겹살", "feature": "신선한 냉동고기, 데이트 추천", "price": "보통", "distance": "도보 7분"}, {"id": "20260602-5", "name": "사천화가", "cuisine": "중식/마라탕", "feature": "차슈마라탕, 회전빠름", "price": "저렴", "distance": "더현대서울 6층"}], "by_condition": {"해장 필요": [{"id": "20260602-해장-1", "name": "화목순대국", "cuisine": "한식/순대국", "feature": "노포, 해장 전문", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-해장-2", "name": "하동관 여의도점", "cuisine": "한식/곰탕", "feature": "3대째 한우곰탕", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260602-해장-3", "name": "소호정 여의도점", "cuisine": "한식/칼국수", "feature": "3대째 전통", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-해장-4", "name": "여의도따로국밥", "cuisine": "한식/국밥", "feature": "노포, 깔끔한 맛", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-해장-5", "name": "제주은희네해장국", "cuisine": "한식/해장국", "feature": "4.7점 평점", "price": "저렴", "distance": "여의도역 근처"}], "매콤하게": [{"id": "20260602-매콤-1", "name": "사천화가", "cuisine": "중식/마라탕", "feature": "차슈마라탕, 향신료 강함", "price": "저렴", "distance": "더현대서울 6층"}, {"id": "20260602-매콤-2", "name": "산라미엔", "cuisine": "중식/마라미엔", "feature": "마라 특화", "price": "저렴", "distance": "국제금융센터 근처"}, {"id": "20260602-매콤-3", "name": "소이연남", "cuisine": "아시안/쌀국수", "feature": "해장 겸용 가능", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-매콤-4", "name": "신송한식", "cuisine": "한식/대구탕", "feature": "5.0점 평점", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-매콤-5", "name": "희정식당", "cuisine": "한식/부대찌개", "feature": "얼큰한 맛", "price": "저렴", "distance": "여의나루역 근처"}], "가볍게": [{"id": "20260602-가볍-1", "name": "리스카페", "cuisine": "카페/브런치", "feature": "4.4점 평점", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-가볍-2", "name": "테일러커피", "cuisine": "카페/커피", "feature": "4.6점 평점", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-가볍-3", "name": "번패티번", "cuisine": "양식/버거", "feature": "수제버거 전문", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-가볍-4", "name": "호우섐", "cuisine": "아시안/홍콩식", "feature": "담백한 맛", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-가볍-5", "name": "브로트아트", "cuisine": "베이커리/독일빵", "feature": "4.5점 평점", "price": "저렴", "distance": "여의나루역 근처"}], "든든하게": [{"id": "20260602-든든-1", "name": "잠수교집", "cuisine": "고기/냉동삼겹살", "feature": "부드러운 식감, 든든함", "price": "보통", "distance": "도보 7분"}, {"id": "20260602-든든-2", "name": "방돈식당", "cuisine": "고기/삼겹살", "feature": "4.3점 평점", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-든든-3", "name": "한미옥", "cuisine": "고기/한우", "feature": "4.3점 평점", "price": "비쌈", "distance": "여의나루역 근처"}, {"id": "20260602-든든-4", "name": "최선도", "cuisine": "고기/고깃집", "feature": "4.6점 평점", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-든든-5", "name": "달리181", "cuisine": "양식/스테이크", "feature": "쇠고기 스테이크", "price": "비쌈", "distance": "여의나루역 근처"}], "일식": [{"id": "20260602-일식-1", "name": "소몽", "cuisine": "일식/소바", "feature": "직접 끓인 육수, 웨이팅 잦음", "price": "보통", "distance": "도보 3분"}, {"id": "20260602-일식-2", "name": "카츠아지", "cuisine": "일식/돈카츠", "feature": "미네랄 포크 숙성", "price": "보통", "distance": "도보 5분"}, {"id": "20260602-일식-3", "name": "진가와", "cuisine": "일식", "feature": "4.1점 평점", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260602-일식-4", "name": "삿뽀로블랙", "cuisine": "일식", "feature": "4.9점 평점", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260602-일식-5", "name": "아루히", "cuisine": "일식/스시오마카세", "feature": "4.9점 평점", "price": "비쌈", "distance": "여의도역 근처"}], "한식": [{"id": "20260602-한식-1", "name": "화목순대국", "cuisine": "한식/순대국", "feature": "노포, 맛있는TV 출연", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-한식-2", "name": "하동관 여의도점", "cuisine": "한식/곰탕", "feature": "3대째 정통", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260602-한식-3", "name": "소호정 여의도점", "cuisine": "한식/칼국수", "feature": "3대째 전통", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-한식-4", "name": "사대부집곳간", "cuisine": "한식/반상", "feature": "4.2점 평점", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260602-한식-5", "name": "별미볶음점", "cuisine": "한식/제육볶음", "feature": "4.5점 평점", "price": "저렴", "distance": "여의도역 근처"}], "고기": [{"id": "20260602-고기-1", "name": "잠수교집", "cuisine": "고기/냉동삼겹살", "feature": "4.6점 평점, 데이트 추천", "price": "보통", "distance": "도보 7분"}, {"id": "20260602-고기-2", "name": "방돈식당", "cuisine": "고기/삼겹살", "feature": "4.3점 평점", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-고기-3", "name": "한미옥", "cuisine": "고기/한우", "feature": "4.3점 평점, 구절판도 가능", "price": "비쌈", "distance": "여의나루역 근처"}, {"id": "20260602-고기-4", "name": "최선도", "cuisine": "고기/고깃집", "feature": "4.6점 평점", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260602-고기-5", "name": "달리181", "cuisine": "양식/스테이크", "feature": "룸형 좌석, 사진 명소", "price": "비쌈", "distance": "여의나루역 근처"}], "혼밥": [{"id": "20260602-혼밥-1", "name": "소몽", "cuisine": "일식/소바", "feature": "카운터 좌석 가능, 인기", "price": "보통", "distance": "도보 3분"}, {"id": "20260602-혼밥-2", "name": "테일러커피", "cuisine": "카페/커피", "feature": "편안한 분위기", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-혼밥-3", "name": "호우섐", "cuisine": "아시안/홍콩식", "feature": "혼밥 무난", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260602-혼밥-4", "name": "제일어버이순대", "cuisine": "한식/순대국", "feature": "착한 식당, 혼밥 추천", "price": "저렴", "distance": "여의도역 근처"}, {"id": "20260602-혼밥-5", "name": "번패티번", "cuisine": "양식/버거", "feature": "간편한 식사", "price": "보통", "distance": "여의나루역 근처"}]}}, {"date": "2026-06-01", "comment": "쾌청한 초여름 날씨! 최고 30도로 더워지니 시원한 소바, 냉면 또는 가벼운 일식이 추천됩니다.", "restaurants": [{"id": "20260601-1", "name": "소몽", "cuisine": "일식 소바", "feature": "정성스럽게 끓인 소바육수, 평일 점심에도 웨이팅", "price": "보통", "distance": "여의나루역 도보 3분"}, {"id": "20260601-2", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크 숙성, 혼밥 가능, 우아한 룸 좌석", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-3", "name": "로바", "cuisine": "일식 정식/파스타", "feature": "고젠정식, 와인 페어링 가능, 조용한 분위기", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-4", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 육개장, 도미 솥밥, 룸이 많은 모임 장소", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-5", "name": "사천화가", "cuisine": "중식", "feature": "차슈마라탕, 통창이 밝은 분위기", "price": "보통", "distance": "더현대서울 6층"}], "by_condition": {"해장 필요": [{"id": "20260601-해장-1", "name": "사천화가", "cuisine": "중식", "feature": "매콤한 차슈마라탕면", "price": "보통", "distance": "더현대서울 6층"}, {"id": "20260601-해장-2", "name": "한암동", "cuisine": "한식", "feature": "시원한 한우 육개장", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-해장-3", "name": "소몽", "cuisine": "일식", "feature": "담백한 고등어 온소바", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-해장-4", "name": "호우섐", "cuisine": "홍콩식", "feature": "진한 국물 요리", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260601-해장-5", "name": "정윤키친", "cuisine": "한식", "feature": "따뜻한 국물 한식", "price": "저렴", "distance": "공작상가"}], "매콤하게": [{"id": "20260601-매콤-1", "name": "사천화가", "cuisine": "중식", "feature": "차슈마라탕, 맵기 조절 가능", "price": "보통", "distance": "더현대서울 6층"}, {"id": "20260601-매콤-2", "name": "하반", "cuisine": "한식 매콤", "feature": "매운 국물 요리", "price": "보통", "distance": "여의나루 일대"}, {"id": "20260601-매콤-3", "name": "야마야", "cuisine": "일식 이자카야", "feature": "매콤한 아시안 양념", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260601-매콤-4", "name": "고추장불고기", "cuisine": "한식 BBQ", "feature": "고추장 양념 삼겹살", "price": "저렴", "distance": "여의나루 근처"}, {"id": "20260601-매콤-5", "name": "산라미엔", "cuisine": "중식", "feature": "얼큰한 마라미엔", "price": "저렴", "distance": "국제금융센터"}], "가볍게": [{"id": "20260601-가볍-1", "name": "소몽", "cuisine": "일식 소바", "feature": "냉소바, 가벼운 식감", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-가볍-2", "name": "정윤키친", "cuisine": "아시안 가정식", "feature": "담백한 싱가포르 치킨라이스", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-가볍-3", "name": "리스카페", "cuisine": "브런치", "feature": "가벼운 베이글, 제철 샐러드", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260601-가볍-4", "name": "로바", "cuisine": "일식 정식", "feature": "신선한 스시, 우동", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-가볍-5", "name": "달리181", "cuisine": "양식", "feature": "신선한 해산물, 가벼운 파스타", "price": "보통", "distance": "여의나루 일대"}], "든든하게": [{"id": "20260601-든든-1", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 갈비살 수육, 푸짐한 구성", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-든든-2", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "튀김류, 든든한 정식", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-든든-3", "name": "하동관", "cuisine": "한식 곰탕", "feature": "깊은 맛의 곰탕, 푸짐한 밥", "price": "저렴", "distance": "여의도 일대"}, {"id": "20260601-든든-4", "name": "창고43", "cuisine": "한식 한우", "feature": "한우구이, 룸 많음", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-든든-5", "name": "야마야", "cuisine": "일식 이자카야", "feature": "푸짐한 일식 정식, 코스", "price": "비쌈", "distance": "여의도역 근처"}], "일식": [{"id": "20260601-일식-1", "name": "소몽", "cuisine": "일식 소바", "feature": "수제 소바, 정통성 있는 맛", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-일식-2", "name": "로바", "cuisine": "일식 오마카세", "feature": "스시·사시미·우동 고젠", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-일식-3", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크 돈카츠", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-일식-4", "name": "야마야", "cuisine": "일식 이자카야", "feature": "다양한 일식 메뉴", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260601-일식-5", "name": "이노찌", "cuisine": "일식 스시", "feature": "신선한 회, 프리미엄", "price": "비쌈", "distance": "여의도 일대"}], "한식": [{"id": "20260601-한식-1", "name": "한암동", "cuisine": "한식 한우", "feature": "1++ 한우, 정갈한 구성", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-한식-2", "name": "창고43", "cuisine": "한식 한우", "feature": "한우구이, 편안한 분위기", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-한식-3", "name": "하동관", "cuisine": "한식 곰탕", "feature": "전통 곰탕, 수육", "price": "저렴", "distance": "여의도 일대"}, {"id": "20260601-한식-4", "name": "정윤키친", "cuisine": "한식 가정식", "feature": "남녀노소 무난한 구성", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-한식-5", "name": "은호식당", "cuisine": "한식 곰탕", "feature": "80년 전통 꼬리곰탕", "price": "저렴", "distance": "여의도 일대"}], "고기": [{"id": "20260601-고기-1", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 갈비살, 고급 육질", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-고기-2", "name": "창고43", "cuisine": "한식 한우", "feature": "한우 본연의 맛, 최고 부위", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-고기-3", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크, 육즙살살", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-고기-4", "name": "하반", "cuisine": "한식 고기", "feature": "대형 좌석, 룸 편의", "price": "보통", "distance": "여의나루 일대"}, {"id": "20260601-고기-5", "name": "민소한우", "cuisine": "한식 한우", "feature": "새로운 한우 성지, 예약 필수", "price": "비쌈", "distance": "여의도 일대"}], "혼밥": [{"id": "20260601-혼밥-1", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "혼밥 무난, 높은 층고", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-혼밥-2", "name": "소몽", "cuisine": "일식 소바", "feature": "혼밥 가능, 빠른 제공 속도", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-혼밥-3", "name": "정윤키친", "cuisine": "아시안 가정식", "feature": "1~2인석 구성, 단시간 식사", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-혼밥-4", "name": "리스카페", "cuisine": "브런치 베이글", "feature": "개인 좌석, 조용한 분위기", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260601-혼밥-5", "name": "사천화가", "cuisine": "중식", "feature": "회전 빠름, 혼밥 편함", "price": "보통", "distance": "더현대서울 6층"}]}}, {"date": "2026-05-29", "restaurants": [{"id": "20260529-1", "name": "별미볶음점", "cuisine": "한식 - 직화볶음", "feature": "강렬한 불 맛 직화볶음 전문. 제육직화·오징어직화·낙지직화가 인기. 평일 런치만 운영하는 여의도 직장인 단골 맛집", "price": "저렴 (1만~1.2만원)", "distance": "도보 약 8분 (여의도역 인근)"}, {"id": "20260529-2", "name": "영원식당", "cuisine": "한식 - 수제비/칼국수", "feature": "쫀득한 수제비와 파전·감자전이 인기. 오징어볶음·낙지볶음도 함께 즐길 수 있는 정겨운 한식집. 금요일 마무리엔 따끈한 국물 한 그릇", "price": "저렴 (8천~1.2만원)", "distance": "도보 약 6분 (여의나루역 인근)"}, {"id": "20260529-3", "name": "카츠아지", "cuisine": "일식 - 돈카츠", "feature": "치즈카츠(2.1만)·로스+멘치카츠 정식(2.3만) 인기. 바삭한 일본식 수제 돈카츠와 수제 일본 카레(6천)도 별미", "price": "보통 (2.1만~2.3만원)", "distance": "도보 약 5분 (공작상가 인근)"}, {"id": "20260529-4", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "쌈채소 무한리필 쌈밥 전문. 제육오징어·부대전골이 대표 메뉴. 금요일 점심 든든하게 채워주는 집밥 스타일 맛집", "price": "보통 (1.2만~1.5만원)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260529-5", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문으로 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 여의나루 대표 웨이팅 명소", "price": "보통 (1.3만~1.8만원)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}]}, {"date": "2026-05-28", "restaurants": [{"id": "20260528-1", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문. 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 목요일 점심 웨이팅 대비 11시 전후 방문 추천", "price": "보통 (1.3만~1.8만원대)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}, {"id": "20260528-2", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표. 따뜻한 목요일엔 채소 듬뿍 쌈밥 한 상", "price": "보통 (1.2만~1.5만원대)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260528-3", "name": "희정식당", "cuisine": "한식 - 부대찌개", "feature": "20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 저렴하고 든든한 한 끼", "price": "저렴 (1인 약 1.3만원)", "distance": "도보 약 5분 (여의나루로 117, 공작상가 지하)"}, {"id": "20260528-4", "name": "소몽", "cuisine": "일식 - 소바/덮밥", "feature": "직접 끓인 육수로 만드는 정통 소바 전문. 고등어 온소바·새우장 냉소바 인기. 5월 말 날씨에 냉소바 한 그릇 딱", "price": "보통 (1만~1.6만원대)", "distance": "도보 약 5분 (여의나루로 113, 공작상가 2층)"}, {"id": "20260528-5", "name": "사천화가", "cuisine": "중식 - 마라탕면", "feature": "더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 목요일 오후는 대기 없이 여유롭게 식사 가능", "price": "보통 (1.7만~2.1만원)", "distance": "도보 약 10분 (더현대서울 6층)"}]}, {"date": "2026-05-27", "restaurants": [{"id": "20260527-1", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문으로 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 점심 웨이팅 명소", "price": "보통 (1.3만~1.8만원대)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}, {"id": "20260527-2", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표 메뉴. 인근 직장인 줄 서는 집밥 맛집", "price": "보통 (1.2만~1.5만원대)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260527-3", "name": "희정식당", "cuisine": "한식 - 부대찌개", "feature": "20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 직장인 단골 맛집", "price": "저렴 (1인 약 1.3만원)", "distance": "도보 약 5분 (여의나루로 117, 공작상가 지하)"}, {"id": "20260527-4", "name": "소몽", "cuisine": "일식 - 소바/덮밥", "feature": "직접 끓인 육수로 만드는 정통 소바 전문점. 고등어 온소바와 새우장 냉소바가 인기. 평일 점심 웨이팅 있을 정도로 꾸준한 인기", "price": "보통 (1만~1.6만원대)", "distance": "도보 약 5분 (여의나루로 113, 공작상가 2층)"}, {"id": "20260527-5", "name": "사천화가", "cuisine": "중식 - 마라탕면", "feature": "더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 1~2인석 구성으로 혼밥도 OK. 오픈 직후 or 13시 이후 방문 추천", "price": "보통 (1.7만~2.1만원)", "distance": "도보 약 10분 (더현대서울 6층)"}]}];
 
 // ── 인메모리 상태 ─────────────────────────────────────────────
-let visitState = {};   // { restaurantId: boolean }
 let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating, created_at}] }
 
 // ── Supabase API ──────────────────────────────────────────────
 async function loadAll() {
   setBadge('loading', '동기화 중…');
   try {
-    // 방문 여부
-    const r1 = await fetch(`${SB_URL}/rest/v1/reviews?select=id,visited`, { headers: SB_HEADERS });
-    if (!r1.ok) throw new Error(r1.status);
-    const visits = await r1.json();
-    visitState = {};
-    visits.forEach(v => { visitState[v.id] = v.visited; });
-
     // 댓글 (다중 리뷰)
     const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&order=created_at.asc`, { headers: SB_HEADERS });
     if (!r2.ok) throw new Error(r2.status);
@@ -486,15 +474,6 @@ async function loadAll() {
   }
   renderHistory();
   renderStats();
-}
-
-async function upsertVisit(id, visited) {
-  const res = await fetch(`${SB_URL}/rest/v1/reviews`, {
-    method: 'POST',
-    headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ id, visited, updated_at: new Date().toISOString() })
-  });
-  if (!res.ok) throw new Error(await res.text());
 }
 
 async function insertComment(restaurantId, reviewerName, content, rating) {
@@ -570,7 +549,6 @@ function renderGroup(group) {
   const days = ['일','월','화','수','목','금','토'];
   const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
   const cards = group.restaurants.map(r => {
-    const visited = !!visitState[r.id];
     const cms = commentsState[r.id] || [];
     const reviewsHtml = cms.length
       ? cms.map(c => {
@@ -590,14 +568,13 @@ function renderGroup(group) {
           </div>`;
         }).join('')
       : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
-    return `<div class="card ${visited?'visited':''}" id="c-${r.id}">
+    return `<div class="card" id="c-${r.id}">
       <div class="card-stripe"></div>
       <div class="card-emoji">${emo(r.cuisine)}</div>
       <div class="card-body">
         <div class="card-top">
           <span class="card-name">${r.name}</span>
           <span class="badge badge-cuisine">${r.cuisine}</span>
-          <span class="badge ${visited?'badge-visited':'badge-unvisited'}">${visited?'✅ 방문함':'미방문'}</span>
         </div>
         <div class="card-feature">${r.feature}</div>
         <div class="card-meta">
@@ -607,7 +584,6 @@ function renderGroup(group) {
         <div class="reviews-block">${reviewsHtml}</div>
       </div>
       <div class="card-actions">
-        <button class="btn-visit ${visited?'on':''}" onclick="toggleVisit('${r.id}')">${visited?'✅ 방문':'방문 체크'}</button>
         <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
       </div>
     </div>`;
@@ -858,19 +834,6 @@ function escAttr(s) {
   return String(s).replace(/'/g,"\\'");
 }
 
-// ── 방문 토글 ─────────────────────────────────────────────────
-async function toggleVisit(id) {
-  visitState[id] = !visitState[id];
-  renderHistory(); renderStats();
-  setBadge('loading', '저장 중…');
-  try {
-    await upsertVisit(id, visitState[id]);
-    setBadge('ok', '☁️ 동기화됨');
-  } catch {
-    setBadge('err', '⚠️ 저장 실패');
-  }
-}
-
 // ── 리뷰 모달 ─────────────────────────────────────────────────
 let mId = null, mRating = 0;
 
@@ -922,11 +885,6 @@ async function saveReview() {
     const newComment = await insertComment(mId, name, text, mRating);
     if (!commentsState[mId]) commentsState[mId] = [];
     commentsState[mId].push(newComment);
-    // 리뷰 남기면 방문 체크도 자동
-    if (!visitState[mId]) {
-      visitState[mId] = true;
-      await upsertVisit(mId, true);
-    }
     setBadge('ok', '☁️ 동기화됨');
     closeModal();
     renderHistory(); renderStats();
@@ -959,7 +917,6 @@ async function confirmDelete(commentId, restaurantId) {
 // ── 통계 ──────────────────────────────────────────────────────
 function renderStats() {
   const all = HISTORY_DATA.flatMap(g => g.restaurants);
-  const visited = all.filter(r => visitState[r.id]).length;
   const allComments = Object.values(commentsState).flat();
   const reviewed = new Set(allComments.map(c => c.restaurant_id)).size;
   const ratings = allComments.map(c => c.rating).filter(Boolean);
@@ -983,9 +940,8 @@ function renderStats() {
 
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   const statsHtml = `
-    <div class="stats-grid">
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
       <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">총 추천 수</div></div>
-      <div class="stat-card"><div class="stat-num">${visited}</div><div class="stat-label">방문한 곳</div></div>
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
     </div>
