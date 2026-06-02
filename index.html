@@ -420,7 +420,6 @@
     <h1>JB 맛집 트래커</h1>
     <p>여의나루로 77 근처 · 점심·저녁·술집 추천</p>
   </div>
-  <span class="sync-badge loading" id="sync-badge">동기화 중…</span>
 </div>
 
 <div class="tabs">
@@ -533,6 +532,7 @@ async function deleteComment(commentId) {
 
 function setBadge(type, text) {
   const b = document.getElementById('sync-badge');
+  if (!b) return;   // 배지 제거됨 — 무시
   b.className = 'sync-badge ' + type;
   b.textContent = text;
 }
