@@ -685,11 +685,8 @@ function renderHistory() {
     <div id="today-group"></div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
-  if (defMeal === '점심') {
-    renderCondGroup();                         // 점심: 미리 생성된 데이터
-  } else {
-    generateRecommend('', defMeal, false);     // 저녁/술집: 백엔드 생성
-  }
+  updateCondChips();
+  renderCondGroup();        // 시간대별 미리 생성된 데이터
   renderSearchHistory();
 }
 
@@ -855,50 +852,66 @@ function renderCustomGroup() {
     renderGroup({ date: new Date().toLocaleDateString('sv-SE'), restaurants: customResult.restaurants }, true);
 }
 
-// 시간대 토글 (점심/저녁/술집)
+// 오늘 데이터 / 시간대별 데이터 추출
+function getDay() {
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  return sorted.find(g => g.by_condition) || sorted[0];
+}
+function getMealData(day, meal) {
+  if (!day) return null;
+  if (meal === '점심') return { restaurants: day.restaurants, by_condition: day.by_condition };
+  return (day.meals && day.meals[meal]) || null;
+}
+
+// 컨디션 칩 표시/숨김 + 선택 동기화 (by_condition 있을 때만 노출)
+function updateCondChips() {
+  const md = getMealData(getDay(), currentMeal);
+  const hasCond = !!(md && md.by_condition && Object.keys(md.by_condition).length);
+  const wrap = document.querySelector('.pref-chips');
+  if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
+  document.querySelectorAll('.pref-chip').forEach(c => c.classList.toggle('on', c.dataset.cond === currentCond));
+}
+
+// 시간대 토글 (점심/저녁/술집) — 모두 미리 생성된 데이터 사용
 function selectMeal(el) {
   document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   currentMeal = el.dataset.meal;
   currentCond = '';
   customResult = null;
-  document.querySelectorAll('.pref-chip').forEach(c => c.classList.toggle('on', c.dataset.cond === ''));
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
   document.getElementById('pref-answer').classList.remove('show');
-  if (currentMeal === '점심') {
-    renderCondGroup();                       // 미리 생성된 점심 데이터
-  } else {
-    generateRecommend('', currentMeal, false); // 저녁/술집은 백엔드 생성
-  }
+  document.getElementById('pref-progress').classList.remove('show');
+  updateCondChips();
+  renderCondGroup();
 }
 
 function selectCond(el) {
   document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
   currentCond = el.dataset.cond;
+  customResult = null;
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
-  if (currentMeal === '점심') {
-    customResult = null;
-    document.getElementById('pref-answer').classList.remove('show');
-    document.getElementById('pref-progress').classList.remove('show');
-    renderCondGroup();
-  } else {
-    // 저녁/술집: 컨디션을 입력으로 백엔드 생성
-    generateRecommend(currentCond, currentMeal, false);
-  }
+  document.getElementById('pref-answer').classList.remove('show');
+  document.getElementById('pref-progress').classList.remove('show');
+  renderCondGroup();
 }
 
 function renderCondGroup() {
   if (customResult) { renderCustomGroup(); return; }
-  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  if (!sorted.length) return;
-  const group = sorted.find(g => g.by_condition) || sorted[0];
-  const restaurants = currentCond && group.by_condition?.[currentCond]
-    ? group.by_condition[currentCond]
-    : group.restaurants;
-  document.getElementById('today-group').innerHTML = renderGroup({...group, restaurants}, true);
+  const day = getDay();
+  const md = getMealData(day, currentMeal);
+  if (!md || !md.restaurants || !md.restaurants.length) {
+    document.getElementById('today-group').innerHTML =
+      `<div class="empty">아직 ${currentMeal} 추천 데이터가 없어요.<br>아래 직접 입력으로 추천받아보세요!</div>`;
+    return;
+  }
+  const restaurants = currentCond && md.by_condition && md.by_condition[currentCond]
+    ? md.by_condition[currentCond]
+    : md.restaurants;
+  document.getElementById('today-group').innerHTML = renderGroup({ date: day.date, restaurants }, true);
 }
 
 function escHtml(s) {

@@ -236,6 +236,66 @@ def update_index_html(history, html_path="index.html"):
         print("✅ index.html 업데이트 완료")
 
 
+CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥"]
+MEAL_CTX = {
+    "점심": "점심 식사로 좋은 음식점",
+    "저녁": "저녁 식사로 좋은 음식점 (분위기 있거나 회식·모임에도 좋은 곳 포함)",
+    "술집": "술 한잔 하기 좋은 술집 (이자카야·호프·포차·와인바·안주 맛집)",
+}
+MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
+
+
+def generate_meal(client, today, date_compact, meal, with_conditions):
+    """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
+    ctx = MEAL_CTX[meal]
+    idp = MEAL_IDP[meal]
+    id_prefix = date_compact + (f"-{idp}" if idp else "")
+
+    if with_conditions:
+        cond_list = " / ".join(CONDITIONS)
+        weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
+        prompt = f"""{weather_line}여의나루로 77 (영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
+
+웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
+- restaurants: 시간대({meal})에 어울리는 기본 추천 5곳
+- by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합)
+- comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
+
+각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
+
+```json
+{{"comment":"...","restaurants":[...],"by_condition":{{"해장 필요":[...],"매콤하게":[...],"가볍게":[...],"든든하게":[...],"일식":[...],"한식":[...],"고기":[...],"혼밥":[...]}}}}
+```"""
+    else:
+        prompt = f"""여의나루로 77 (영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
+웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
+각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
+
+```json
+{{"comment":"{meal} 추천 한마디","restaurants":[...5곳]}}
+```"""
+
+    print(f"🔍 [{meal}] 생성 중...")
+    text = call_claude(client, prompt)
+    entry = extract_json(text) if text else None
+    if not entry:
+        print(f"❌ [{meal}] JSON 파싱 실패")
+        return None, text
+
+    # id 보정
+    for idx, r in enumerate(entry.get("restaurants", [])):
+        r["id"] = f"{id_prefix}-{idx + 1}"
+    for cond, rlist in entry.get("by_condition", {}).items():
+        cp = cond[:2].replace(" ", "")
+        for idx, r in enumerate(rlist):
+            r["id"] = f"{id_prefix}-{cp}-{idx + 1}"
+
+    n = len(entry.get("restaurants", []))
+    nc = len(entry.get("by_condition", {}))
+    print(f"✅ [{meal}] 기본 {n}곳" + (f" + 컨디션 {nc}종" if nc else ""))
+    return entry, text
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -248,66 +308,31 @@ def main():
 
     print(f"📅 오늘 날짜 (KST): {today}")
 
-    CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥"]
-    cond_list = " / ".join(CONDITIONS)
-
-    prompt = f"""오늘({today}) 서울 여의도 날씨를 웹 검색으로 확인하고, 여의나루로 77 (영등포구 여의도동) 근처 음식점을 추천해줘.
-
-웹 검색으로 여의도/여의나루 인기 맛집을 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-
-- restaurants: 날씨·요일 기반 기본 추천 5곳
-- by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합)
-- comment: 날씨를 반영한 한마디
-
-각 음식점 필드: id({date_compact}-번호), name, cuisine, feature, price(저렴/보통/비쌈), distance
-
-```json
-{{"date":"{today}","comment":"...","restaurants":[...],"by_condition":{{"해장 필요":[...],"매콤하게":[...],"가볍게":[...],"든든하게":[...],"일식":[...],"한식":[...],"고기":[...],"혼밥":[...]}}}}
-```"""
-
-    print("🔍 날씨 + 전체 컨디션별 맛집 생성 중...")
-    text = call_claude(client, prompt)
-
-    if not text:
-        print("❌ Claude 응답을 받지 못했습니다.")
+    # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True)
+    if not lunch:
+        print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False)
 
-    print("📝 JSON 파싱 중...")
-    new_entry = extract_json(text)
+    # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
+    new_entry = {
+        "date": today,
+        "comment": lunch.get("comment", ""),
+        "restaurants": lunch.get("restaurants", []),
+        "by_condition": lunch.get("by_condition", {}),
+        "meals": {},
+    }
+    if dinner:
+        new_entry["meals"]["저녁"] = {
+            "restaurants": dinner.get("restaurants", []),
+            "by_condition": dinner.get("by_condition", {}),
+        }
+    if bar:
+        new_entry["meals"]["술집"] = {"restaurants": bar.get("restaurants", [])}
 
-    # JSON이 없으면 2차 호출로 JSON만 추출 요청
-    if not new_entry:
-        print("⚠️  JSON 없음 — 2차 JSON 추출 요청 중...")
-        cond_list = " / ".join(CONDITIONS)
-        fallback_prompt = f"""아래 정보를 바탕으로 반드시 JSON만 출력해줘. 다른 설명 없이 JSON 블록만.
-
-앞서 조사한 여의나루 맛집 정보:
-{text[:3000]}
-
-아래 형식으로 출력:
-```json
-{{"date":"{today}","comment":"날씨 한마디","restaurants":[{{"id":"{date_compact}-1","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-2","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-3","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-4","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}},{{"id":"{date_compact}-5","name":"이름","cuisine":"종류","feature":"특징","price":"저렴/보통/비쌈","distance":"도보N분"}}],"by_condition":{{"해장 필요":[5곳],"매콤하게":[5곳],"가볍게":[5곳],"든든하게":[5곳],"일식":[5곳],"한식":[5곳],"고기":[5곳],"혼밥":[5곳]}}}}
-```"""
-        text2 = call_claude(client, fallback_prompt)
-        new_entry = extract_json(text2) if text2 else None
-
-    if not new_entry:
-        print("❌ JSON 파싱 최종 실패.")
-        sys.exit(1)
-
-    # date / id 보정
-    new_entry["date"] = today
-    for idx, r in enumerate(new_entry.get("restaurants", [])):
-        r["id"] = f"{date_compact}-{idx + 1}"
-    for cond, rlist in new_entry.get("by_condition", {}).items():
-        prefix = cond[:2].replace(" ", "")
-        for idx, r in enumerate(rlist):
-            r["id"] = f"{date_compact}-{prefix}-{idx + 1}"
-
-    print(f"✅ 기본 {len(new_entry.get('restaurants', []))}곳 + 컨디션별 {len(new_entry.get('by_condition', {}))}종류 추천 완료")
-    for cond, rlist in new_entry.get("by_condition", {}).items():
-        names = ", ".join(r['name'] for r in rlist[:3])
-        print(f"  [{cond}] {names}…")
+    text = lunch_text  # 이메일 본문 참고용
 
     print("\n📂 history.json 업데이트 중...")
     history = update_history(new_entry)
