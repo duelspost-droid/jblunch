@@ -682,6 +682,8 @@ function renderHistory() {
         <button class="pref-chip" data-cond="한식" onclick="selectCond(this)">🍚 한식</button>
         <button class="pref-chip" data-cond="고기" onclick="selectCond(this)">🥩 고기</button>
         <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
+        <button class="pref-chip" data-cond="와인" onclick="selectCond(this)">🍷 와인</button>
+        <button class="pref-chip" data-cond="임원" onclick="selectCond(this)">👔 임원</button>
       </div>
       <div class="pref-input-row">
         <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 과음했어 / 얼큰한거 / 빨리 먹고싶어)"
@@ -942,7 +944,15 @@ function selectCond(el) {
   if (input) input.value = '';
   document.getElementById('pref-answer').classList.remove('show');
   document.getElementById('pref-progress').classList.remove('show');
-  renderCondGroup();
+
+  // 미리 생성된 by_condition에 있으면 즉시, 없으면(와인/임원 등) 백엔드 생성
+  const md = getMealData(getDay(), currentMeal);
+  const hasPre = currentCond === '' || (md && md.by_condition && md.by_condition[currentCond]);
+  if (hasPre) {
+    renderCondGroup();
+  } else {
+    generateRecommend(currentCond, currentMeal, false);
+  }
 }
 
 function renderCondGroup() {
