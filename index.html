@@ -695,7 +695,7 @@ function renderHistory() {
       <div class="pref-answer" id="pref-answer"></div>
       <div class="pref-history" id="pref-history" style="display:none">
         <div class="pref-history-head">
-          <span>🕘 최근 검색</span>
+          <span>🕘 <span id="hist-meal-label">점심</span> 최근 검색</span>
           <button class="pref-history-clear" onclick="clearHistory()">전체 삭제</button>
         </div>
         <div class="pref-history-chips" id="pref-history-chips"></div>
@@ -763,20 +763,22 @@ let historyCache = [];   // [{id, text, created_at}]
 
 async function loadHistory() {
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/search_history?select=*&order=created_at.desc&limit=${HIST_MAX}`, { headers: SB_HEADERS });
+    // 현재 시간대(meal) 기록만 조회
+    const res = await fetch(`${SB_URL}/rest/v1/search_history?select=*&meal=eq.${encodeURIComponent(currentMeal)}&order=created_at.desc&limit=${HIST_MAX}`, { headers: SB_HEADERS });
     historyCache = res.ok ? await res.json() : [];
   } catch { historyCache = []; }
   renderSearchHistory();
 }
 
 async function addHistory(text, cond) {
+  const meal = currentMeal;
   try {
-    // 같은 검색어 중복 제거(서버)
-    await fetch(`${SB_URL}/rest/v1/search_history?text=eq.${encodeURIComponent(text)}`, { method: 'DELETE', headers: SB_HEADERS });
+    // 같은 시간대+검색어 중복 제거(서버)
+    await fetch(`${SB_URL}/rest/v1/search_history?text=eq.${encodeURIComponent(text)}&meal=eq.${encodeURIComponent(meal)}`, { method: 'DELETE', headers: SB_HEADERS });
     await fetch(`${SB_URL}/rest/v1/search_history`, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, meal })
     });
   } catch {}
   loadHistory();
@@ -790,9 +792,9 @@ async function removeHistory(id) {
 }
 
 async function clearHistory() {
-  if (!confirm('모두가 보는 공유 검색 기록을 전체 삭제할까요?')) return;
+  if (!confirm(`모두가 보는 '${currentMeal}' 검색 기록을 전체 삭제할까요?`)) return;
   try {
-    await fetch(`${SB_URL}/rest/v1/search_history?id=gt.0`, { method: 'DELETE', headers: SB_HEADERS });
+    await fetch(`${SB_URL}/rest/v1/search_history?meal=eq.${encodeURIComponent(currentMeal)}`, { method: 'DELETE', headers: SB_HEADERS });
   } catch {}
   loadHistory();
 }
@@ -801,6 +803,8 @@ function renderSearchHistory() {
   const wrap = document.getElementById('pref-history');
   const chips = document.getElementById('pref-history-chips');
   if (!wrap || !chips) return;
+  const lbl = document.getElementById('hist-meal-label');
+  if (lbl) lbl.textContent = currentMeal;
   if (!historyCache.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   chips.innerHTML = historyCache.map(item => `
@@ -926,6 +930,7 @@ function selectMeal(el) {
   document.getElementById('pref-progress').classList.remove('show');
   updateCondChips();
   renderCondGroup();
+  loadHistory();   // 시간대별 검색기록 갱신
 }
 
 function selectCond(el) {
