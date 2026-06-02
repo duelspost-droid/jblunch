@@ -457,7 +457,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('history',this)">🍽️ 오늘의 추천</button>
-  <button class="tab" onclick="showTab('stats',this)">📊 통계</button>
+  <button class="tab" onclick="showTab('stats',this)">📝 리뷰</button>
 </div>
 
 <div class="content">
@@ -1157,8 +1157,7 @@ function renderStats() {
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
   document.getElementById('tab-stats').innerHTML = `
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-num">${uniqueNames}</div><div class="stat-label">맛집 수</div></div>
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
     </div>
