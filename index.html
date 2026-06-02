@@ -577,6 +577,12 @@ function renderHistory() {
         <button class="pref-chip" data-cond="고기" onclick="selectCond(this)">🥩 고기</button>
         <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
       </div>
+      <div class="pref-input-row">
+        <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 과음했어 / 얼큰한거 / 빨리 먹고싶어)"
+               maxlength="40" onkeydown="if(event.key==='Enter')applyFreeText()">
+        <button class="pref-submit" onclick="applyFreeText()">추천</button>
+      </div>
+      <div class="pref-saved" id="pref-match"></div>
     </div>
     <div id="today-group"></div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
@@ -586,10 +592,53 @@ function renderHistory() {
 
 let currentCond = '';  // 선택된 컨디션 ('': 기본)
 
+// 자유 입력 → 컨디션 키워드 매핑 (고정 도출)
+const COND_KEYWORDS = {
+  '해장 필요': ['해장','과음','술','숙취','국물','뜨끈','속풀','얼큰한국'],
+  '매콤하게': ['매콤','매운','얼큰','맵','칼칼','마라','떡볶','스트레스'],
+  '가볍게': ['가볍','가벼','샐러드','브런치','커피','간단','다이어','적게','속편'],
+  '든든하게': ['든든','배고','많이','푸짐','포만','고기많','양많','배불'],
+  '일식': ['일식','초밥','스시','소바','돈카츠','라멘','우동','회'],
+  '한식': ['한식','국밥','찌개','백반','집밥','한정식','김치'],
+  '고기': ['고기','삼겹','구이','한우','스테이크','갈비','회식','육'],
+  '혼밥': ['혼밥','혼자','빨리','빠르','간편','대기싫','웨이팅싫','후딱'],
+};
+
+function matchCondition(text) {
+  const t = text.replace(/\s/g, '');
+  let best = '', bestScore = 0;
+  for (const [cond, kws] of Object.entries(COND_KEYWORDS)) {
+    let score = 0;
+    for (const kw of kws) if (t.includes(kw)) score++;
+    if (score > bestScore) { bestScore = score; best = cond; }
+  }
+  return bestScore > 0 ? best : '';
+}
+
+function applyFreeText() {
+  const input = document.getElementById('pref-text');
+  const text = input.value.trim();
+  const matchEl = document.getElementById('pref-match');
+  if (!text) { matchEl.textContent = ''; return; }
+  const cond = matchCondition(text);
+  // 칩 하이라이트 동기화
+  document.querySelectorAll('.pref-chip').forEach(c =>
+    c.classList.toggle('on', c.dataset.cond === cond));
+  currentCond = cond;
+  matchEl.textContent = cond
+    ? `✅ "${text}" → '${cond}' 추천을 보여드려요`
+    : `🤔 "${text}" — 딱 맞는 분류가 없어 기본 추천을 보여드려요`;
+  renderCondGroup();
+}
+
 function selectCond(el) {
   document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
   currentCond = el.dataset.cond;
+  const input = document.getElementById('pref-text');
+  const matchEl = document.getElementById('pref-match');
+  if (input) input.value = '';
+  if (matchEl) matchEl.textContent = '';
   renderCondGroup();
 }
 
