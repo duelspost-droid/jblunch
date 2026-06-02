@@ -2,384 +2,385 @@
   "recommendations": [
     {
       "date": "2026-06-02",
-      "comment": "맑은 날씨의 초여름, 쌀쌀할 수 있으니 가벼운 식사나 시원한 음식으로 수분 보충이 좋습니다",
+      "weather": "웹 검색 제한으로 실시간 날씨 정보 미확인 - 기상청 앱 확인 권장",
+      "comment": "여의나루역 주변 명실상부 맛집들로 구성했습니다. 날씨에 관계없이 즐길 수 있는 다양한 음식점을 준비했습니다.",
       "restaurants": [
         {
           "id": "20260602-1",
           "name": "소몽",
-          "cuisine": "일식 소바",
-          "feature": "직접 끓인 소바육수, 신선한 고등어",
+          "cuisine": "일식/소바",
+          "feature": "직접 끓인 소바육수, 웨이팅 잦음",
           "price": "보통",
           "distance": "도보 3분"
         },
         {
           "id": "20260602-2",
-          "name": "로바 더현대서울",
-          "cuisine": "이탈리안 파스타",
-          "feature": "한식 요소 퓨전, 와인 페어링",
+          "name": "카츠아지",
+          "cuisine": "일식/돈카츠",
+          "feature": "미네랄 포크, 280시간 숙성",
           "price": "보통",
-          "distance": "도보 2분"
-        },
-        {
-          "id": "20260602-3",
-          "name": "육전국밥",
-          "cuisine": "한식 국밥",
-          "feature": "소고기 육전, 점심시간 인기",
-          "price": "저렴",
           "distance": "도보 5분"
         },
         {
+          "id": "20260602-3",
+          "name": "로바",
+          "cuisine": "양식/파스타",
+          "feature": "퓨전 파스타, 룸 이용 가능",
+          "price": "보통",
+          "distance": "더현대서울 내"
+        },
+        {
           "id": "20260602-4",
-          "name": "여의도 따로국밥",
-          "cuisine": "한식 국밥",
-          "feature": "40년 전통, 아침 7시 오픈",
-          "price": "저렴",
-          "distance": "도보 10분"
+          "name": "잠수교집",
+          "cuisine": "고기/냉동삼겹살",
+          "feature": "신선한 냉동고기, 데이트 추천",
+          "price": "보통",
+          "distance": "도보 7분"
         },
         {
           "id": "20260602-5",
           "name": "사천화가",
-          "cuisine": "중식",
-          "feature": "마라탕면, 더현대 위치",
-          "price": "보통",
-          "distance": "도보 2분"
+          "cuisine": "중식/마라탕",
+          "feature": "차슈마라탕, 회전빠름",
+          "price": "저렴",
+          "distance": "더현대서울 6층"
         }
       ],
       "by_condition": {
         "해장 필요": [
           {
             "id": "20260602-해장-1",
-            "name": "여의도 따로국밥",
-            "cuisine": "한식 국밥",
-            "feature": "아침 영업, 맑은 국물",
+            "name": "화목순대국",
+            "cuisine": "한식/순대국",
+            "feature": "노포, 해장 전문",
             "price": "저렴",
-            "distance": "도보 10분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-해장-2",
-            "name": "육전국밥",
-            "cuisine": "한식 국밥",
-            "feature": "깊은 국물감",
-            "price": "저렴",
-            "distance": "도보 5분"
+            "name": "하동관 여의도점",
+            "cuisine": "한식/곰탕",
+            "feature": "3대째 한우곰탕",
+            "price": "보통",
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-해장-3",
-            "name": "제일어버이순대",
-            "cuisine": "한식 순대국",
-            "feature": "진한 국물, 통통한 순대",
+            "name": "소호정 여의도점",
+            "cuisine": "한식/칼국수",
+            "feature": "3대째 전통",
             "price": "저렴",
-            "distance": "도보 15분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-해장-4",
-            "name": "금원삼계탕",
-            "cuisine": "한식 삼계탕",
-            "feature": "진한 곰탕 국물",
+            "name": "여의도따로국밥",
+            "cuisine": "한식/국밥",
+            "feature": "노포, 깔끔한 맛",
             "price": "저렴",
-            "distance": "도보 12분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-해장-5",
-            "name": "사천화가",
-            "cuisine": "중식",
-            "feature": "마라탕면, 따뜻함",
-            "price": "보통",
-            "distance": "도보 2분"
+            "name": "제주은희네해장국",
+            "cuisine": "한식/해장국",
+            "feature": "4.7점 평점",
+            "price": "저렴",
+            "distance": "여의도역 근처"
           }
         ],
         "매콤하게": [
           {
             "id": "20260602-매콤-1",
             "name": "사천화가",
-            "cuisine": "중식",
-            "feature": "차슈마라탕, 스팟한 맛",
-            "price": "보통",
-            "distance": "도보 2분"
+            "cuisine": "중식/마라탕",
+            "feature": "차슈마라탕, 향신료 강함",
+            "price": "저렴",
+            "distance": "더현대서울 6층"
           },
           {
             "id": "20260602-매콤-2",
-            "name": "김삼보 여의도",
-            "cuisine": "한식 김치찌개",
-            "feature": "24시간 운영, 제주 생고기",
+            "name": "산라미엔",
+            "cuisine": "중식/마라미엔",
+            "feature": "마라 특화",
             "price": "저렴",
-            "distance": "도보 12분"
+            "distance": "국제금융센터 근처"
           },
           {
             "id": "20260602-매콤-3",
-            "name": "강가 인도요리",
-            "cuisine": "인도 카레",
-            "feature": "탄두리 치킨, 향신료",
-            "price": "보통",
-            "distance": "도보 8분"
+            "name": "소이연남",
+            "cuisine": "아시안/쌀국수",
+            "feature": "해장 겸용 가능",
+            "price": "저렴",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-매콤-4",
-            "name": "산라미엔",
-            "cuisine": "중식",
-            "feature": "마라미엔, 얼큰함",
-            "price": "저렴",
-            "distance": "도보 10분"
+            "name": "신송한식",
+            "cuisine": "한식/대구탕",
+            "feature": "5.0점 평점",
+            "price": "보통",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-매콤-5",
-            "name": "야마야 여의도",
-            "cuisine": "일식 돈카츠",
-            "feature": "고소한 튀김, 스파이스",
-            "price": "보통",
-            "distance": "도보 8분"
+            "name": "희정식당",
+            "cuisine": "한식/부대찌개",
+            "feature": "얼큰한 맛",
+            "price": "저렴",
+            "distance": "여의나루역 근처"
           }
         ],
         "가볍게": [
           {
             "id": "20260602-가볍-1",
-            "name": "소몽",
-            "cuisine": "일식 소바",
-            "feature": "냉소바, 신선한 맛",
-            "price": "보통",
-            "distance": "도보 3분"
+            "name": "리스카페",
+            "cuisine": "카페/브런치",
+            "feature": "4.4점 평점",
+            "price": "저렴",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-가볍-2",
-            "name": "호우섐",
-            "cuisine": "홍콩식",
-            "feature": "닭다리살, 담백한 맛",
+            "name": "테일러커피",
+            "cuisine": "카페/커피",
+            "feature": "4.6점 평점",
             "price": "저렴",
-            "distance": "도보 4분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-가볍-3",
-            "name": "로바 더현대서울",
-            "cuisine": "이탈리안",
-            "feature": "신선한 야채, 심플함",
+            "name": "번패티번",
+            "cuisine": "양식/버거",
+            "feature": "수제버거 전문",
             "price": "보통",
-            "distance": "도보 2분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-가볍-4",
-            "name": "베이글스토리",
-            "cuisine": "카페 브런치",
-            "feature": "베이글, 크림치즈",
+            "name": "호우섐",
+            "cuisine": "아시안/홍콩식",
+            "feature": "담백한 맛",
             "price": "저렴",
-            "distance": "도보 6분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-가볍-5",
-            "name": "테일러커피",
-            "cuisine": "카페",
-            "feature": "가벼운 스낵",
+            "name": "브로트아트",
+            "cuisine": "베이커리/독일빵",
+            "feature": "4.5점 평점",
             "price": "저렴",
-            "distance": "도보 5분"
+            "distance": "여의나루역 근처"
           }
         ],
         "든든하게": [
           {
             "id": "20260602-든든-1",
-            "name": "육전국밥",
-            "cuisine": "한식 국밥",
-            "feature": "소고기 육전, 포만감",
-            "price": "저렴",
-            "distance": "도보 5분"
+            "name": "잠수교집",
+            "cuisine": "고기/냉동삼겹살",
+            "feature": "부드러운 식감, 든든함",
+            "price": "보통",
+            "distance": "도보 7분"
           },
           {
             "id": "20260602-든든-2",
-            "name": "제일어버이순대",
-            "cuisine": "한식 순대국",
-            "feature": "푸짐한 순대, 밥",
-            "price": "저렴",
-            "distance": "도보 15분"
+            "name": "방돈식당",
+            "cuisine": "고기/삼겹살",
+            "feature": "4.3점 평점",
+            "price": "보통",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-든든-3",
             "name": "한미옥",
-            "cuisine": "한식",
-            "feature": "구절판, 푸짐함",
+            "cuisine": "고기/한우",
+            "feature": "4.3점 평점",
             "price": "비쌈",
-            "distance": "도보 10분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-든든-4",
-            "name": "하반",
-            "cuisine": "일식 고젠",
-            "feature": "우나기동, 소고기",
-            "price": "비쌈",
-            "distance": "도보 2분"
+            "name": "최선도",
+            "cuisine": "고기/고깃집",
+            "feature": "4.6점 평점",
+            "price": "보통",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-든든-5",
-            "name": "바이킹스워프",
-            "cuisine": "한식 뷔페",
-            "feature": "무제한 랍스타, 다양함",
+            "name": "달리181",
+            "cuisine": "양식/스테이크",
+            "feature": "쇠고기 스테이크",
             "price": "비쌈",
-            "distance": "도보 8분"
+            "distance": "여의나루역 근처"
           }
         ],
         "일식": [
           {
             "id": "20260602-일식-1",
             "name": "소몽",
-            "cuisine": "일식 소바",
-            "feature": "고등어온소바, 신선함",
+            "cuisine": "일식/소바",
+            "feature": "직접 끓인 육수, 웨이팅 잦음",
             "price": "보통",
             "distance": "도보 3분"
           },
           {
             "id": "20260602-일식-2",
-            "name": "하반",
-            "cuisine": "일식 고젠",
-            "feature": "우나기동, 특사시미",
-            "price": "비쌈",
-            "distance": "도보 2분"
+            "name": "카츠아지",
+            "cuisine": "일식/돈카츠",
+            "feature": "미네랄 포크 숙성",
+            "price": "보통",
+            "distance": "도보 5분"
           },
           {
             "id": "20260602-일식-3",
-            "name": "야마야 여의도",
-            "cuisine": "일식 돈카츠",
-            "feature": "크런치한 튀김",
+            "name": "진가와",
+            "cuisine": "일식",
+            "feature": "4.1점 평점",
             "price": "보통",
-            "distance": "도보 8분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-일식-4",
-            "name": "스시다정",
-            "cuisine": "일식 오마카세",
-            "feature": "가성비 좋은 스시",
+            "name": "삿뽀로블랙",
+            "cuisine": "일식",
+            "feature": "4.9점 평점",
             "price": "보통",
-            "distance": "도보 7분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-일식-5",
-            "name": "카츠아지",
-            "cuisine": "일식 돈카츠",
-            "feature": "혼밥 가능, 간편함",
-            "price": "저렴",
-            "distance": "도보 5분"
+            "name": "아루히",
+            "cuisine": "일식/스시오마카세",
+            "feature": "4.9점 평점",
+            "price": "비쌈",
+            "distance": "여의도역 근처"
           }
         ],
         "한식": [
           {
             "id": "20260602-한식-1",
-            "name": "육전국밥",
-            "cuisine": "한식 국밥",
-            "feature": "전통 소고기 육전",
+            "name": "화목순대국",
+            "cuisine": "한식/순대국",
+            "feature": "노포, 맛있는TV 출연",
             "price": "저렴",
-            "distance": "도보 5분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-한식-2",
-            "name": "여의도 따로국밥",
-            "cuisine": "한식 국밥",
-            "feature": "40년 전통",
-            "price": "저렴",
-            "distance": "도보 10분"
+            "name": "하동관 여의도점",
+            "cuisine": "한식/곰탕",
+            "feature": "3대째 정통",
+            "price": "보통",
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-한식-3",
-            "name": "제일어버이순대",
-            "cuisine": "한식 순대국",
-            "feature": "직장인 맛집",
+            "name": "소호정 여의도점",
+            "cuisine": "한식/칼국수",
+            "feature": "3대째 전통",
             "price": "저렴",
-            "distance": "도보 15분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-한식-4",
-            "name": "김삼보 여의도",
-            "cuisine": "한식 김치찌개",
-            "feature": "24시간, 제주 생고기",
-            "price": "저렴",
-            "distance": "도보 12분"
+            "name": "사대부집곳간",
+            "cuisine": "한식/반상",
+            "feature": "4.2점 평점",
+            "price": "보통",
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-한식-5",
-            "name": "금원삼계탕",
-            "cuisine": "한식 삼계탕",
-            "feature": "닭칼국수, 곰탕",
+            "name": "별미볶음점",
+            "cuisine": "한식/제육볶음",
+            "feature": "4.5점 평점",
             "price": "저렴",
-            "distance": "도보 12분"
+            "distance": "여의도역 근처"
           }
         ],
         "고기": [
           {
             "id": "20260602-고기-1",
-            "name": "한미옥",
-            "cuisine": "한식 한우",
-            "feature": "한우구이, 프리미엄",
-            "price": "비쌈",
-            "distance": "도보 10분"
+            "name": "잠수교집",
+            "cuisine": "고기/냉동삼겹살",
+            "feature": "4.6점 평점, 데이트 추천",
+            "price": "보통",
+            "distance": "도보 7분"
           },
           {
             "id": "20260602-고기-2",
-            "name": "본전주먹구이",
-            "cuisine": "한식 삼겹살",
-            "feature": "노포감성, 목살",
+            "name": "방돈식당",
+            "cuisine": "고기/삼겹살",
+            "feature": "4.3점 평점",
             "price": "보통",
-            "distance": "도보 9분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-고기-3",
-            "name": "바우한우",
-            "cuisine": "한식 한우",
-            "feature": "소고기, 양념갈비",
-            "price": "보통",
-            "distance": "도보 11분"
+            "name": "한미옥",
+            "cuisine": "고기/한우",
+            "feature": "4.3점 평점, 구절판도 가능",
+            "price": "비쌈",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-고기-4",
-            "name": "야마야 여의도",
-            "cuisine": "일식 돈카츠",
-            "feature": "돼지고기 튀김",
+            "name": "최선도",
+            "cuisine": "고기/고깃집",
+            "feature": "4.6점 평점",
             "price": "보통",
-            "distance": "도보 8분"
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-고기-5",
-            "name": "바이킹스워프",
-            "cuisine": "한식 뷔페",
-            "feature": "무제한 랍스타",
+            "name": "달리181",
+            "cuisine": "양식/스테이크",
+            "feature": "룸형 좌석, 사진 명소",
             "price": "비쌈",
-            "distance": "도보 8분"
+            "distance": "여의나루역 근처"
           }
         ],
         "혼밥": [
           {
             "id": "20260602-혼밥-1",
-            "name": "카츠아지",
-            "cuisine": "일식 돈카츠",
-            "feature": "혼밥 전문, 카운터석",
-            "price": "저렴",
-            "distance": "도보 5분"
-          },
-          {
-            "id": "20260602-혼밥-2",
             "name": "소몽",
-            "cuisine": "일식 소바",
-            "feature": "조용한 분위기",
+            "cuisine": "일식/소바",
+            "feature": "카운터 좌석 가능, 인기",
             "price": "보통",
             "distance": "도보 3분"
           },
           {
-            "id": "20260602-혼밥-3",
-            "name": "여의도 따로국밥",
-            "cuisine": "한식 국밥",
-            "feature": "회전 빠름, 간편함",
+            "id": "20260602-혼밥-2",
+            "name": "테일러커피",
+            "cuisine": "카페/커피",
+            "feature": "편안한 분위기",
             "price": "저렴",
-            "distance": "도보 10분"
+            "distance": "여의나루역 근처"
+          },
+          {
+            "id": "20260602-혼밥-3",
+            "name": "호우섐",
+            "cuisine": "아시안/홍콩식",
+            "feature": "혼밥 무난",
+            "price": "저렴",
+            "distance": "여의나루역 근처"
           },
           {
             "id": "20260602-혼밥-4",
-            "name": "호우섐",
-            "cuisine": "홍콩식",
-            "feature": "빠른 서빙, 혼밥 좋음",
+            "name": "제일어버이순대",
+            "cuisine": "한식/순대국",
+            "feature": "착한 식당, 혼밥 추천",
             "price": "저렴",
-            "distance": "도보 4분"
+            "distance": "여의도역 근처"
           },
           {
             "id": "20260602-혼밥-5",
-            "name": "사천화가",
-            "cuisine": "중식",
-            "feature": "더현대 위치, 편리함",
+            "name": "번패티번",
+            "cuisine": "양식/버거",
+            "feature": "간편한 식사",
             "price": "보통",
-            "distance": "도보 2분"
+            "distance": "여의나루역 근처"
           }
         ]
       }
