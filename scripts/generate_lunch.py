@@ -234,7 +234,11 @@ def update_index_html(history, html_path="index.html"):
         print("✅ index.html 업데이트 완료")
 
 
-CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥"]
+CONDITIONS = ["해장 필요", "매콤하게", "가볍게", "든든하게", "일식", "한식", "고기", "혼밥", "와인", "임원"]
+COND_HINT = {
+    "와인": "와인바·와인 페어링 좋은 곳",
+    "임원": "임원 모시거나 접대하기 좋은 격식 있는 고급 식당(프라이빗 룸 선호)",
+}
 MEAL_CTX = {
     "점심": "점심 식사로 좋은 음식점",
     "저녁": "저녁 식사로 좋은 음식점 (분위기 있거나 회식·모임에도 좋은 곳 포함)",
@@ -251,18 +255,20 @@ def generate_meal(client, today, date_compact, meal, with_conditions):
 
     if with_conditions:
         cond_list = " / ".join(CONDITIONS)
+        hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
         weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
+        cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}여의나루로 77 (영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 시간대({meal})에 어울리는 기본 추천 5곳
-- by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합)
+- by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
 
 ```json
-{{"comment":"...","restaurants":[...],"by_condition":{{"해장 필요":[...],"매콤하게":[...],"가볍게":[...],"든든하게":[...],"일식":[...],"한식":[...],"고기":[...],"혼밥":[...]}}}}
+{{"comment":"...","restaurants":[...],"by_condition":{{{cond_json}}}}}
 ```"""
     else:
         prompt = f"""여의나루로 77 (영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
