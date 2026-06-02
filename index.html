@@ -14,19 +14,25 @@
     min-height: 100vh;
   }
   .app-header {
-    background: #fff;
-    border-bottom: 1px solid #eee;
-    padding: 14px 18px;
+    background: linear-gradient(100deg, #0a3d7a 0%, #1565c0 100%);
+    padding: 15px 18px;
     position: sticky;
     top: 0;
     z-index: 10;
     display: flex;
     align-items: center;
     gap: 12px;
+    box-shadow: 0 2px 10px rgba(10,61,122,0.18);
   }
-  .app-header .logo { font-size: 1.5rem; }
-  .app-header .title-block h1 { font-size: 1.05rem; font-weight: 700; }
-  .app-header .title-block p { font-size: 0.76rem; color: #999; margin-top: 1px; }
+  .app-header .logo {
+    font-size: 0.95rem; font-weight: 900; letter-spacing: 0.5px;
+    background: #fff; color: #0a3d7a;
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .app-header .title-block h1 { font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+  .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
   .sync-badge {
     margin-left: auto;
     font-size: 0.72rem;
@@ -57,7 +63,7 @@
     margin-bottom: -1px;
     transition: all 0.15s;
   }
-  .tab.active { color: #e85d04; border-bottom-color: #e85d04; }
+  .tab.active { color: #0a3d7a; border-bottom-color: #0a3d7a; }
 
   .content { padding: 14px; max-width: 640px; margin: 0 auto; }
   .section { display: none; }
@@ -79,7 +85,7 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  .sub-tab.active { background: #e85d04; border-color: #e85d04; color: #fff; }
+  .sub-tab.active { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
 
   .date-group { margin-bottom: 22px; }
   .date-label {
@@ -90,8 +96,8 @@
     margin-bottom: 9px;
   }
   .weather-comment {
-    background: linear-gradient(135deg, #fff9f0, #fff3e0);
-    border-left: 3px solid #e85d04;
+    background: linear-gradient(135deg, #eef4fb, #e3eef9);
+    border-left: 3px solid #0a3d7a;
     border-radius: 10px;
     padding: 10px 13px;
     margin-bottom: 10px;
@@ -151,7 +157,7 @@
   .review-avatar {
     width: 28px; height: 28px;
     border-radius: 50%;
-    background: #e85d04;
+    background: #0a3d7a;
     color: #fff;
     font-size: 0.75rem;
     font-weight: 700;
@@ -197,9 +203,9 @@
     font-weight: 600;
     white-space: nowrap;
     transition: all 0.13s;
-    border: 1.5px solid #e85d04; background: #fff; color: #e85d04;
+    border: 1.5px solid #0a3d7a; background: #fff; color: #0a3d7a;
   }
-  .btn-review:hover { background: #e85d04; color: #fff; }
+  .btn-review:hover { background: #0a3d7a; color: #fff; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Stats */
@@ -217,14 +223,14 @@
     text-align: center;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
-  .stat-num { font-size: 1.8rem; font-weight: 800; color: #e85d04; line-height: 1; }
+  .stat-num { font-size: 1.8rem; font-weight: 800; color: #0a3d7a; line-height: 1; }
   .stat-label { font-size: 0.72rem; color: #999; margin-top: 4px; }
 
   .top-list { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .top-list h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 11px; }
   .top-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
   .top-item:last-child { border-bottom: none; }
-  .top-rank { font-size: 0.95rem; font-weight: 800; color: #e85d04; width: 20px; text-align: center; }
+  .top-rank { font-size: 0.95rem; font-weight: 800; color: #0a3d7a; width: 20px; text-align: center; }
   .top-info { flex: 1; }
   .top-name { font-weight: 600; font-size: 0.86rem; }
   .top-cuisine { font-size: 0.73rem; color: #aaa; }
@@ -261,7 +267,7 @@
     padding: 9px 11px; font-size: 0.86rem;
     font-family: inherit; color: #333;
   }
-  .modal-field input[type="text"]:focus { outline: none; border-color: #e85d04; }
+  .modal-field input[type="text"]:focus { outline: none; border-color: #0a3d7a; }
   .modal-stars { display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; }
   .modal-stars span { opacity: 0.22; transition: opacity 0.1s; }
   .modal-stars span.lit { opacity: 1; }
@@ -271,10 +277,10 @@
     padding: 9px 11px; font-size: 0.86rem; resize: none;
     font-family: inherit; color: #333; line-height: 1.5;
   }
-  .modal textarea:focus { outline: none; border-color: #e85d04; }
+  .modal textarea:focus { outline: none; border-color: #0a3d7a; }
   .modal-btns { display: flex; gap: 8px; margin-top: 11px; justify-content: flex-end; }
   .btn-cancel { background: #f5f5f5; color: #666; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
-  .btn-save { background: #e85d04; color: #fff; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
+  .btn-save { background: #0a3d7a; color: #fff; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
   .saving-msg { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: right; min-height: 18px; }
 
   .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
@@ -294,15 +300,15 @@
 
   /* 상단 날짜+날씨 배너 */
   .top-banner {
-    background: linear-gradient(135deg, #e85d04, #f6904d);
-    border-radius: 16px;
-    padding: 16px 18px;
+    background: #fff;
+    border-left: 4px solid #0a3d7a;
+    border-radius: 12px;
+    padding: 14px 16px;
     margin-bottom: 14px;
-    color: #fff;
-    box-shadow: 0 3px 12px rgba(232,93,4,0.25);
+    box-shadow: 0 1px 6px rgba(10,61,122,0.08);
   }
-  .top-banner .tb-date { font-size: 0.95rem; font-weight: 800; margin-bottom: 5px; }
-  .top-banner .tb-weather { font-size: 0.83rem; line-height: 1.5; opacity: 0.97; }
+  .top-banner .tb-date { font-size: 0.95rem; font-weight: 800; color: #0a3d7a; margin-bottom: 5px; }
+  .top-banner .tb-weather { font-size: 0.83rem; line-height: 1.5; color: #556; }
 
   /* 시간대(점심/저녁/술집) 토글 */
   .meal-toggle {
@@ -310,11 +316,11 @@
   }
   .meal-btn {
     flex: 1; padding: 11px 0; border-radius: 12px;
-    border: 1.5px solid #e2e8f0; background: #fff;
-    font-size: 0.9rem; font-weight: 700; color: #999;
+    border: 1.5px solid #d8e2ee; background: #fff;
+    font-size: 0.9rem; font-weight: 700; color: #8794a6;
     cursor: pointer; transition: all 0.15s;
   }
-  .meal-btn.on { background: #1a1a2e; border-color: #1a1a2e; color: #fff; }
+  .meal-btn.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; box-shadow: 0 2px 8px rgba(10,61,122,0.25); }
 
   /* 컨디션 입력 */
   .pref-card {
@@ -332,15 +338,15 @@
     font-size: 0.76rem; font-weight: 600; color: #888;
     cursor: pointer; transition: all 0.13s;
   }
-  .pref-chip.on { border-color: #e85d04; background: #e85d04; color: #fff; }
+  .pref-chip.on { border-color: #0a3d7a; background: #0a3d7a; color: #fff; }
   .pref-input-row { display: flex; gap: 8px; }
   .pref-input {
     flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
     padding: 8px 11px; font-size: 0.84rem; font-family: inherit; color: #333;
   }
-  .pref-input:focus { outline: none; border-color: #e85d04; }
+  .pref-input:focus { outline: none; border-color: #0a3d7a; }
   .pref-submit {
-    background: #e85d04; color: #fff; border: none;
+    background: #0a3d7a; color: #fff; border: none;
     border-radius: 10px; padding: 8px 14px;
     font-size: 0.82rem; font-weight: 700; cursor: pointer;
     white-space: nowrap;
@@ -355,7 +361,7 @@
   }
   .pref-progress.show { display: block; }
   .pref-progress-label {
-    font-size: 0.78rem; color: #e85d04; font-weight: 600;
+    font-size: 0.78rem; color: #0a3d7a; font-weight: 600;
     margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
   }
   .pref-progress-bar {
@@ -363,12 +369,12 @@
   }
   .pref-progress-fill {
     height: 100%; width: 0%;
-    background: linear-gradient(90deg, #e85d04, #f6a04d);
+    background: linear-gradient(90deg, #0a3d7a, #1565c0);
     border-radius: 6px; transition: width 0.25s ease;
   }
   .spinner {
     width: 12px; height: 12px;
-    border: 2px solid #f6cdae; border-top-color: #e85d04;
+    border: 2px solid #bcd4ee; border-top-color: #0a3d7a;
     border-radius: 50%; animation: spin 0.7s linear infinite;
     display: inline-block;
   }
@@ -376,13 +382,13 @@
 
   .pref-answer {
     margin-top: 11px; padding: 11px 13px;
-    background: linear-gradient(135deg, #fff7f0, #fff1e6);
-    border: 1px solid #ffd9b3; border-radius: 12px;
-    font-size: 0.83rem; color: #5a4030; line-height: 1.55;
+    background: linear-gradient(135deg, #eef4fb, #e3eef9);
+    border: 1px solid #c5dbf0; border-radius: 12px;
+    font-size: 0.83rem; color: #1e3a5f; line-height: 1.55;
     display: none; animation: fadeInUp 0.25s ease;
   }
   .pref-answer.show { display: block; }
-  .pref-answer .pa-head { font-weight: 700; color: #e85d04; margin-bottom: 3px; }
+  .pref-answer .pa-head { font-weight: 700; color: #0a3d7a; margin-bottom: 3px; }
 
   /* 검색 히스토리 */
   .pref-history {
@@ -407,7 +413,7 @@
     font-size: 0.74rem; color: #555; cursor: pointer;
     transition: all 0.13s; max-width: 200px;
   }
-  .hist-chip:hover { background: #fff3e6; border-color: #ffd1a3; color: #e85d04; }
+  .hist-chip:hover { background: #e3eef9; border-color: #c5dbf0; color: #0a3d7a; }
   .hist-chip .hc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hist-chip .hc-cond { font-size: 0.68rem; color: #aaa; flex-shrink: 0; }
 </style>
@@ -415,7 +421,7 @@
 <body>
 
 <div class="app-header">
-  <span class="logo">🍽️</span>
+  <span class="logo">JB</span>
   <div class="title-block">
     <h1>JB 맛집 트래커</h1>
     <p>여의나루로 77 근처 · 점심·저녁·술집 추천</p>
@@ -555,7 +561,7 @@ function emo(c) {
 }
 
 function avatarColor(name) {
-  const colors = ['#e85d04','#3182ce','#38a169','#805ad5','#d69e2e','#e53e3e','#319795'];
+  const colors = ['#0a3d7a','#3182ce','#38a169','#805ad5','#d69e2e','#e53e3e','#319795'];
   let h = 0;
   for (let i=0; i<name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
   return colors[Math.abs(h) % colors.length];
