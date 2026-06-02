@@ -479,10 +479,16 @@ const HISTORY_DATA = [{"date": "2026-06-02", "comment": "화창한 날씨지만 
 let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating, created_at}] }
 
 // ── Supabase API ──────────────────────────────────────────────
-async function loadAll() {
+// 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
+function init() {
+  renderHistory();
+  renderStats();
+  loadComments();
+}
+
+async function loadComments() {
   setBadge('loading', '동기화 중…');
   try {
-    // 댓글 (다중 리뷰)
     const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&order=created_at.asc`, { headers: SB_HEADERS });
     if (!r2.ok) throw new Error(r2.status);
     const comments = await r2.json();
@@ -491,13 +497,12 @@ async function loadAll() {
       if (!commentsState[c.restaurant_id]) commentsState[c.restaurant_id] = [];
       commentsState[c.restaurant_id].push(c);
     });
-
     setBadge('ok', '☁️ 동기화됨');
+    renderCondGroup();   // 현재 선택 유지하며 리뷰 반영
+    renderStats();
   } catch(e) {
     setBadge('err', '⚠️ 오프라인');
   }
-  renderHistory();
-  renderStats();
 }
 
 async function insertComment(restaurantId, reviewerName, content, rating) {
@@ -1076,7 +1081,7 @@ function showTab(name, btn) {
 }
 
 // ── 초기화 ────────────────────────────────────────────────────
-loadAll();
+init();
 </script>
 </body>
 </html>
