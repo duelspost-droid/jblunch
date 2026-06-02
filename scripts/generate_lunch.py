@@ -44,21 +44,19 @@ def get_today_preference(today):
     return None
 
 
-def call_claude(client, prompt):
-    """Claude API 호출 (web search 포함, agentic loop). Rate limit 시 자동 재시도."""
+def call_claude(client, prompt, use_web=True):
+    """Claude API 호출 (web search 옵션, agentic loop). Rate limit 시 자동 재시도."""
     messages = [{"role": "user", "content": prompt}]
-    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}]
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}] if use_web else []
 
     for iteration in range(10):
         # Rate limit 재시도 (최대 3회, 지수 백오프)
         for attempt in range(3):
             try:
-                response = client.messages.create(
-                    model="claude-haiku-4-5-20251001",
-                    max_tokens=8000,
-                    tools=tools,
-                    messages=messages,
-                )
+                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=8000, messages=messages)
+                if tools:
+                    kwargs["tools"] = tools
+                response = client.messages.create(**kwargs)
                 break
             except anthropic.RateLimitError:
                 wait = 65 * (attempt + 1)
@@ -276,7 +274,8 @@ def generate_meal(client, today, date_compact, meal, with_conditions):
 ```"""
 
     print(f"🔍 [{meal}] 생성 중...")
-    text = call_claude(client, prompt)
+    # 점심만 웹검색(날씨/신선도), 저녁·술집은 지식 기반(토큰 절감 → rate limit 회피)
+    text = call_claude(client, prompt, use_web=(meal == "점심"))
     entry = extract_json(text) if text else None
     if not entry:
         print(f"❌ [{meal}] JSON 파싱 실패")
@@ -313,7 +312,9 @@ def main():
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
+    time.sleep(40)  # rate limit(10k tokens/min) 회피
     dinner, _ = generate_meal(client, today, date_compact, "저녁", True)
+    time.sleep(40)
     bar, _ = generate_meal(client, today, date_compact, "술집", False)
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
