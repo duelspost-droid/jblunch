@@ -206,6 +206,17 @@
     border: 1.5px solid #0a3d7a; background: #fff; color: #0a3d7a;
   }
   .btn-review:hover { background: #0a3d7a; color: #fff; }
+  .btn-map {
+    font-size: 0.71rem;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.13s;
+    border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
+    text-decoration: none; display: inline-block; text-align: center;
+  }
+  .btn-map:hover { background: #03c75a; color: #fff; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Stats */
@@ -628,6 +639,7 @@ function renderGroup(group, bare) {
         <div class="reviews-block">${reviewsHtml}</div>
       </div>
       <div class="card-actions">
+        <a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>
         <button class="btn-review" onclick="openModal('${r.id}','${escAttr(r.name)}')">📝 리뷰</button>
       </div>
     </div>`;
