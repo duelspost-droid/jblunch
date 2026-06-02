@@ -408,14 +408,22 @@
   .pref-history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .hist-chip {
     display: inline-flex; align-items: center; gap: 5px;
-    padding: 5px 10px; border-radius: 16px;
+    padding: 5px 6px 5px 10px; border-radius: 16px;
     background: #f7f7f9; border: 1px solid #ececf0;
-    font-size: 0.74rem; color: #555; cursor: pointer;
-    transition: all 0.13s; max-width: 200px;
+    font-size: 0.74rem; color: #555;
+    transition: all 0.13s; max-width: 220px;
   }
-  .hist-chip:hover { background: #e3eef9; border-color: #c5dbf0; color: #0a3d7a; }
+  .hist-chip:hover { background: #e3eef9; border-color: #c5dbf0; }
+  .hist-chip .hc-main { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-width: 0; }
+  .hist-chip:hover .hc-text { color: #0a3d7a; }
   .hist-chip .hc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hist-chip .hc-cond { font-size: 0.68rem; color: #aaa; flex-shrink: 0; }
+  .hist-chip .hc-del {
+    flex-shrink: 0; border: none; background: none; cursor: pointer;
+    color: #bbb; font-size: 0.8rem; line-height: 1; padding: 2px 4px; border-radius: 50%;
+    transition: all 0.12s;
+  }
+  .hist-chip .hc-del:hover { color: #fff; background: #e53e3e; }
 </style>
 </head>
 <body>
@@ -751,7 +759,7 @@ const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':
 
 // ── 검색 히스토리 (localStorage) ─────────────────────────────
 const HIST_KEY = 'jblunch_search_history';
-const HIST_MAX = 8;
+const HIST_MAX = 20;
 
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; }
@@ -764,7 +772,13 @@ function addHistory(text, cond) {
   renderSearchHistory();
 }
 function clearHistory() {
+  if (!confirm('검색 기록을 모두 삭제할까요?')) return;
   localStorage.removeItem(HIST_KEY);
+  renderSearchHistory();
+}
+function removeHistory(ts) {
+  const h = getHistory().filter(x => String(x.ts) !== String(ts));
+  localStorage.setItem(HIST_KEY, JSON.stringify(h));
   renderSearchHistory();
 }
 function renderSearchHistory() {
@@ -775,11 +789,12 @@ function renderSearchHistory() {
   if (!h.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   chips.innerHTML = h.map(item => {
-    const emoji = COND_EMOJI[item.cond] || '🍽️';
-    return `<button class="hist-chip" onclick="rerunHistory('${escAttr(item.text)}')">
-      <span class="hc-text">${escHtml(item.text)}</span>
-      <span class="hc-cond">${emoji}${item.cond ? ' ' + escHtml(item.cond) : ''}</span>
-    </button>`;
+    return `<span class="hist-chip">
+      <span class="hc-main" onclick="rerunHistory('${escAttr(item.text)}')">
+        <span class="hc-text">🔎 ${escHtml(item.text)}</span>
+      </span>
+      <button class="hc-del" title="삭제" onclick="removeHistory('${item.ts}')">✕</button>
+    </span>`;
   }).join('');
 }
 function rerunHistory(text) {
