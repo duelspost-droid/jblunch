@@ -774,7 +774,7 @@ async function applyFreeText() {
     }
   }, 400);
 
-  let cond = '', comment = '';
+  let comment = '', restaurants = null, ok = false;
   try {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
@@ -782,42 +782,53 @@ async function applyFreeText() {
       body: JSON.stringify({ text })
     });
     const data = await res.json();
-    cond = data.condition || '';
     comment = data.comment || '';
-  } catch (e) {
-    // 실패 시 키워드 매칭 폴백
-    cond = matchCondition(text);
-  }
+    restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
+    ok = !!(restaurants && restaurants.length);
+  } catch (e) { ok = false; }
 
   clearInterval(progTimer);
   fill.style.width = '100%';
   progText.textContent = '완료!';
 
   setTimeout(() => {
-    document.querySelectorAll('.pref-chip').forEach(c =>
-      c.classList.toggle('on', c.dataset.cond === cond));
-    currentCond = cond;
-
-    const emoji = COND_EMOJI[cond] || '🍽️';
-    if (cond) {
-      const head = comment ? '' : `${cond} 추천`;
-      answerEl.innerHTML = `<div class="pa-head">${emoji} ${cond}</div>${escHtml(comment || COND_ANSWERS[cond]?.body || '')}`;
-    } else {
-      answerEl.innerHTML = `<div class="pa-head">🍽️ 오늘의 기본 추천</div>${escHtml(comment || '입력에 딱 맞는 분류를 찾지 못해 기본 추천을 보여드려요.')}`;
-    }
-
+    document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
     progEl.classList.remove('show');
-    answerEl.classList.add('show');
     btn.disabled = false;
-    renderCondGroup();
-    addHistory(text, cond);  // 검색 기록 저장
+
+    if (ok) {
+      // 백엔드가 생성한 맞춤 맛집으로 화면 업데이트
+      customResult = { text, comment, restaurants };
+      answerEl.innerHTML = `<div class="pa-head">🔎 "${escHtml(text)}" 맞춤 추천</div>${escHtml(comment)}`;
+      answerEl.classList.add('show');
+      renderCustomGroup();
+      addHistory(text);
+    } else {
+      answerEl.innerHTML = `<div class="pa-head">⚠️ 분석에 실패했어요</div>네트워크 문제로 맞춤 추천을 못 가져왔어요. 잠시 후 다시 시도해주세요.`;
+      answerEl.classList.add('show');
+    }
   }, 300);
+}
+
+let customResult = null;  // {text, comment, restaurants}
+
+function renderCustomGroup() {
+  if (!customResult) return;
+  const today = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  const target = {
+    date: today.toLocaleDateString('sv-SE'),
+    comment: `🔎 "${customResult.text}" 맞춤 추천 · ${customResult.comment}`,
+    restaurants: customResult.restaurants,
+  };
+  document.getElementById('today-group').innerHTML = renderGroup(target);
 }
 
 function selectCond(el) {
   document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
   currentCond = el.dataset.cond;
+  customResult = null;  // 칩 선택 시 맞춤 결과 해제
   const input = document.getElementById('pref-text');
   const answerEl = document.getElementById('pref-answer');
   const progEl = document.getElementById('pref-progress');
@@ -828,6 +839,7 @@ function selectCond(el) {
 }
 
 function renderCondGroup() {
+  if (customResult) { renderCustomGroup(); return; }
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   if (!sorted.length) return;
   // by_condition 있는 가장 최근 항목 우선 사용
