@@ -10,6 +10,7 @@ import re
 import os
 import sys
 import smtplib
+import time
 import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -44,17 +45,28 @@ def get_today_preference(today):
 
 
 def call_claude(client, prompt):
-    """Claude API 호출 (web search 포함, agentic loop)."""
+    """Claude API 호출 (web search 포함, agentic loop). Rate limit 시 자동 재시도."""
     messages = [{"role": "user", "content": prompt}]
     tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}]
 
     for iteration in range(10):
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=8000,
-            tools=tools,
-            messages=messages,
-        )
+        # Rate limit 재시도 (최대 3회, 지수 백오프)
+        for attempt in range(3):
+            try:
+                response = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=8000,
+                    tools=tools,
+                    messages=messages,
+                )
+                break
+            except anthropic.RateLimitError:
+                wait = 65 * (attempt + 1)
+                print(f"  ⏳ Rate limit — {wait}초 후 재시도 ({attempt+1}/3)...")
+                time.sleep(wait)
+        else:
+            print("❌ Rate limit 재시도 초과")
+            return None
 
         print(f"  [iteration {iteration + 1}] stop_reason={response.stop_reason}")
 
