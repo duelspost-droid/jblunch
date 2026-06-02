@@ -1058,33 +1058,54 @@ async function confirmDelete(commentId, restaurantId) {
 }
 
 // ── 통계 ──────────────────────────────────────────────────────
+// 모든 시간대·컨디션의 맛집을 평탄화 (점심/저녁/술집 + by_condition)
+function allRestaurants() {
+  const out = [];
+  HISTORY_DATA.forEach(day => {
+    const buckets = [];
+    if (day.restaurants) buckets.push(day.restaurants);
+    if (day.by_condition) buckets.push(...Object.values(day.by_condition));
+    if (day.meals) Object.values(day.meals).forEach(m => {
+      if (m && m.restaurants) buckets.push(m.restaurants);
+      if (m && m.by_condition) buckets.push(...Object.values(m.by_condition));
+    });
+    buckets.forEach(b => b.forEach(r => out.push(r)));
+  });
+  return out;
+}
+
 function renderStats() {
-  const all = HISTORY_DATA.flatMap(g => g.restaurants);
+  const allR = allRestaurants();
+  const byId = {};
+  allR.forEach(r => { if (r.id) byId[r.id] = r; });
+  const uniqueNames = new Set(allR.map(r => r.name)).size;
+  const days = HISTORY_DATA.length;
+
   const allComments = Object.values(commentsState).flat();
-  const reviewed = new Set(allComments.map(c => c.restaurant_id)).size;
   const ratings = allComments.map(c => c.rating).filter(Boolean);
   const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
 
-  // TOP 맛집: 평균 별점 기준
+  // TOP 맛집: 평균 별점 기준 (id로 맛집 매칭)
   const ratingMap = {};
   allComments.forEach(c => {
     if (!c.rating) return;
     if (!ratingMap[c.restaurant_id]) ratingMap[c.restaurant_id] = [];
     ratingMap[c.restaurant_id].push(c.rating);
   });
-  const topList = all
-    .filter(r => ratingMap[r.id])
-    .map(r => ({
-      ...r,
-      avg: ratingMap[r.id].reduce((a,b)=>a+b,0)/ratingMap[r.id].length,
-      cnt: ratingMap[r.id].length
+  const topList = Object.keys(ratingMap)
+    .filter(id => byId[id])
+    .map(id => ({
+      ...byId[id],
+      avg: ratingMap[id].reduce((a,b)=>a+b,0)/ratingMap[id].length,
+      cnt: ratingMap[id].length
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
   const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
   const statsHtml = `
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">총 추천 수</div></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">${days}</div><div class="stat-label">추천 일수</div></div>
+      <div class="stat-card"><div class="stat-num">${uniqueNames}</div><div class="stat-label">맛집 수</div></div>
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
     </div>
