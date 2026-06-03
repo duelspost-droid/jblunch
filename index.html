@@ -75,6 +75,15 @@
   .section { display: none; }
   .section.active { display: block; }
 
+  /* PC 반응형: 넓은 화면에서 폭 확대 + 카드 2단 */
+  @media (min-width: 900px) {
+    .content { max-width: 1000px; padding: 18px 24px; }
+    .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; align-items: start; }
+    .top-banner, .meal-toggle, .meal-info, .pref-card { max-width: 720px; margin-left: auto; margin-right: auto; }
+    .extra-head { max-width: 1000px; }
+    .tabs { padding: 0 24px; }
+  }
+
   .sub-tabs {
     display: flex;
     gap: 6px;
@@ -467,6 +476,14 @@
     margin-bottom: 14px;
   }
   .pref-title { font-size: 0.82rem; font-weight: 700; color: #333; margin-bottom: 10px; }
+  .pref-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    background: none; border: none; cursor: pointer; padding: 2px 0;
+    font-size: 0.86rem; font-weight: 700; color: #0a3d7a;
+  }
+  .pref-caret { transition: transform 0.18s; color: #9aa7b8; }
+  .pref-toggle.open .pref-caret { transform: rotate(180deg); }
+  .pref-body { margin-top: 12px; }
   .pref-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
   .pref-chip {
     padding: 5px 12px; border-radius: 20px;
@@ -874,8 +891,13 @@ function renderHistory() {
     <div class="meal-info" id="meal-info"></div>`;
 
   const prefHtml = bannerHtml + `
+    <div id="today-group"></div>
     <div class="pref-card">
-      <div class="pref-title">🙋 오늘 컨디션은?</div>
+      <button class="pref-toggle" onclick="togglePref(this)">
+        <span>🙋 오늘 컨디션 · 맞춤 추천</span>
+        <span class="pref-caret">▾</span>
+      </button>
+      <div class="pref-body" id="pref-body" style="display:none">
       <div class="pref-chips">
         <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
         <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
@@ -906,14 +928,29 @@ function renderHistory() {
         </div>
         <div class="pref-history-chips" id="pref-history-chips"></div>
       </div>
-    </div>
-    <div id="today-group"></div>`;
+      </div>
+    </div>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
   updateMealInfo();
   updateCondChips();
   renderCondGroup();        // 시간대별 미리 생성된 데이터
   loadHistory();           // 공유 검색기록 서버에서 불러오기
+}
+
+// 컨디션·맞춤추천 영역 접기/펼치기
+function togglePref(btn) {
+  const body = document.getElementById('pref-body');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  btn.classList.toggle('open', open);
+}
+
+// 추천 카드 영역으로 부드럽게 스크롤 (컨디션이 카드 아래에 있어 선택 시 위로 이동)
+function scrollToCards() {
+  const el = document.getElementById('today-group');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // 시간대 기반 기본 선택: ~15시 점심, 15~18시 저녁, 18시~ 술집
@@ -1102,6 +1139,7 @@ async function generateRecommend(text, meal, saveHist) {
       answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
       answerEl.classList.add('show');
       renderCustomGroup();
+      scrollToCards();
       if (saveHist && text) addHistory(text);
     } else if (errMsg) {
       answerEl.innerHTML = `<div class="pa-head">⏳ 잠시만요</div>${escHtml(errMsg)}`;
@@ -1171,6 +1209,7 @@ function selectCond(el) {
   const hasPre = currentCond === '' || (md && md.by_condition && md.by_condition[currentCond]);
   if (hasPre) {
     renderCondGroup();
+    scrollToCards();
   } else {
     generateRecommend(currentCond, currentMeal, false);
   }
