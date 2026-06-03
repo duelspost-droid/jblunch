@@ -424,6 +424,15 @@
   }
   .top-banner .tb-date { font-size: 0.95rem; font-weight: 800; color: #0a3d7a; margin-bottom: 5px; }
   .top-banner .tb-weather { font-size: 0.83rem; line-height: 1.5; color: #556; }
+  .top-banner .tb-msg { font-size: 0.84rem; line-height: 1.55; color: #1e3a5f; margin-top: 7px; font-weight: 500; }
+  .top-banner .tb-news { margin-top: 10px; padding-top: 9px; border-top: 1px dashed #e2e8f0; }
+  .top-banner .tb-news-head { font-size: 0.74rem; font-weight: 700; color: #0a3d7a; margin-bottom: 5px; }
+  .top-banner .tb-news-item {
+    display: block; font-size: 0.78rem; color: #556; line-height: 1.5;
+    text-decoration: none; padding: 2px 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .top-banner .tb-news-item:hover { color: #0a3d7a; text-decoration: underline; }
 
   /* 시간대(점심/저녁/술집) 토글 */
   .meal-toggle {
@@ -814,11 +823,22 @@ function renderHistory() {
   const defMeal = getDefaultMeal();
   currentMeal = defMeal;
   const todayData = sorted.find(g => g.by_condition) || sorted[0];
-  const weather = todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
+  const weather = (todayData && todayData.weather) || '';
+  const message = (todayData && todayData.message) || todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
+  const news = (todayData && todayData.news) || [];
+  const weatherLine = weather ? `<div class="tb-weather">🌤️ ${escHtml(weather)}</div>` : '';
+  const msgLine = message ? `<div class="tb-msg">💬 ${escHtml(message)}</div>` : '';
+  const newsLine = news.length ? `
+      <div class="tb-news">
+        <div class="tb-news-head">📰 JB금융 소식</div>
+        ${news.slice(0,3).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">· ${escHtml(n.title)}</a>`).join('')}
+      </div>` : '';
   const bannerHtml = `
     <div class="top-banner">
       <div class="tb-date">📅 ${dateLabel}</div>
-      <div class="tb-weather">🌤️ ${escHtml(weather)}</div>
+      ${weatherLine}
+      ${msgLine}
+      ${newsLine}
     </div>
     <div class="meal-toggle">
       <button class="meal-btn${defMeal==='점심'?' on':''}" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>

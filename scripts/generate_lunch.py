@@ -609,7 +609,7 @@ MEAL_CTX = {
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
 
-def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None):
+def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None, mood_ctx=""):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
     idp = MEAL_IDP[meal]
@@ -636,7 +636,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
-{cand_block}{avoid_line}
+{mood_ctx}{cand_block}{avoid_line}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 2곳(둘 다 반드시 도보 10분 이내 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
@@ -725,8 +725,19 @@ def main():
     if recent:
         print(f"🔁 최근 추천 {len(recent)}곳 회피: {', '.join(recent[:8])}…")
 
+    # 날씨 + JB금융 뉴스 먼저 수집 → 추천 분위기에 반영
+    print("\n🌤️  날씨/뉴스 수집 중...")
+    weather = fetch_weather()
+    news = fetch_jb_news(naver_id, naver_secret)
+    headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
+    mood_ctx = ""
+    if weather or headlines:
+        mood_ctx = (f"\n[오늘 분위기] 날씨: {weather or '정보 없음'}. "
+                    f"JB금융그룹 소식: {headlines or '특이사항 없음'}. "
+                    f"이 분위기(날씨·회사 소식)를 추천 comment에 자연스럽게 녹이고, 어울리는 곳을 골라줘.\n")
+
     # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret, recent)
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
@@ -735,10 +746,6 @@ def main():
     time.sleep(70)
     bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent)
 
-    # 날씨 + JB금융 뉴스 (이메일/카카오 첨부용)
-    print("\n🌤️  날씨/뉴스 수집 중...")
-    weather = fetch_weather()
-    news = fetch_jb_news(naver_id, naver_secret)
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
