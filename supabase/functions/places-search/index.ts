@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const query = (body.query || "").toString().trim();
-    if (!query) return json({ places: [] });
 
     const kakaoKey = Deno.env.get("KAKAO_REST_API_KEY") || "";
     if (!kakaoKey) return json({ error: "kakao key missing" }, 500);
@@ -33,9 +32,12 @@ Deno.serve(async (req) => {
     const cx = useGps ? lng : JB_LNG;
     const origin = useGps ? "현위치" : "JB빌딩";
 
-    const q = encodeURIComponent(query);
-    const url = `https://dapi.kakao.com/v2/local/search/keyword.json` +
-      `?query=${q}&x=${cx}&y=${cy}&radius=2000&sort=distance&size=15`;
+    // 검색어 있으면 키워드 검색, 없으면 주변 음식점 카테고리 검색(거리순)
+    const url = query
+      ? `https://dapi.kakao.com/v2/local/search/keyword.json` +
+        `?query=${encodeURIComponent(query)}&x=${cx}&y=${cy}&radius=2000&sort=distance&size=15`
+      : `https://dapi.kakao.com/v2/local/search/category.json` +
+        `?category_group_code=FD6&x=${cx}&y=${cy}&radius=1000&sort=distance&size=15`;
     const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
     if (!r.ok) return json({ error: "kakao error", detail: await r.text() }, 502);
     const docs = (await r.json()).documents || [];

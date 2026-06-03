@@ -278,6 +278,9 @@
 
   /* 내 근처 맛집 검색 */
   .place-search-card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; }
+  .place-head-row { display: flex; align-items: center; justify-content: space-between; }
+  .place-refresh { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 8px; }
+  .place-refresh:hover { background: #f0f5fb; }
   .place-search-row { display: flex; gap: 8px; margin-top: 10px; }
   .place-input {
     flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
@@ -1329,13 +1332,16 @@ function renderStats() {
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
-  // 내 근처 맛집 검색 결과 카드
+  // 내 주변 맛집 카드 (자동 목록 + 이름 검색 보조)
   const searchHtml = `
     <div class="place-search-card">
-      <div class="pref-title">🔍 내 근처 맛집 검색해서 리뷰 남기기</div>
+      <div class="place-head-row">
+        <div class="pref-title" style="margin:0">📍 내 주변 맛집에 리뷰 남기기</div>
+        <button class="place-refresh" onclick="loadNearby(true)" title="새로고침">🔄</button>
+      </div>
       <div class="place-search-row">
         <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
-               placeholder="가게 이름·메뉴 (예: 스타벅스, 김밥, 소몽)" maxlength="30"
+               placeholder="이름으로 찾기 (예: 스타벅스, 소몽)" maxlength="30"
                onkeydown="if(event.key==='Enter')searchPlaces()">
         <button class="place-btn" id="place-btn" onclick="searchPlaces()">검색</button>
       </div>
@@ -1366,12 +1372,13 @@ function renderStats() {
     </div>`;
 }
 
-// ── 내 근처 맛집 검색 ─────────────────────────────────────────
+// ── 내 주변 맛집 ──────────────────────────────────────────────
 let searchedPlaces = [];   // [{name, cuisine, distance, address, verified}]
-let placeSearchQ = '';
+let placeSearchQ = '';     // 이름 검색어 (없으면 주변 목록 모드)
 let placeSearchBusy = false;
 let placeOrigin = '';      // '현위치' | 'JB빌딩'
 let myPos = null;          // {lat, lng} (한 번 받으면 캐시)
+let nearbyLoaded = false;  // 리뷰 탭 첫 진입 시 1회 자동 로드
 
 // 브라우저 GPS 위치 (권한 거부/실패 시 null → JB빌딩 폴백)
 function getMyPosition() {
@@ -1387,12 +1394,16 @@ function getMyPosition() {
 }
 
 function renderPlaceResults() {
-  if (placeSearchBusy) return '<div class="place-hint">🔎 검색 중…</div>';
-  if (!placeSearchQ) return '<div class="place-hint">추천에 없는 가게도 검색해서 리뷰를 남길 수 있어요. (위치 허용 시 내 주변 기준)</div>';
-  if (!searchedPlaces.length) return '<div class="place-hint">검색 결과가 없어요. 다른 키워드로 시도해보세요.</div>';
-  const originNote = placeOrigin === '현위치'
-    ? '<div class="place-origin">📍 현재 내 위치 기준</div>'
-    : '<div class="place-origin">📍 JB빌딩 기준 (위치 권한 없음)</div>';
+  if (placeSearchBusy) return '<div class="place-hint">📍 주변 맛집 불러오는 중…</div>';
+  if (!searchedPlaces.length) {
+    return placeSearchQ
+      ? '<div class="place-hint">검색 결과가 없어요. 다른 이름으로 시도해보세요.</div>'
+      : '<div class="place-hint">주변 맛집을 불러오지 못했어요. 🔄 새로고침 또는 이름으로 검색해보세요.</div>';
+  }
+  const base = placeOrigin === '현위치' ? '현재 내 위치' : 'JB빌딩';
+  const originNote = placeSearchQ
+    ? `<div class="place-origin">🔎 "${escHtml(placeSearchQ)}" 검색 · ${base} 기준</div>`
+    : `<div class="place-origin">📍 ${base} 주변 맛집 · 가까운 순</div>`;
   return originNote + searchedPlaces.map(p => {
     const cms = commentsState[p.name] || [];
     const cnt = cms.length;
@@ -1407,19 +1418,16 @@ function renderPlaceResults() {
   }).join('');
 }
 
-async function searchPlaces() {
-  const inp = document.getElementById('place-q');
-  if (!inp) return;
-  const q = inp.value.trim();
-  placeSearchQ = q;
-  if (!q) { searchedPlaces = []; renderStats(); return; }
+// 공통 조회: query 없으면 주변 목록, 있으면 이름 검색
+async function fetchPlaces(query) {
   placeSearchBusy = true;
+  nearbyLoaded = true;
   const rwrap = document.getElementById('place-results');
   if (rwrap) rwrap.innerHTML = renderPlaceResults();
-  // GPS 위치 (허용 시 내 주변, 거부/실패 시 JB빌딩)
-  const pos = await getMyPosition();
+  const pos = await getMyPosition();   // 허용 시 내 위치, 거부 시 JB 폴백
   try {
-    const reqBody = { query: q };
+    const reqBody = {};
+    if (query) reqBody.query = query;
     if (pos) { reqBody.lat = pos.lat; reqBody.lng = pos.lng; }
     const res = await fetch(PLACES_URL, {
       method: 'POST',
@@ -1436,12 +1444,31 @@ async function searchPlaces() {
   renderStats();
 }
 
+// 내 주변 맛집 자동 목록 (검색어 없이)
+async function loadNearby(force) {
+  if (nearbyLoaded && !force) return;
+  placeSearchQ = '';
+  await fetchPlaces('');
+}
+
+// 이름으로 특정 가게 검색
+async function searchPlaces() {
+  const inp = document.getElementById('place-q');
+  if (!inp) return;
+  const q = inp.value.trim();
+  placeSearchQ = q;
+  if (!q) { await loadNearby(true); return; }   // 비우고 검색 = 주변 목록
+  await fetchPlaces(q);
+}
+
 // ── 탭 전환 ───────────────────────────────────────────────────
 function showTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  // 리뷰 탭 첫 진입 시 내 주변 맛집 자동 로드
+  if (name === 'stats') loadNearby();
 }
 
 // ── 초기화 ────────────────────────────────────────────────────
