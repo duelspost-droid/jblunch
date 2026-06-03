@@ -417,21 +417,6 @@
 
   .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
 
-  /* 관리자 */
-  .admin-modal { max-width: 760px; }
-  .admin-stats { background: #f4f7fb; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-  .admin-stat-row { font-size: 0.9rem; color: #1e3a5f; }
-  .admin-stat-row b { color: #0a3d7a; }
-  .admin-act { font-size: 0.74rem; color: #888; margin-top: 4px; }
-  .admin-logs { max-height: 56vh; overflow: auto; border: 1px solid #eee; border-radius: 10px; }
-  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
-  .admin-table th { position: sticky; top: 0; background: #0a3d7a; color: #fff; padding: 7px 8px; text-align: left; font-weight: 600; }
-  .admin-table td { padding: 6px 8px; border-bottom: 1px solid #f3f3f3; color: #444; vertical-align: top; }
-  .admin-table .al-time { white-space: nowrap; color: #999; }
-  .admin-table .al-ip { white-space: nowrap; font-family: monospace; color: #2b6cb0; }
-  .admin-table .al-act { white-space: nowrap; font-weight: 600; }
-  .admin-table .al-detail { color: #666; word-break: break-all; }
-
   /* 삭제 확인 토스트 */
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -647,32 +632,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- 관리자 페이지 (#admin) -->
-<div class="modal-bg" id="admin-bg">
-  <div class="modal admin-modal">
-    <h3>🔒 관리자 — 접속/작업 로그</h3>
-    <div id="admin-login">
-      <div class="modal-field">
-        <label>관리자 비밀번호</label>
-        <input type="password" id="admin-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')adminLogin()">
-      </div>
-      <div class="saving-msg" id="admin-msg"></div>
-      <div class="modal-btns">
-        <button class="btn-cancel" onclick="closeAdmin()">닫기</button>
-        <button class="btn-save" onclick="adminLogin()">로그인</button>
-      </div>
-    </div>
-    <div id="admin-panel" style="display:none">
-      <div class="admin-stats" id="admin-stats"></div>
-      <div class="admin-logs" id="admin-logs"></div>
-      <div class="modal-btns">
-        <button class="btn-cancel" onclick="closeAdmin()">닫기</button>
-        <button class="btn-save" onclick="adminLogin()">새로고침</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 // ── Supabase 설정 ─────────────────────────────────────────────
 const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
@@ -685,7 +644,6 @@ const SB_HEADERS = {
 
 // ── 접속/작업 로그 ────────────────────────────────────────────
 const TRACK_URL = `${SB_URL}/functions/v1/track`;
-const ADMIN_URL = `${SB_URL}/functions/v1/admin`;
 function track(action, detail) {
   try {
     fetch(TRACK_URL, {
@@ -704,68 +662,15 @@ let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating,
 
 // ── Supabase API ──────────────────────────────────────────────
 // 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
-// ── 관리자 ────────────────────────────────────────────────────
-let adminPwCache = '';
-function openAdmin() {
-  document.getElementById('admin-bg').classList.add('open');
-  document.getElementById('admin-login').style.display = 'block';
-  document.getElementById('admin-panel').style.display = 'none';
-  document.getElementById('admin-msg').textContent = '';
-  setTimeout(() => document.getElementById('admin-pw').focus(), 100);
-}
-function closeAdmin() {
-  document.getElementById('admin-bg').classList.remove('open');
-  if (location.hash === '#admin') history.replaceState(null, '', location.pathname);
-}
-async function adminLogin() {
-  const pw = adminPwCache || document.getElementById('admin-pw').value;
-  const msg = document.getElementById('admin-msg');
-  if (!pw) { msg.textContent = '⚠️ 비밀번호를 입력하세요.'; return; }
-  msg.textContent = '확인 중…';
-  try {
-    const res = await fetch(ADMIN_URL, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw, limit: 300 })
-    });
-    const data = await res.json();
-    if (!res.ok) { msg.textContent = '⚠️ ' + (data.error || '로그인 실패'); adminPwCache = ''; return; }
-    adminPwCache = pw;
-    renderAdmin(data);
-  } catch (e) {
-    msg.textContent = '⚠️ 네트워크 오류';
-  }
-}
-function renderAdmin(data) {
-  document.getElementById('admin-login').style.display = 'none';
-  document.getElementById('admin-panel').style.display = 'block';
-  const s = data.stats || {};
-  const acts = Object.entries(s.actions || {}).map(([k,v]) => `${k} ${v}`).join(' · ');
-  document.getElementById('admin-stats').innerHTML =
-    `<div class="admin-stat-row"><b>${s.total||0}</b> 기록 · <b>${s.uniqueIPs||0}</b> IP</div>
-     <div class="admin-act">${escHtml(acts)}</div>`;
-  const rows = (data.logs || []).map(l => `
-    <tr>
-      <td class="al-time">${fmtDate(l.created_at)}</td>
-      <td class="al-ip">${escHtml(l.ip||'')}</td>
-      <td class="al-act">${escHtml(l.action||'')}</td>
-      <td class="al-detail">${escHtml(l.detail||'')}</td>
-    </tr>`).join('');
-  document.getElementById('admin-logs').innerHTML = `
-    <table class="admin-table">
-      <thead><tr><th>시간</th><th>IP</th><th>액션</th><th>상세</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4">기록 없음</td></tr>'}</tbody>
-    </table>`;
-}
-
 function init() {
   renderHistory();
   renderStats();
   loadComments();
   track('visit');
-  if (location.hash === '#admin') openAdmin();
+  // 관리자 페이지는 별도(admin.html). #admin 접근 시 리다이렉트
+  if (location.hash === '#admin') location.href = 'admin.html';
 }
-window.addEventListener('hashchange', () => { if (location.hash === '#admin') openAdmin(); });
+window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'admin.html'; });
 
 async function loadComments() {
   setBadge('loading', '동기화 중…');

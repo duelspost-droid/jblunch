@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>🔒 JB×AX 관리자</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #f5f6fa; color: #1a1a2e; min-height: 100vh; padding: 20px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .app-header {
+    background: linear-gradient(100deg, #0a3d7a 0%, #1565c0 100%);
+    color: #fff; padding: 16px 20px; border-radius: 14px; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .app-header h1 { font-size: 1.05rem; font-weight: 800; }
+  .app-header .hl-ax { background: linear-gradient(90deg,#ffd54a,#ffb300); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .app-header a { margin-left: auto; color: #dbe8f7; font-size: 0.8rem; text-decoration: none; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 16px; }
+  .card h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: #0a3d7a; }
+  label { font-size: 0.78rem; font-weight: 600; color: #555; display: block; margin-bottom: 5px; }
+  input[type=password] {
+    width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 0.9rem; font-family: inherit; margin-bottom: 12px;
+  }
+  input:focus { outline: none; border-color: #0a3d7a; }
+  .btn { background: #0a3d7a; color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+  .btn:hover { opacity: 0.92; }
+  .btn.gray { background: #edf0f5; color: #555; }
+  .msg { font-size: 0.82rem; margin: 6px 0; min-height: 18px; }
+  .msg.err { color: #c53030; }
+  .msg.ok { color: #2f855a; }
+  .stats { background: #f4f7fb; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.9rem; color: #1e3a5f; }
+  .stats b { color: #0a3d7a; }
+  .stats .act { font-size: 0.74rem; color: #888; margin-top: 5px; }
+  .logs { max-height: 60vh; overflow: auto; border: 1px solid #eee; border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+  th { position: sticky; top: 0; background: #0a3d7a; color: #fff; padding: 8px; text-align: left; font-weight: 600; }
+  td { padding: 7px 8px; border-bottom: 1px solid #f3f3f3; color: #444; vertical-align: top; }
+  .t-time { white-space: nowrap; color: #999; }
+  .t-ip { white-space: nowrap; font-family: monospace; color: #2b6cb0; }
+  .t-act { white-space: nowrap; font-weight: 600; }
+  .t-detail { color: #666; word-break: break-all; }
+  .hidden { display: none; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header">
+    <span>🔒</span>
+    <h1>JB<span class="hl-ax">×AX</span> 관리자</h1>
+    <a href="./">← 사이트로</a>
+  </div>
+
+  <!-- 로그인 -->
+  <div class="card" id="login-card">
+    <h2>관리자 로그인</h2>
+    <label>비밀번호</label>
+    <input type="password" id="pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')login()">
+    <div class="msg" id="login-msg"></div>
+    <button class="btn" onclick="login()">로그인</button>
+  </div>
+
+  <!-- 로그 + 비번변경 (로그인 후) -->
+  <div id="panel" class="hidden">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">📊 접속/작업 로그</h2>
+        <button class="btn gray" onclick="loadLogs()">새로고침</button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="logs" id="logs"></div>
+    </div>
+
+    <div class="card">
+      <h2>🔑 비밀번호 변경</h2>
+      <label>새 비밀번호 (6자 이상)</label>
+      <input type="password" id="np1" placeholder="새 비밀번호">
+      <label>새 비밀번호 확인</label>
+      <input type="password" id="np2" placeholder="다시 입력" onkeydown="if(event.key==='Enter')changePw()">
+      <div class="msg" id="pw-msg"></div>
+      <button class="btn" onclick="changePw()">비밀번호 변경</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM';
+const ADMIN_URL = `${SB_URL}/functions/v1/admin`;
+let curPw = '';
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(iso){ if(!iso) return ''; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+async function adminCall(payload){
+  const res = await fetch(ADMIN_URL, {
+    method:'POST',
+    headers:{ 'Authorization':`Bearer ${SB_KEY}`, 'Content-Type':'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(()=>({}));
+  return { ok: res.ok, data };
+}
+
+async function login(){
+  const pw = document.getElementById('pw').value;
+  const msg = document.getElementById('login-msg');
+  if(!pw){ msg.className='msg err'; msg.textContent='비밀번호를 입력하세요.'; return; }
+  msg.className='msg'; msg.textContent='확인 중…';
+  const { ok, data } = await adminCall({ password: pw, limit: 300 });
+  if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'로그인 실패'); return; }
+  curPw = pw;
+  document.getElementById('login-card').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  render(data);
+}
+
+async function loadLogs(){
+  if(!curPw) return;
+  const { ok, data } = await adminCall({ password: curPw, limit: 300 });
+  if(ok) render(data);
+}
+
+function render(data){
+  const s = data.stats || {};
+  const acts = Object.entries(s.actions||{}).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
+  document.getElementById('stats').innerHTML =
+    `<div><b>${s.total||0}</b> 기록 · <b>${s.uniqueIPs||0}</b> 고유 IP</div><div class="act">${acts}</div>`;
+  const rows = (data.logs||[]).map(l=>`
+    <tr><td class="t-time">${fmt(l.created_at)}</td><td class="t-ip">${esc(l.ip)}</td>
+    <td class="t-act">${esc(l.action)}</td><td class="t-detail">${esc(l.detail)}</td></tr>`).join('');
+  document.getElementById('logs').innerHTML =
+    `<table><thead><tr><th>시간</th><th>IP</th><th>액션</th><th>상세</th></tr></thead>
+     <tbody>${rows||'<tr><td colspan="4" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
+}
+
+async function changePw(){
+  const np1 = document.getElementById('np1').value;
+  const np2 = document.getElementById('np2').value;
+  const msg = document.getElementById('pw-msg');
+  if(np1.length < 6){ msg.className='msg err'; msg.textContent='새 비밀번호는 6자 이상이어야 합니다.'; return; }
+  if(np1 !== np2){ msg.className='msg err'; msg.textContent='새 비밀번호가 일치하지 않습니다.'; return; }
+  msg.className='msg'; msg.textContent='변경 중…';
+  const { ok, data } = await adminCall({ password: curPw, action:'change_password', newPassword: np1 });
+  if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'변경 실패'); return; }
+  curPw = np1;
+  document.getElementById('np1').value=''; document.getElementById('np2').value='';
+  msg.className='msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다.';
+}
+</script>
+</body>
+</html>
