@@ -1346,19 +1346,22 @@ function renderStats() {
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
-  // 내 주변 맛집 카드 (자동 목록 + 이름 검색 보조)
+  // 내 주변 맛집 카드 — 버튼 클릭(목록 로드) 후에만 검색창 노출
+  const placeOpened = nearbyLoaded || !!placeSearchQ;
+  const searchRow = placeOpened ? `
+      <div class="place-search-row">
+        <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
+               placeholder="이름으로 찾기 (예: 스타벅스, 소몽)" maxlength="30"
+               onkeydown="if(event.key==='Enter')searchPlaces()">
+        <button class="place-btn" id="place-btn" onclick="searchPlaces()">검색</button>
+      </div>` : '';
   const searchHtml = `
     <div class="place-search-card">
       <div class="place-head-row">
         <div class="pref-title" style="margin:0">📍 내 주변 맛집에 리뷰 남기기</div>
         ${nearbyLoaded ? '<button class="place-refresh" onclick="loadNearby(true)" title="새로고침">🔄</button>' : ''}
       </div>
-      <div class="place-search-row">
-        <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
-               placeholder="이름으로 찾기 (예: 스타벅스, 소몽)" maxlength="30"
-               onkeydown="if(event.key==='Enter')searchPlaces()">
-        <button class="place-btn" id="place-btn" onclick="searchPlaces()">검색</button>
-      </div>
+      ${searchRow}
       <div id="place-results">${renderPlaceResults()}</div>
     </div>`;
 
