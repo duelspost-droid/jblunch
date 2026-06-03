@@ -318,6 +318,29 @@ def fetch_jb_news(naver_id, naver_secret, count=3):
         return []
 
 
+def generate_daily_message(client, weather, news, restaurants):
+    """날씨 + JB금융 뉴스 + 추천 맛집을 엮은 친근한 점심 한마디 생성."""
+    names = ", ".join(r["name"] for r in restaurants[:5])
+    headlines = " / ".join(n["title"] for n in (news or [])[:3]) or "(특이 소식 없음)"
+    prompt = f"""아래 정보로 여의도 JB금융 직장인에게 보내는 친근한 점심 안내 멘트를 2~3문장으로 써줘.
+존댓말, 이모지 약간 사용. 날씨에 어울리는 메뉴를 자연스럽게 권하고, 회사 소식이 있으면 가볍게 한 줄 엮어줘.
+
+- 오늘 날씨: {weather or '정보 없음'}
+- JB금융그룹 소식: {headlines}
+- 오늘 추천 맛집: {names}
+
+멘트 문장만 출력해줘 (다른 설명 없이)."""
+    try:
+        msg = call_claude(client, prompt, use_web=False)
+        msg = (msg or "").strip()
+        if msg:
+            print(f"💬 오늘의 멘트: {msg[:60]}…")
+        return msg
+    except Exception as e:
+        print(f"⚠️  멘트 생성 실패 (무시): {e}")
+        return ""
+
+
 def get_today_preference(today):
     """Supabase에서 오늘 저장된 컨디션/선호도 조회."""
     try:
@@ -456,8 +479,8 @@ def update_history(new_entry, history_path="history.json"):
     return history
 
 
-def send_email(restaurants, today, full_text, comment="", weather="", news=None, extras=None):
-    """Gmail SMTP로 점심 추천 이메일 발송 (날씨 + JB금융 뉴스 포함)."""
+def send_email(restaurants, today, full_text, comment="", weather="", news=None, extras=None, message=""):
+    """Gmail SMTP로 점심 추천 이메일 발송 (날씨 + JB금융 뉴스 + 오늘의 멘트 포함)."""
     gmail_user = os.environ.get("GMAIL_USER")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
     if not gmail_user or not gmail_password:
@@ -473,7 +496,11 @@ def send_email(restaurants, today, full_text, comment="", weather="", news=None,
 
     lines = [f"🍽️ 오늘의 여의나루 점심 맛집 추천 ({date_label})\n"]
     if weather:
-        lines.append(f"🌤️ 오늘 날씨: {weather}\n")
+        lines.append(f"🌤️ 오늘 날씨: {weather}")
+    if message:
+        lines.append(f"\n💬 {message}\n")
+    else:
+        lines.append("")
     lines += ["여의도 JB빌딩 근처 추천 음식점입니다.\n", "─" * 40]
     for i, r in enumerate(restaurants, 1):
         lines += [
@@ -497,9 +524,11 @@ def send_email(restaurants, today, full_text, comment="", weather="", news=None,
         for n in news:
             lines.append(f"\n• {n['title']}\n   {n.get('link','')}")
 
-    closing = comment if comment else "오늘도 맛있는 점심 되세요!"
-    lines += ["\n" + "─" * 40,
-              f"\n💬 {closing}",
+    # 상단에 멘트(message)가 없을 때만 하단에 날씨 코멘트 노출 (중복 방지)
+    lines += ["\n" + "─" * 40]
+    if not message and comment:
+        lines.append(f"\n💬 {comment}")
+    lines += ["\n오늘도 맛있는 점심 되세요! 🍽️",
               "\n—\nClaude AI 자동 발송"]
     body = "\n".join(lines)
 
@@ -673,11 +702,13 @@ def main():
     print("\n🌤️  날씨/뉴스 수집 중...")
     weather = fetch_weather()
     news = fetch_jb_news(naver_id, naver_secret)
+    daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
     new_entry = {
         "date": today,
         "comment": lunch.get("comment", ""),
+        "message": daily_msg,
         "weather": weather,
         "news": news,
         "restaurants": lunch.get("restaurants", []),
@@ -708,7 +739,7 @@ def main():
 
     print("\n📧 이메일 발송 중...")
     send_email(new_entry.get("restaurants", []), today, text, new_entry.get("comment", ""),
-               weather=weather, news=news, extras=new_entry.get("extras", []))
+               weather=weather, news=news, extras=new_entry.get("extras", []), message=daily_msg)
 
     print("\n✨ 완료!")
 

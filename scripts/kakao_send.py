@@ -33,13 +33,17 @@ def refresh_access_token(refresh_token):
 SITE_URL = "https://duelspost-droid.github.io/jblunch/"
 
 
-def send_to_me(access_token, restaurants, today, comment, weather="", news=None, extras=None):
-    """나에게 보내기 (메모) API로 점심 추천 발송. 날씨 + JB금융 뉴스 포함."""
+def send_to_me(access_token, restaurants, today, comment, weather="", news=None, extras=None, message=""):
+    """나에게 보내기 (메모) API로 점심 추천 발송. 날씨 + 멘트 + JB금융 뉴스 포함."""
     lines = [f"🍽️ 오늘의 여의나루 점심 추천 ({today})", ""]
     if weather:
-        lines += [f"🌤️ 날씨: {weather}", ""]
+        lines.append(f"🌤️ 날씨: {weather}")
+    if message:
+        lines += [f"💬 {message}", ""]
     elif comment:
         lines += [f"🌤️ {comment}", ""]
+    else:
+        lines.append("")
     for i, r in enumerate(restaurants[:5], 1):
         lines.append(f"{i}. {r['name']} ({r['cuisine']}) · {r['price']} · {r['distance']}")
     # 추가 추천
@@ -101,7 +105,8 @@ def main():
     try:
         send_to_me(access_token, entry["restaurants"], entry["date"],
                    entry.get("comment", ""), weather=entry.get("weather", ""),
-                   news=entry.get("news", []), extras=entry.get("extras", []))
+                   news=entry.get("news", []), extras=entry.get("extras", []),
+                   message=entry.get("message", ""))
         print("✅ 카카오톡 발송 완료")
     except Exception as e:
         body = e.read().decode() if hasattr(e, "read") else str(e)
