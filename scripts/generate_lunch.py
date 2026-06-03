@@ -501,27 +501,26 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-- restaurants: 시간대({meal})에 어울리는 기본 추천 5곳 — 다양하게 구성:
-  · 2~3곳은 가까운 검증 맛집(위 후보 목록), 음식 종류가 겹치지 않게
-  · 최소 1곳은 여의도 유명 맛집(조금 멀거나 지도 미등록이어도 OK)
-  · 가까운 곳 → 먼 곳 순서로 정렬
+- restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 다양하게)
+- extras: 추가 추천 2곳 — 1곳 tag="근처유명"(도보 10분내 유명), 1곳 tag="검색유명"(웹 유명, 멀거나 미등록 OK). restaurants와 겹치지 않게
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
-각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
+각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
 
 ```json
-{{"comment":"...","restaurants":[...],"by_condition":{{{cond_json}}}}}
+{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}],"by_condition":{{{cond_json}}}}}
 ```"""
     else:
         prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-5곳은 다양하게: 2~3곳은 가까운 검증 맛집(위 후보), 최소 1곳은 유명한 곳(조금 멀거나 미등록이어도 OK), 종류 겹치지 않게, 가까운 순 정렬.
-각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
+- restaurants: 가까운 검증 맛집 5곳 (종류 다양하게, 가까운 순)
+- extras: 추가 2곳 — 1곳 tag="근처유명"(도보 10분내 유명), 1곳 tag="검색유명"(웹 유명, 멀거나 미등록 OK)
+각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
 
 ```json
-{{"comment":"{meal} 추천 한마디","restaurants":[...5곳]}}
+{{"comment":"{meal} 추천 한마디","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}]}}
 ```"""
 
     print(f"🔍 [{meal}] 생성 중...")
@@ -536,6 +535,8 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     # id 보정
     for idx, r in enumerate(entry.get("restaurants", [])):
         r["id"] = f"{id_prefix}-{idx + 1}"
+    for idx, r in enumerate(entry.get("extras", [])):
+        r["id"] = f"{id_prefix}-x{idx + 1}"
     for cond, rlist in entry.get("by_condition", {}).items():
         cp = cond[:2].replace(" ", "")
         for idx, r in enumerate(rlist):
@@ -545,6 +546,8 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     if kakao_key or naver_id:
         print(f"  📐 [{meal}] 검증 + 거리 계산 중...")
         entry["restaurants"], _ = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
+        if entry.get("extras"):
+            entry["extras"], _ = verify_and_enrich(entry["extras"], kakao_key, naver_id, naver_secret)
         for cond in list(entry.get("by_condition", {}).keys()):
             entry["by_condition"][cond], _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
 
@@ -589,16 +592,21 @@ def main():
         "date": today,
         "comment": lunch.get("comment", ""),
         "restaurants": lunch.get("restaurants", []),
+        "extras": lunch.get("extras", []),
         "by_condition": lunch.get("by_condition", {}),
         "meals": {},
     }
     if dinner:
         new_entry["meals"]["저녁"] = {
             "restaurants": dinner.get("restaurants", []),
+            "extras": dinner.get("extras", []),
             "by_condition": dinner.get("by_condition", {}),
         }
     if bar:
-        new_entry["meals"]["술집"] = {"restaurants": bar.get("restaurants", [])}
+        new_entry["meals"]["술집"] = {
+            "restaurants": bar.get("restaurants", []),
+            "extras": bar.get("extras", []),
+        }
 
     text = lunch_text  # 이메일 본문 참고용
 

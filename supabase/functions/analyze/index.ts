@@ -208,15 +208,15 @@ Deno.serve(async (req) => {
 ${candBlock}
 규칙:
 - 실제 존재하는 여의도/여의나루 근처 가게로, 시간대(${meal})에 어울리게 골라.
-- 다양성 있게 5곳을 구성해줘:
-  · 2~3곳은 '가까운 검증 맛집'에서 (도보 가까운 곳 우선)
-  · 음식 종류(한식/일식/중식/양식 등)가 최대한 겹치지 않게
-  · 최소 1곳은 여의도에서 '유명한 맛집'으로 (위 인기 목록이나 네가 아는 유명한 곳 — 조금 멀거나 지도 미등록이어도 OK)
-  · 가까운 곳 → 먼 곳 순서로 정렬
+- restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 최대한 다양하게).
+- extras: 추가 추천 2곳 — 아래 형식 그대로 2개:
+  · 1곳은 tag="근처유명" — 도보 10분 이내의 여의도 유명 맛집
+  · 1곳은 tag="검색유명" — 웹에서 유명한 여의도 맛집 (조금 멀거나 지도 미등록이어도 OK)
+  · extras는 restaurants 5곳과 겹치지 않게.
 - comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
 - 반드시 JSON만 출력:
-{"comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개]}`;
+{"comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -245,12 +245,15 @@ ${candBlock}
     const parsed = JSON.parse(match[0]);
     const stamp = Date.now();
     const restaurants: Record<string, unknown>[] = parsed.restaurants || [];
+    const extras: Record<string, unknown>[] = Array.isArray(parsed.extras) ? parsed.extras : [];
 
-    // ③ 거리 실측 + 검증 — 5곳 전체를 병렬 처리 (속도)
+    // ③ 거리 실측 + 검증 — 기본 5곳 + 추가 2곳 모두 병렬 처리 (속도)
     await Promise.all(
-      restaurants.map((r) => verifyOne(r, kakaoKey, naverId, naverSecret)),
+      [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret)),
     );
     restaurants.forEach((r, i) => { r.id = `custom-${stamp}-${i + 1}`; });
+    extras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
+    parsed.extras = extras;
 
     return json(parsed, 200);
   } catch (e) {

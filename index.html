@@ -133,6 +133,14 @@
   .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
   .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
   .badge-review { background: #fff4d6; color: #b7791f; }
+  .badge-tag { background: #ede9fe; color: #6b46c1; }
+  .extra-head {
+    font-size: 0.8rem; font-weight: 700; color: #6b46c1;
+    margin: 16px 0 9px; padding-top: 13px;
+    border-top: 1px dashed #e2e2ea;
+  }
+  .card.card-extra { background: #faf9ff; }
+  .card.card-extra .card-stripe { background: #b794f4; }
   .card.has-review .card-stripe { background: #f6b73c; }
   .modal-intro {
     background: #f0f5fb; border-radius: 10px; padding: 10px 12px;
@@ -620,60 +628,75 @@ function fmtDate(iso) {
 
 // ── 카드 그룹 렌더 (공통) ────────────────────────────────────
 // bare=true: 날짜/날씨 헤더 없이 카드만 (홈 today-group용, 상단 배너와 중복 방지)
+// 추천 태그 → 배지 라벨
+const TAG_BADGE = {
+  '근처유명': '⭐ 10분내 유명',
+  '검색유명': '🔍 검색 인기',
+};
+
+function buildCard(r) {
+  const cms = commentsState[r.name] || [];
+  const reviewsHtml = cms.length
+    ? cms.map(c => {
+        const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+        const color = avatarColor(c.reviewer_name||'?');
+        return `<div class="review-item">
+          <div class="review-avatar" style="background:${color}">${initial}</div>
+          <div class="review-right">
+            <div class="review-header">
+              <span class="review-name">${escHtml(c.reviewer_name)}</span>
+              ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+              <span class="review-date">${fmtDate(c.created_at)}</span>
+            </div>
+            ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+          </div>
+          <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
+        </div>`;
+      }).join('')
+    : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
+  const cnt = cms.length;
+  const ratings = cms.map(c => c.rating).filter(Boolean);
+  const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
+  const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
+  const tagBadge = r.tag && TAG_BADGE[r.tag] ? `<span class="badge badge-tag">${TAG_BADGE[r.tag]}</span>` : '';
+  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
+    <div class="card-stripe"></div>
+    <div class="card-emoji">${emo(r.cuisine)}</div>
+    <div class="card-body">
+      <div class="card-top">
+        <span class="card-name">${r.name}</span>
+        <span class="badge badge-cuisine">${r.cuisine}</span>
+        ${tagBadge}
+        ${reviewBadge}
+      </div>
+      <div class="card-feature">${r.feature}</div>
+      <div class="card-meta">
+        <span>💰 ${r.price}</span>
+        <span>🚶 ${r.distance}</span>
+      </div>
+      <div class="reviews-block">${reviewsHtml}</div>
+    </div>
+    <div class="card-actions">
+      ${r.verified === false
+        ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
+        : `<a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`}
+      <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
+    </div>
+  </div>`;
+}
+
 function renderGroup(group, bare) {
   const d = new Date(group.date);
   const days = ['일','월','화','수','목','금','토'];
   const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
-  const cards = group.restaurants.map(r => {
-    const cms = commentsState[r.name] || [];
-    const reviewsHtml = cms.length
-      ? cms.map(c => {
-          const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
-          const color = avatarColor(c.reviewer_name||'?');
-          return `<div class="review-item">
-            <div class="review-avatar" style="background:${color}">${initial}</div>
-            <div class="review-right">
-              <div class="review-header">
-                <span class="review-name">${escHtml(c.reviewer_name)}</span>
-                ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
-                <span class="review-date">${fmtDate(c.created_at)}</span>
-              </div>
-              ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
-            </div>
-            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
-          </div>`;
-        }).join('')
-      : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
-    const cnt = cms.length;
-    const ratings = cms.map(c => c.rating).filter(Boolean);
-    const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
-    const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
-    return `<div class="card ${cnt?'has-review':''}" id="c-${escAttr(r.name)}">
-      <div class="card-stripe"></div>
-      <div class="card-emoji">${emo(r.cuisine)}</div>
-      <div class="card-body">
-        <div class="card-top">
-          <span class="card-name">${r.name}</span>
-          <span class="badge badge-cuisine">${r.cuisine}</span>
-          ${reviewBadge}
-        </div>
-        <div class="card-feature">${r.feature}</div>
-        <div class="card-meta">
-          <span>💰 ${r.price}</span>
-          <span>🚶 ${r.distance}</span>
-        </div>
-        <div class="reviews-block">${reviewsHtml}</div>
-      </div>
-      <div class="card-actions">
-        ${r.verified === false
-          ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
-          : `<a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`}
-        <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
-      </div>
-    </div>`;
-  }).join('');
+  const cards = group.restaurants.map(buildCard).join('');
+  // 추가 추천 (10분내 유명 / 검색 유명) — 하단 별도 섹션
+  const extras = (group.extras || []).filter(Boolean);
+  const extrasHtml = extras.length
+    ? `<div class="extra-head">✨ 이런 곳도 가볼 만해요</div><div class="cards">${extras.map(buildCard).join('')}</div>`
+    : '';
   if (bare) {
-    return `<div class="cards">${cards}</div>`;
+    return `<div class="cards">${cards}</div>${extrasHtml}`;
   }
   const commentHtml = group.comment
     ? `<div class="weather-comment">🌤️ ${escHtml(group.comment)}</div>`
@@ -682,6 +705,7 @@ function renderGroup(group, bare) {
     <div class="date-label">📅 ${label}</div>
     ${commentHtml}
     <div class="cards">${cards}</div>
+    ${extrasHtml}
   </div>`;
 }
 
@@ -909,7 +933,7 @@ async function generateRecommend(text, meal, saveHist) {
     if (i < steps.length) { progText.textContent = steps[i].t; fill.style.width = steps[i].w + '%'; i++; }
   }, 400);
 
-  let comment = '', restaurants = null, ok = false;
+  let comment = '', restaurants = null, extras = [], ok = false;
   try {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
@@ -919,6 +943,7 @@ async function generateRecommend(text, meal, saveHist) {
     const data = await res.json();
     comment = data.comment || '';
     restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
+    extras = Array.isArray(data.extras) ? data.extras : [];
     ok = !!(restaurants && restaurants.length);
   } catch (e) { ok = false; }
 
@@ -932,7 +957,7 @@ async function generateRecommend(text, meal, saveHist) {
 
     if (ok) {
       const label = text ? `🔎 "${text}" 맞춤 추천` : `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
-      customResult = { label, comment, restaurants };
+      customResult = { label, comment, restaurants, extras };
       answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
       answerEl.classList.add('show');
       renderCustomGroup();
@@ -947,7 +972,7 @@ async function generateRecommend(text, meal, saveHist) {
 function renderCustomGroup() {
   if (!customResult) return;
   document.getElementById('today-group').innerHTML =
-    renderGroup({ date: new Date().toLocaleDateString('sv-SE'), restaurants: customResult.restaurants }, true);
+    renderGroup({ date: new Date().toLocaleDateString('sv-SE'), restaurants: customResult.restaurants, extras: customResult.extras }, true);
 }
 
 // 오늘 데이터 / 시간대별 데이터 추출
@@ -957,7 +982,7 @@ function getDay() {
 }
 function getMealData(day, meal) {
   if (!day) return null;
-  if (meal === '점심') return { restaurants: day.restaurants, by_condition: day.by_condition };
+  if (meal === '점심') return { restaurants: day.restaurants, by_condition: day.by_condition, extras: day.extras };
   return (day.meals && day.meals[meal]) || null;
 }
 
@@ -1016,10 +1041,11 @@ function renderCondGroup() {
       `<div class="empty">아직 ${currentMeal} 추천 데이터가 없어요.<br>아래 직접 입력으로 추천받아보세요!</div>`;
     return;
   }
-  const restaurants = currentCond && md.by_condition && md.by_condition[currentCond]
-    ? md.by_condition[currentCond]
-    : md.restaurants;
-  document.getElementById('today-group').innerHTML = renderGroup({ date: day.date, restaurants }, true);
+  const isBase = !(currentCond && md.by_condition && md.by_condition[currentCond]);
+  const restaurants = isBase ? md.restaurants : md.by_condition[currentCond];
+  // 추가 추천(extras)은 기본(컨디션 미선택) 보기에서만 노출
+  const extras = isBase ? md.extras : null;
+  document.getElementById('today-group').innerHTML = renderGroup({ date: day.date, restaurants, extras }, true);
 }
 
 function escHtml(s) {
