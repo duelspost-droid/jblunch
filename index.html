@@ -223,6 +223,13 @@
     line-height: 1;
   }
   .btn-del-review:hover { color: #e53e3e; background: #fff0f0; }
+  .review-actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .btn-edit-review {
+    background: none; border: none; cursor: pointer; color: #bbb;
+    font-size: 0.8rem; padding: 2px 4px; border-radius: 4px;
+    transition: color 0.13s, background 0.13s; line-height: 1;
+  }
+  .btn-edit-review:hover { color: #0a3d7a; background: #eef4fb; }
   .no-reviews { font-size: 0.76rem; color: #ccc; padding: 2px 0; }
 
   .card-actions {
@@ -685,6 +692,22 @@ async function deleteComment(commentId) {
   if (!res.ok) throw new Error(await res.text());
 }
 
+async function updateComment(commentId, reviewerName, content, rating, meal) {
+  const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
+    method: 'PATCH',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+    body: JSON.stringify({
+      reviewer_name: reviewerName,
+      content: content || null,
+      rating: rating || null,
+      meal: meal || null
+    })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0];
+}
+
 function setBadge(type, text) {
   const b = document.getElementById('sync-badge');
   if (!b) return;   // 배지 제거됨 — 무시
@@ -752,7 +775,10 @@ function buildCard(r) {
             </div>
             ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
           </div>
-          <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
+          <div class="review-actions">
+            <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
+            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
+          </div>
         </div>`;
       }).join('')
     : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
@@ -1174,7 +1200,14 @@ function escAttr(s) {
 }
 
 // ── 리뷰 모달 ─────────────────────────────────────────────────
-let mId = null, mRating = 0, mFeature = '', mMeal = '점심';
+let mId = null, mRating = 0, mFeature = '', mMeal = '점심', mEditId = null;
+
+// 리뷰 수정: 해당 리뷰를 찾아 모달을 수정 모드로 염
+function editReview(commentId, restaurantName) {
+  const c = (commentsState[restaurantName] || []).find(x => String(x.id) === String(commentId));
+  if (!c) return;
+  openModal(restaurantName, '', c);
+}
 
 function selectModalMeal(el) {
   mMeal = el.dataset.meal;
@@ -1194,13 +1227,15 @@ function findRestaurant(name) {
   return allRestaurants().find(r => r.name === name) || null;
 }
 
-function openModal(name, feature) {
-  mId = name; mRating = 0; mFeature = feature || '';
-  // 끼니 기본값: 현재 보고 있는 시간대 (없으면 점심)
-  mMeal = (typeof currentMeal !== 'undefined' && currentMeal) ? currentMeal : '점심';
+function openModal(name, feature, editC) {
+  mId = name; mRating = editC ? (editC.rating || 0) : 0; mFeature = feature || '';
+  mEditId = editC ? editC.id : null;
+  // 끼니 기본값: 수정이면 기존 값, 아니면 현재 보고 있는 시간대
+  mMeal = editC && editC.meal ? editC.meal
+        : ((typeof currentMeal !== 'undefined' && currentMeal) ? currentMeal : '점심');
   document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
     b.classList.toggle('on', b.dataset.meal === mMeal));
-  document.getElementById('modal-title').textContent = `🍽️ ${name}`;
+  document.getElementById('modal-title').textContent = editC ? `✏️ 리뷰 수정 — ${name}` : `🍽️ ${name}`;
   // 맛집 상세정보 (종류/가격/거리 + 지도)
   const info = findRestaurant(name);
   const detailEl = document.getElementById('modal-detail');
@@ -1242,7 +1277,10 @@ function openModal(name, feature) {
           </div>
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
         </div>
-        <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(name)}')">✕</button>
+        <div class="review-actions">
+          <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(name)}')">✏️</button>
+          <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(name)}')">✕</button>
+        </div>
       </div>`;
     }).join('');
     revEl.style.display = 'block';
@@ -1250,10 +1288,12 @@ function openModal(name, feature) {
     revEl.innerHTML = '';
     revEl.style.display = 'none';
   }
-  document.getElementById('modal-name').value = '';
-  document.getElementById('modal-text').value = '';
+  // 수정 모드면 기존 값 채우기
+  document.getElementById('modal-name').value = editC ? (editC.reviewer_name || '') : '';
+  document.getElementById('modal-text').value = editC ? (editC.content || '') : '';
   document.getElementById('saving-msg').textContent = '';
   document.getElementById('btn-save').disabled = false;
+  document.getElementById('btn-save').textContent = editC ? '수정 저장' : '저장';
   renderModalStars();
   document.getElementById('modal-bg').classList.add('open');
   setTimeout(() => document.getElementById('modal-name').focus(), 100);
@@ -1289,16 +1329,27 @@ async function saveReview() {
   const btn = document.getElementById('btn-save');
   const msg = document.getElementById('saving-msg');
   btn.disabled = true;
-  msg.textContent = '저장 중…';
+  msg.textContent = mEditId ? '수정 중…' : '저장 중…';
 
   try {
-    const newComment = await insertComment(mId, name, text, mRating, mMeal);
-    if (!commentsState[mId]) commentsState[mId] = [];
-    commentsState[mId].push(newComment);
-    setBadge('ok', '☁️ 동기화됨');
-    closeModal();
-    renderHistory(); renderStats();
-    showToast('✅ 리뷰가 저장되었습니다!');
+    if (mEditId) {
+      const updated = await updateComment(mEditId, name, text, mRating, mMeal);
+      const arr = commentsState[mId] || [];
+      const i = arr.findIndex(c => String(c.id) === String(mEditId));
+      if (i >= 0) arr[i] = updated;
+      setBadge('ok', '☁️ 동기화됨');
+      closeModal();
+      renderHistory(); renderStats();
+      showToast('✏️ 리뷰가 수정되었습니다!');
+    } else {
+      const newComment = await insertComment(mId, name, text, mRating, mMeal);
+      if (!commentsState[mId]) commentsState[mId] = [];
+      commentsState[mId].push(newComment);
+      setBadge('ok', '☁️ 동기화됨');
+      closeModal();
+      renderHistory(); renderStats();
+      showToast('✅ 리뷰가 저장되었습니다!');
+    }
   } catch(e) {
     msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
     btn.disabled = false;
