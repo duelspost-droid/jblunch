@@ -276,6 +276,34 @@
   .stat-num { font-size: 1.8rem; font-weight: 800; color: #0a3d7a; line-height: 1; }
   .stat-label { font-size: 0.72rem; color: #999; margin-top: 4px; }
 
+  /* 내 근처 맛집 검색 */
+  .place-search-card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; }
+  .place-search-row { display: flex; gap: 8px; margin-top: 10px; }
+  .place-input {
+    flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 12px; font-size: 0.86rem; font-family: inherit; color: #333;
+  }
+  .place-input:focus { outline: none; border-color: #0a3d7a; }
+  .place-btn {
+    background: #0a3d7a; color: #fff; border: none; border-radius: 10px;
+    padding: 9px 16px; font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .place-hint { font-size: 0.78rem; color: #aaa; padding: 12px 2px 2px; line-height: 1.5; }
+  .place-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 4px; border-bottom: 1px solid #f3f3f3;
+  }
+  .place-item:last-child { border-bottom: none; }
+  .place-info { flex: 1; min-width: 0; cursor: pointer; }
+  .place-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+  .place-sub { font-size: 0.76rem; color: #777; }
+  .place-addr { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
+  .place-review-btn {
+    flex-shrink: 0; border: 1.5px solid #0a3d7a; background: #fff; color: #0a3d7a;
+    border-radius: 9px; padding: 7px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    transition: all 0.13s;
+  }
+  .place-review-btn:hover { background: #0a3d7a; color: #fff; }
   .top-list { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .top-list h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 11px; }
   .top-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; border-radius: 8px; transition: background 0.13s; }
@@ -867,6 +895,7 @@ function matchCondition(text) {
 }
 
 const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
+const PLACES_URL = `${SB_URL}/functions/v1/places-search`;
 const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
 
 // ── 검색 히스토리 (Supabase 공유) ────────────────────────────
@@ -1119,6 +1148,8 @@ function findRestaurant(name) {
     const hit = all.find(r => r.name === name);
     if (hit) return hit;
   }
+  const inSearch = (searchedPlaces || []).find(r => r.name === name);
+  if (inSearch) return inSearch;
   return allRestaurants().find(r => r.name === name) || null;
 }
 
@@ -1297,11 +1328,25 @@ function renderStats() {
     }))
     .sort((a,b) => b.avg - a.avg).slice(0,5);
 
+  // 내 근처 맛집 검색 결과 카드
+  const searchHtml = `
+    <div class="place-search-card">
+      <div class="pref-title">🔍 내 근처 맛집 검색해서 리뷰 남기기</div>
+      <div class="place-search-row">
+        <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
+               placeholder="가게 이름·메뉴 (예: 스타벅스, 김밥, 소몽)" maxlength="30"
+               onkeydown="if(event.key==='Enter')searchPlaces()">
+        <button class="place-btn" id="place-btn" onclick="searchPlaces()">검색</button>
+      </div>
+      <div id="place-results">${renderPlaceResults()}</div>
+    </div>`;
+
   document.getElementById('tab-stats').innerHTML = `
     <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
     </div>
+    ${searchHtml}
     <div class="top-list">
       <h3>⭐ 리뷰 맛집 (평균 별점순) · 눌러서 리뷰 보기</h3>
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
@@ -1318,6 +1363,53 @@ function renderStats() {
         </div>
       </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
     </div>`;
+}
+
+// ── 내 근처 맛집 검색 ─────────────────────────────────────────
+let searchedPlaces = [];   // [{name, cuisine, distance, address, verified}]
+let placeSearchQ = '';
+let placeSearchBusy = false;
+
+function renderPlaceResults() {
+  if (placeSearchBusy) return '<div class="place-hint">🔎 검색 중…</div>';
+  if (!placeSearchQ) return '<div class="place-hint">추천에 없는 가게도 검색해서 리뷰를 남길 수 있어요.</div>';
+  if (!searchedPlaces.length) return '<div class="place-hint">검색 결과가 없어요. 다른 키워드로 시도해보세요.</div>';
+  return searchedPlaces.map(p => {
+    const cms = commentsState[p.name] || [];
+    const cnt = cms.length;
+    return `<div class="place-item">
+      <div class="place-info" onclick="openModal('${escAttr(p.name)}','')">
+        <div class="place-name">${emo(p.cuisine)} ${escHtml(p.name)} ${cnt?`<span class="badge badge-review">리뷰 ${cnt}</span>`:''}</div>
+        <div class="place-sub">${escHtml(p.cuisine||'')} · 🚶 ${escHtml(p.distance||'')}</div>
+        ${p.address?`<div class="place-addr">📍 ${escHtml(p.address)}</div>`:''}
+      </div>
+      <button class="place-review-btn" onclick="openModal('${escAttr(p.name)}','')">📝 리뷰</button>
+    </div>`;
+  }).join('');
+}
+
+async function searchPlaces() {
+  const inp = document.getElementById('place-q');
+  if (!inp) return;
+  const q = inp.value.trim();
+  placeSearchQ = q;
+  if (!q) { searchedPlaces = []; renderStats(); return; }
+  placeSearchBusy = true;
+  const rwrap = document.getElementById('place-results');
+  if (rwrap) rwrap.innerHTML = renderPlaceResults();
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q })
+    });
+    const data = await res.json();
+    searchedPlaces = Array.isArray(data.places) ? data.places : [];
+  } catch (e) {
+    searchedPlaces = [];
+  }
+  placeSearchBusy = false;
+  renderStats();
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────────
