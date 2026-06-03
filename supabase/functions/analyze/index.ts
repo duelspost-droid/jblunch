@@ -225,7 +225,8 @@ ${candBlock}
 - 반드시 JSON만 출력:
 {"comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    // Claude 호출 — rate limit(429) 시 짧게 1회 재시도
+    const callClaude = () => fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -239,9 +240,20 @@ ${candBlock}
       }),
     });
 
+    let resp = await callClaude();
+    if (resp.status === 429) {
+      await new Promise((r) => setTimeout(r, 3000));
+      resp = await callClaude();
+    }
+
     if (!resp.ok) {
       const err = await resp.text();
-      return json({ error: "claude error", detail: err }, 502);
+      const rateLimited = resp.status === 429 || err.includes("rate_limit");
+      return json({
+        error: rateLimited ? "rate_limited" : "claude error",
+        message: rateLimited ? "AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요." : "추천 생성 오류",
+        detail: err,
+      }, rateLimited ? 429 : 502);
     }
 
     const data = await resp.json();

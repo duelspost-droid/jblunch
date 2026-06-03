@@ -933,7 +933,7 @@ async function generateRecommend(text, meal, saveHist) {
     if (i < steps.length) { progText.textContent = steps[i].t; fill.style.width = steps[i].w + '%'; i++; }
   }, 400);
 
-  let comment = '', restaurants = null, extras = [], ok = false;
+  let comment = '', restaurants = null, extras = [], ok = false, errMsg = '';
   try {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
@@ -944,6 +944,7 @@ async function generateRecommend(text, meal, saveHist) {
     comment = data.comment || '';
     restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
     extras = Array.isArray(data.extras) ? data.extras : [];
+    if (data.error) errMsg = data.message || (data.error === 'rate_limited' ? 'AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요.' : '');
     ok = !!(restaurants && restaurants.length);
   } catch (e) { ok = false; }
 
@@ -962,6 +963,9 @@ async function generateRecommend(text, meal, saveHist) {
       answerEl.classList.add('show');
       renderCustomGroup();
       if (saveHist && text) addHistory(text);
+    } else if (errMsg) {
+      answerEl.innerHTML = `<div class="pa-head">⏳ 잠시만요</div>${escHtml(errMsg)}`;
+      answerEl.classList.add('show');
     } else {
       answerEl.innerHTML = `<div class="pa-head">⚠️ 추천 생성 실패</div>네트워크 문제로 맞춤 추천을 못 가져왔어요. 잠시 후 다시 시도해주세요.`;
       answerEl.classList.add('show');
