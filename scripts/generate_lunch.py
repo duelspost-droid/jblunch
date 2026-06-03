@@ -21,9 +21,9 @@ from datetime import datetime, timezone, timedelta
 SB_URL = "https://nrdapzgtibbusvoaceuh.supabase.co"
 SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM"
 
-# JB빌딩 (여의나루로 77) 좌표
-JB_LAT = 37.5215
-JB_LNG = 126.9319
+# JB빌딩 (여의나루로 77) 좌표 — Kakao 주소 지오코딩으로 검증됨
+JB_LAT = 37.5240914884765
+JB_LNG = 126.927376521939
 
 _coords_cache = {}
 
@@ -59,6 +59,33 @@ def _is_food_category(category):
     if any(kw in category for kw in NON_FOOD_KEYWORDS):
         return False
     return True
+
+
+def fetch_nearby_candidates(kakao_key, radius=600, max_count=40):
+    """Kakao 카테고리 검색으로 JB빌딩 반경 내 실제 음식점 목록 조회.
+    하이브리드 추천용 — Claude에게 '실존 후보'로 제공. 실패 시 빈 리스트."""
+    if not kakao_key:
+        return []
+    out = []
+    try:
+        for page in range(1, 4):  # 최대 3페이지(45곳)
+            url = (f"https://dapi.kakao.com/v2/local/search/category.json"
+                   f"?category_group_code=FD6&x={JB_LNG}&y={JB_LAT}"
+                   f"&radius={radius}&sort=distance&size=15&page={page}")
+            req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
+            with urllib.request.urlopen(req, timeout=5) as r:
+                data = json.loads(r.read())
+            for d in data.get("documents", []):
+                cat = d.get("category_name", "").replace("음식점 > ", "")
+                mins = max(1, round(int(d.get("distance", 0)) * 1.0 / 80))
+                out.append(f"{d['place_name']}({cat.split(' > ')[0]}, 도보 {mins}분)")
+                if len(out) >= max_count:
+                    return out
+            if data.get("meta", {}).get("is_end"):
+                break
+    except Exception as e:
+        print(f"  ⚠️  후보 목록 조회 실패: {e}")
+    return out
 
 
 def get_kakao_place(name, kakao_key):
@@ -115,11 +142,14 @@ def get_naver_place(name, naver_id, naver_secret):
 
 
 def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
-    """Kakao 또는 Naver 중 한 곳이라도 실존 + 음식점이면 통과 (OR 검증).
-    반환: (verified_restaurants, failed_names)"""
-    verified, failed = [], []
+    """Kakao/Naver로 실존 여부 확인 + 거리 계산.
+    검증 실패해도 제거하지 않고 verified=False 플래그만 부여
+    (프론트엔드에서 '지도없음'으로 표시 → 사용자가 직접 판단).
+    각 가게에 r["verified"]=True/False 추가. 반환: (restaurants, unverified_names)"""
+    unverified = []
 
     for r in restaurants:
+        r["name"] = clean_name(r["name"])
         distances = {}
         food_votes = []   # 카테고리 판정 결과 (True/False/None)
 
@@ -136,34 +166,29 @@ def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
                 distances["네이버"] = max(1, round(haversine_m(JB_LAT, JB_LNG, nlat, nlng) * 1.35 / 80))
                 food_votes.append(_is_food_category(ncat))
 
-        # 어디서도 못 찾음 → 가짜 가게
-        if not distances:
-            failed.append(r["name"])
+        # 검증 실패 판정: 어디서도 못 찾음 OR 모든 소스가 비음식점
+        is_food = not (food_votes and all(v is False for v in food_votes))
+        if not distances or not is_food:
+            r["verified"] = False
+            r["distance"] = "거리 미확인"
+            unverified.append(r["name"])
+            print(f"  ⚠️  {r['name']}: 지도없음")
             continue
 
-        # 모든 소스가 "음식점 아님"으로 판정 → 이름 충돌(다른 업종) → 제외
-        if food_votes and all(v is False for v in food_votes):
-            failed.append(f"{r['name']}(비음식점)")
-            continue
-
-        # 가게명 정리 (괄호 주소 제거 → 지도 버튼 검색 정확도 향상)
-        r["name"] = clean_name(r["name"])
-
-        # distance 필드 업데이트 (찾은 소스만 표기)
+        # 검증 성공 — 거리 표기 (찾은 소스만)
+        r["verified"] = True
         if "카카오" in distances and "네이버" in distances:
             r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
         elif "카카오" in distances:
             r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
         else:
             r["distance"] = f"도보 {distances['네이버']}분 (네이버)"
-
-        verified.append(r)
         print(f"  ✅ {r['name']}: {r['distance']}")
 
-    if failed:
-        print(f"  ❌ 미검증 ({len(failed)}): {', '.join(failed)}")
+    if unverified:
+        print(f"  ⚠️  지도없음 ({len(unverified)}): {', '.join(unverified)}")
 
-    return verified, failed
+    return restaurants, unverified
 
 
 def get_today_kst():
@@ -399,13 +424,21 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     idp = MEAL_IDP[meal]
     id_prefix = date_compact + (f"-{idp}" if idp else "")
 
+    # 하이브리드: JB빌딩 근처 실제 음식점 후보 목록 (거리 정확)
+    candidates = fetch_nearby_candidates(kakao_key)
+    cand_block = ""
+    if candidates:
+        cand_block = ("\n참고용 — JB빌딩 근처 실제 등록 음식점(거리 정확):\n"
+                      + ", ".join(candidates)
+                      + "\n위 목록을 우선 활용하되, 여기 없어도 네가 아는 여의도 유명 맛집은 추가해도 됨.\n")
+
     if with_conditions:
         cond_list = " / ".join(CONDITIONS)
         hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
         weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
-
+{cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 시간대({meal})에 어울리는 기본 추천 5곳
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
@@ -418,6 +451,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 ```"""
     else:
         prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
+{cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
 
@@ -442,24 +476,17 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         for idx, r in enumerate(rlist):
             r["id"] = f"{id_prefix}-{cp}-{idx + 1}"
 
-    # 실제 존재하는 가게만 필터링 (Kakao 검증)
+    # 거리 계산 + 검증 플래그 부여 (실패해도 제거하지 않음)
     if kakao_key or naver_id:
         print(f"  📐 [{meal}] 검증 + 거리 계산 중...")
-        restaurants, failed = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
-
-        if failed and len(restaurants) < 5:
-            print(f"  ⚠️  {len(restaurants)}/5 (재생성 필요)")
-
-        entry["restaurants"] = restaurants
-
-        # by_condition도 검증
+        entry["restaurants"], _ = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
         for cond in list(entry.get("by_condition", {}).keys()):
-            verified, _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
-            entry["by_condition"][cond] = verified
+            entry["by_condition"][cond], _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
 
     n = len(entry.get("restaurants", []))
+    n_ok = sum(1 for r in entry.get("restaurants", []) if r.get("verified"))
     nc = len(entry.get("by_condition", {}))
-    print(f"✅ [{meal}] 기본 {n}곳" + (f" + 컨디션 {nc}종" if nc else ""))
+    print(f"✅ [{meal}] 기본 {n}곳(검증 {n_ok})" + (f" + 컨디션 {nc}종" if nc else ""))
     return entry, text
 
 

@@ -225,6 +225,11 @@
     text-decoration: none; display: inline-block; text-align: center;
   }
   .btn-map:hover { background: #03c75a; color: #fff; }
+  .btn-map.nomap {
+    border-color: #d0d0d0; background: #f3f3f3; color: #999;
+    cursor: default;
+  }
+  .btn-map.nomap:hover { background: #f3f3f3; color: #999; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Stats */
@@ -660,7 +665,9 @@ function renderGroup(group, bare) {
         <div class="reviews-block">${reviewsHtml}</div>
       </div>
       <div class="card-actions">
-        <a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>
+        ${r.verified === false
+          ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
+          : `<a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`}
         <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
       </div>
     </div>`;
