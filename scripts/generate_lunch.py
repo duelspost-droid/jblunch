@@ -28,6 +28,12 @@ JB_LNG = 126.927376521939
 _coords_cache = {}
 
 
+def parse_minutes(distance):
+    """'도보 7분 (카카오) / 6분 (네이버)' → 최소 분. 미확인이면 None."""
+    nums = re.findall(r"(\d+)\s*분", str(distance or ""))
+    return min(int(n) for n in nums) if nums else None
+
+
 def clean_name(name):
     """가게명에서 괄호 안 주소·층수, 대시로 붙인 메뉴 접미사 제거 → 지도 검색 정확도 향상.
     예: '로바(더현대서울 6층)' → '로바', '소몽 - 고등어덮밥' → '소몽'"""
@@ -502,7 +508,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 다양하게)
-- extras: 추가 추천 2곳 — 1곳 tag="근처유명"(도보 10분내 유명), 1곳 tag="검색유명"(웹 유명, 멀거나 미등록 OK). restaurants와 겹치지 않게
+- extras: 추가 추천 2곳(둘 다 반드시 도보 10분 이내 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
@@ -516,7 +522,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 가까운 검증 맛집 5곳 (종류 다양하게, 가까운 순)
-- extras: 추가 2곳 — 1곳 tag="근처유명"(도보 10분내 유명), 1곳 tag="검색유명"(웹 유명, 멀거나 미등록 OK)
+- extras: 추가 2곳(둘 다 반드시 도보 10분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
 
 ```json
@@ -547,7 +553,13 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         print(f"  📐 [{meal}] 검증 + 거리 계산 중...")
         entry["restaurants"], _ = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
         if entry.get("extras"):
-            entry["extras"], _ = verify_and_enrich(entry["extras"], kakao_key, naver_id, naver_secret)
+            extras, _ = verify_and_enrich(entry["extras"], kakao_key, naver_id, naver_secret)
+            # 추가 추천은 도보 10분 이내 + 검증된 곳만 (미확인/초과 제외)
+            entry["extras"] = [r for r in extras
+                               if r.get("verified") and (parse_minutes(r.get("distance")) or 99) <= 10]
+            dropped = len(extras) - len(entry["extras"])
+            if dropped:
+                print(f"  ✂️  추가 추천 {dropped}곳 제외 (10분 초과/미확인)")
         for cond in list(entry.get("by_condition", {}).keys()):
             entry["by_condition"][cond], _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
 

@@ -48,6 +48,13 @@ function walkMin(distM: number): number {
   return Math.max(1, Math.round((distM * 1.35) / 80));
 }
 
+// "도보 7분 (카카오) / 6분 (네이버)" → 최소 분(가장 가까운 추정). 미확인이면 null
+function parseMinutes(distance: unknown): number | null {
+  const nums = String(distance || "").match(/(\d+)\s*분/g);
+  if (!nums) return null;
+  return Math.min(...nums.map((s) => parseInt(s)));
+}
+
 // JB 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순)
 async function kakaoNearby(kakaoKey: string): Promise<string[]> {
   if (!kakaoKey) return [];
@@ -209,9 +216,9 @@ ${candBlock}
 규칙:
 - 실제 존재하는 여의도/여의나루 근처 가게로, 시간대(${meal})에 어울리게 골라.
 - restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 최대한 다양하게).
-- extras: 추가 추천 2곳 — 아래 형식 그대로 2개:
+- extras: 추가 추천 2곳 — 아래 형식 그대로 2개 (둘 다 반드시 도보 10분 이내의 실제 가게):
   · 1곳은 tag="근처유명" — 도보 10분 이내의 여의도 유명 맛집
-  · 1곳은 tag="검색유명" — 웹에서 유명한 여의도 맛집 (조금 멀거나 지도 미등록이어도 OK)
+  · 1곳은 tag="검색유명" — 웹에서 평이 좋은 유명 맛집이되 도보 10분 이내
   · extras는 restaurants 5곳과 겹치지 않게.
 - comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
@@ -252,8 +259,13 @@ ${candBlock}
       [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret)),
     );
     restaurants.forEach((r, i) => { r.id = `custom-${stamp}-${i + 1}`; });
-    extras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
-    parsed.extras = extras;
+    // 추가 추천은 도보 10분 이내 + 검증된 곳만 (거리 미확인/초과 제외)
+    const nearExtras = extras.filter((r) => {
+      const m = parseMinutes(r.distance);
+      return r.verified === true && m !== null && m <= 10;
+    });
+    nearExtras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
+    parsed.extras = nearExtras;
 
     return json(parsed, 200);
   } catch (e) {
