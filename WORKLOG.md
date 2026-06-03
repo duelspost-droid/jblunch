@@ -73,11 +73,14 @@ JB_LNG = 126.927376521939
 | 파일 | 설명 |
 |------|------|
 | `index.html` | 프론트엔드 전체 (UI/CSS/JS, HISTORY_DATA 내장) |
+| `admin.html` | 관리자 페이지 (로그인·접속로그·비번변경, 독립 페이지) |
 | `history.json` | 날짜별 추천 데이터 (daily 스크립트가 갱신) |
 | `scripts/generate_lunch.py` | 일일 추천 생성 (Claude + Kakao/Naver + 날씨/뉴스 + 이메일) |
 | `scripts/kakao_send.py` | 카카오톡 '나에게 보내기' 발송 |
 | `supabase/functions/analyze/index.ts` | 직접입력 맞춤 추천 Edge Function |
 | `supabase/functions/places-search/index.ts` | 내 주변/이름 맛집 검색 Edge Function |
+| `supabase/functions/track/index.ts` | 접속/작업 로그 기록(IP) Edge Function |
+| `supabase/functions/admin/index.ts` | 관리자 로그 조회 + 비번 변경 Edge Function |
 | `.github/workflows/daily-lunch.yml` | 매일 8:30 자동 실행 워크플로우 |
 | `app/` | Capacitor Android 앱 (server.url로 라이브 사이트 로드) |
 | `CLAUDE.md` | 프로젝트 요약 |
@@ -96,7 +99,8 @@ JB_LNG = 126.927376521939
 | `reviews` | id, visited |
 | `daily_preference` | date, preference |
 | `search_history` | id, text, meal, created_at |
-| `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS 켜짐 — service role 전용) |
+| `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS — service role 전용) |
+| `admin_config` | id, password_hash(SHA-256), updated_at (RLS — service role 전용) |
 
 ### Edge Function 배포
 ```bash
@@ -118,18 +122,20 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 
 ## 5-1. 관리자 페이지 & 접속/작업 로그
 
-- **접속 방법**: 사이트 주소 뒤에 `#admin` → https://duelspost-droid.github.io/jblunch/#admin
-- **비밀번호**: 모달에서 입력. 서버 시크릿 `ADMIN_PASSWORD`와 비교(Edge Function `admin`).
-  현재 임시 비번 `jbax-admin-2026` → **반드시 변경할 것**:
-  ```bash
-  SUPABASE_ACCESS_TOKEN="sbp_..." npx supabase secrets set ADMIN_PASSWORD="새비밀번호" --project-ref nrdapzgtibbusvoaceuh
-  ```
-- **로그 기록(Edge Function `track`)**: 클라이언트가 호출하면 서버가 **요청 헤더에서 IP·UA**를
+- **접속**: **별도 페이지** https://duelspost-droid.github.io/jblunch/admin.html
+  (`index.html`에서 `#admin` 접근 시 이 페이지로 리다이렉트. `noindex` 메타로 검색 비노출)
+- **비밀번호**: `admin_config` 테이블에 **SHA-256 해시로 저장**(앱에서 변경 가능).
+  - 최초 1회: 시크릿 `ADMIN_PASSWORD`를 해시해 자동 시드 (초기값 = `jbax-admin-2026`, **변경 권장**)
+  - **변경 방법**: admin.html 로그인 → "🔑 비밀번호 변경" (현재 비번 검증 후 갱신). CLI 불필요.
+- **로그 기록(Edge Function `track`)**: 클라이언트 호출 시 서버가 **요청 헤더에서 IP·UA**를
   읽어 `access_logs`에 service role로 저장 (클라이언트 위변조 불가).
   - 기록 시점: 방문(visit), 리뷰 생성/수정/삭제, 주변검색(nearby/place_search), 맞춤추천(custom_recommend)
-- **로그 조회(Edge Function `admin`)**: 비번 검증 후 최근 로그(최대 500)+통계(총건수/고유IP/액션별) 반환.
-- **보안 설계**: 비번 검증·IP 기록·로그 조회 모두 서버측. `access_logs`는 RLS로 anon 접근 차단.
-- 프론트 구현: `index.html`의 `track()`, `openAdmin()/adminLogin()/renderAdmin()`.
+- **Edge Function `admin`** (액션):
+  - 기본(`logs`): 비번 검증 후 최근 로그(최대 500)+통계(총건수/고유IP/액션별) 반환
+  - `change_password`: 현재 비번 검증 → 새 비번(6자+) SHA-256 해시로 `admin_config` 갱신
+- **보안**: 비번 해시 비교·IP 기록·로그 조회 모두 서버측. `access_logs`/`admin_config`는 RLS로 anon 차단.
+- 프론트: `admin.html`(독립), `index.html`의 `track()`.
+- 테이블: `admin_config(id, password_hash, updated_at)` 추가됨.
 
 ---
 
@@ -180,8 +186,9 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 - [x] (시도→복원) 컨디션 영역은 **원래 위치(카드 위)** 유지
 
 ### 관리자/로그
-- [x] 관리자 페이지(`#admin`) + 비밀번호(서버 시크릿) 검증
+- [x] 관리자 **별도 페이지** `admin.html` + 비밀번호 로그인
 - [x] 접속/작업 로그(IP 포함) — track/admin Edge Function + access_logs 테이블
+- [x] **비밀번호 자체 변경** — admin_config 해시 저장 + change_password 액션
 
 ### 앱
 - [x] Capacitor Android 프로젝트(`app/`) — server.url로 라이브 로드
