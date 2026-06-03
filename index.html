@@ -143,11 +143,29 @@
   .card.card-extra .card-stripe { background: #b794f4; }
   .card.has-review .card-stripe { background: #f6b73c; }
   .modal-intro {
-    background: #f0f5fb; border-radius: 10px; padding: 10px 12px;
-    font-size: 0.83rem; color: #44566b; line-height: 1.5; margin-bottom: 12px;
+    background: #f0f5fb; border-radius: 10px; padding: 12px 14px;
+    font-size: 0.88rem; color: #44566b; line-height: 1.55; margin-bottom: 12px;
   }
-  .modal-reviews { margin-bottom: 14px; max-height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
-  .modal-reviews .mr-head { font-size: 0.78rem; font-weight: 700; color: #0a3d7a; margin-bottom: 2px; }
+  /* 모달 상단 맛집 상세 정보 */
+  .modal-detail {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  }
+  .modal-detail .md-chip {
+    font-size: 0.78rem; padding: 5px 11px; border-radius: 20px;
+    background: #f4f7fb; color: #44566b; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .modal-detail .md-map {
+    margin-left: auto; font-size: 0.78rem; padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
+    text-decoration: none; font-weight: 600;
+  }
+  .modal-detail .md-map.nomap { border-color: #d0d0d0; background: #f3f3f3; color: #999; }
+  .modal-reviews { margin-bottom: 16px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
+  .modal-reviews .mr-head { font-size: 0.84rem; font-weight: 700; color: #0a3d7a; margin-bottom: 4px; }
+  .modal-reviews .review-item { background: #fafafa; border-radius: 9px; padding: 10px 12px; }
+  .modal-reviews .review-name { font-size: 0.86rem; }
+  .modal-reviews .review-content { font-size: 0.85rem; }
 
   .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
   .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
@@ -260,13 +278,17 @@
 
   .top-list { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .top-list h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 11px; }
-  .top-item { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; border-radius: 8px; transition: background 0.13s; }
+  .top-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; border-radius: 8px; transition: background 0.13s; }
   .top-item:hover { background: #f0f5fb; }
   .top-item:last-child { border-bottom: none; }
-  .top-rank { font-size: 0.95rem; font-weight: 800; color: #0a3d7a; width: 20px; text-align: center; }
-  .top-info { flex: 1; }
-  .top-name { font-weight: 600; font-size: 0.86rem; }
-  .top-cuisine { font-size: 0.73rem; color: #aaa; }
+  .top-rank { font-size: 1rem; font-weight: 800; color: #0a3d7a; width: 20px; text-align: center; padding-top: 1px; }
+  .top-info { flex: 1; min-width: 0; }
+  .top-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+  .top-stars-inline { font-size: 0.74rem; font-weight: 500; color: #f0a020; white-space: nowrap; }
+  .top-stars-inline small { color: #aaa; }
+  .top-cuisine { font-size: 0.74rem; color: #2b6cb0; font-weight: 600; }
+  .top-feature { font-size: 0.78rem; color: #666; line-height: 1.45; margin: 3px 0; }
+  .top-meta { display: flex; gap: 11px; font-size: 0.73rem; color: #999; flex-wrap: wrap; }
   .top-stars { font-size: 0.82rem; }
 
   .skeleton { background: #eee; border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
@@ -286,11 +308,13 @@
   .modal {
     background: #fff;
     border-radius: 20px 20px 0 0;
-    padding: 22px 18px;
+    padding: 22px 20px;
     width: 100%;
-    max-width: 460px;
+    max-width: 620px;
+    max-height: 92vh;
+    overflow-y: auto;
   }
-  @media(min-width:480px) { .modal { border-radius: 18px; } }
+  @media(min-width:480px) { .modal { border-radius: 18px; max-height: 88vh; } }
   .modal h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 14px; }
   .modal-field { margin-bottom: 11px; }
   .modal-field label { font-size: 0.78rem; font-weight: 600; color: #555; display: block; margin-bottom: 5px; }
@@ -497,6 +521,7 @@
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">📝 리뷰 남기기</h3>
+    <div class="modal-detail" id="modal-detail"></div>
     <div class="modal-intro" id="modal-intro"></div>
     <div class="modal-reviews" id="modal-reviews"></div>
     <div class="modal-field">
@@ -1087,6 +1112,16 @@ function selectModalMeal(el) {
     b.classList.toggle('on', b.dataset.meal === mMeal));
 }
 
+// 이름으로 맛집 상세정보 찾기 (커스텀 결과 → 일별 데이터 순)
+function findRestaurant(name) {
+  if (customResult) {
+    const all = [...(customResult.restaurants||[]), ...(customResult.extras||[])];
+    const hit = all.find(r => r.name === name);
+    if (hit) return hit;
+  }
+  return allRestaurants().find(r => r.name === name) || null;
+}
+
 function openModal(name, feature) {
   mId = name; mRating = 0; mFeature = feature || '';
   // 끼니 기본값: 현재 보고 있는 시간대 (없으면 점심)
@@ -1094,6 +1129,25 @@ function openModal(name, feature) {
   document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
     b.classList.toggle('on', b.dataset.meal === mMeal));
   document.getElementById('modal-title').textContent = `🍽️ ${name}`;
+  // 맛집 상세정보 (종류/가격/거리 + 지도)
+  const info = findRestaurant(name);
+  const detailEl = document.getElementById('modal-detail');
+  if (info) {
+    const chips = [];
+    if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
+    if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
+    if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
+    const mapBtn = info.verified === false
+      ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
+      : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`;
+    detailEl.innerHTML = chips.join('') + mapBtn;
+    detailEl.style.display = 'flex';
+    if (!feature && info.feature) feature = info.feature;
+  } else {
+    detailEl.innerHTML = '';
+    detailEl.style.display = 'none';
+  }
+  mFeature = feature || mFeature;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');
   introEl.innerHTML = feature ? `💬 ${escHtml(feature)}` : '';
@@ -1253,10 +1307,15 @@ function renderStats() {
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
         <div class="top-rank">${i+1}</div>
         <div class="top-info">
-          <div class="top-name">${emo(r.cuisine)} ${r.name}</div>
-          <div class="top-cuisine">${r.cuisine} · 리뷰 ${r.cnt}개</div>
+          <div class="top-name">${emo(r.cuisine)} ${r.name} <span class="top-stars-inline">${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · 리뷰 ${r.cnt}</span></div>
+          <div class="top-cuisine">${r.cuisine||''}</div>
+          ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
+          <div class="top-meta">
+            ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
+            ${r.distance ? `<span>🚶 ${escHtml(r.distance)}</span>` : ''}
+            ${r.verified === false ? `<span style="color:#c05">🚫 지도없음</span>` : ''}
+          </div>
         </div>
-        <div class="top-stars">${'⭐'.repeat(Math.round(r.avg))} <small style="color:#aaa">${r.avg.toFixed(1)}</small></div>
       </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
     </div>`;
 }
