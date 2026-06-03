@@ -501,7 +501,10 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-- restaurants: 시간대({meal})에 어울리는 기본 추천 5곳
+- restaurants: 시간대({meal})에 어울리는 기본 추천 5곳 — 다양하게 구성:
+  · 2~3곳은 가까운 검증 맛집(위 후보 목록), 음식 종류가 겹치지 않게
+  · 최소 1곳은 여의도 유명 맛집(조금 멀거나 지도 미등록이어도 OK)
+  · 가까운 곳 → 먼 곳 순서로 정렬
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
@@ -514,6 +517,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
 {cand_block}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
+5곳은 다양하게: 2~3곳은 가까운 검증 맛집(위 후보), 최소 1곳은 유명한 곳(조금 멀거나 미등록이어도 OK), 종류 겹치지 않게, 가까운 순 정렬.
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분)
 
 ```json

@@ -48,26 +48,69 @@ function walkMin(distM: number): number {
   return Math.max(1, Math.round((distM * 1.35) / 80));
 }
 
-// JB 반경 내 실제 음식점 후보 (Kakao 카테고리 검색 1페이지 — 속도 우선)
-async function fetchCandidates(kakaoKey: string): Promise<string> {
-  if (!kakaoKey) return "";
+// JB 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순)
+async function kakaoNearby(kakaoKey: string): Promise<string[]> {
+  if (!kakaoKey) return [];
   try {
     const url = `https://dapi.kakao.com/v2/local/search/category.json` +
       `?category_group_code=FD6&x=${JB_LNG}&y=${JB_LAT}&radius=600&sort=distance&size=15`;
     const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
-    if (!r.ok) return "";
+    if (!r.ok) return [];
     const data = await r.json();
-    const list = (data.documents || []).map((d: Record<string, string>) => {
+    return (data.documents || []).map((d: Record<string, string>) => {
       const cat = (d.category_name || "").replace("음식점 > ", "").split(" > ")[0];
       const mins = Math.max(1, Math.round(Number(d.distance || 0) / 80));
       return `${d.place_name}(${cat}, 도보 ${mins}분)`;
     });
-    if (!list.length) return "";
-    return `\n참고용 — JB빌딩 근처 실제 등록 음식점(거리 정확): ${list.join(", ")}\n` +
-      `위 목록을 우선 활용하되, 여기 없어도 네가 아는 여의도 유명 맛집은 추가해도 돼.\n`;
   } catch {
-    return "";
+    return [];
   }
+}
+
+// 여의도 인기·유명 맛집 (Naver 리뷰순 — 조금 멀어도 다양성용)
+async function naverPopular(meal: string, id: string, secret: string): Promise<string[]> {
+  if (!id || !secret) return [];
+  const queries = meal === "술집"
+    ? ["여의도 술집", "여의도 이자카야", "여의도 와인바"]
+    : ["여의도 맛집", "여의도 유명 맛집", `여의도 ${meal}`];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const results = await Promise.all(queries.map(async (kw) => {
+    try {
+      const q = encodeURIComponent(kw);
+      const r = await fetch(
+        `https://openapi.naver.com/v1/search/local.json?query=${q}&display=5&sort=comment`,
+        { headers: { "X-Naver-Client-Id": id, "X-Naver-Client-Secret": secret } },
+      );
+      if (!r.ok) return [];
+      return (await r.json()).items || [];
+    } catch {
+      return [];
+    }
+  }));
+  for (const items of results) {
+    for (const it of items) {
+      const name = (it.title || "").replace(/<[^>]+>/g, "").trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const cat = (it.category || "").split(">").pop()?.trim() || "";
+      out.push(cat ? `${name}(${cat})` : name);
+    }
+  }
+  return out;
+}
+
+// 후보 블록 = 가까운 검증(Kakao) + 인기 유명(Naver) — 병렬
+async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string): Promise<string> {
+  const [near, popular] = await Promise.all([
+    kakaoNearby(kakaoKey),
+    naverPopular(meal, naverId, naverSecret),
+  ]);
+  if (!near.length && !popular.length) return "";
+  let block = "\n[참고 목록 — 실제 존재하는 가게]\n";
+  if (near.length) block += `· 가까운 검증 맛집(거리 정확): ${near.join(", ")}\n`;
+  if (popular.length) block += `· 여의도 인기·유명 맛집(조금 멀 수 있음): ${popular.join(", ")}\n`;
+  return block;
 }
 
 async function kakaoPlace(name: string, key: string): Promise<[number, number, string] | null> {
@@ -152,8 +195,8 @@ Deno.serve(async (req) => {
     const naverId = Deno.env.get("NAVER_CLIENT_ID") || "";
     const naverSecret = Deno.env.get("NAVER_CLIENT_SECRET") || "";
 
-    // ① 실제 후보 목록 (Claude 호출과 무관하게 먼저 시작)
-    const candBlock = await fetchCandidates(kakaoKey);
+    // ① 실제 후보 목록 (가까운 검증 + 인기 유명)
+    const candBlock = await fetchCandidates(meal, kakaoKey, naverId, naverSecret);
 
     const condLine = text
       ? `\n사용자가 입력한 오늘의 컨디션/취향: "${text}" — 이걸 최우선으로 반영해줘.
@@ -165,6 +208,11 @@ Deno.serve(async (req) => {
 ${candBlock}
 규칙:
 - 실제 존재하는 여의도/여의나루 근처 가게로, 시간대(${meal})에 어울리게 골라.
+- 다양성 있게 5곳을 구성해줘:
+  · 2~3곳은 '가까운 검증 맛집'에서 (도보 가까운 곳 우선)
+  · 음식 종류(한식/일식/중식/양식 등)가 최대한 겹치지 않게
+  · 최소 1곳은 여의도에서 '유명한 맛집'으로 (위 인기 목록이나 네가 아는 유명한 곳 — 조금 멀거나 지도 미등록이어도 OK)
+  · 가까운 곳 → 먼 곳 순서로 정렬
 - comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
 - 반드시 JSON만 출력:
