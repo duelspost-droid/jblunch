@@ -301,6 +301,15 @@
     font-family: inherit; color: #333;
   }
   .modal-field input[type="text"]:focus { outline: none; border-color: #0a3d7a; }
+  .modal-meal { display: flex; gap: 7px; }
+  .meal-pick {
+    flex: 1; padding: 8px 0; border-radius: 9px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-size: 0.82rem; font-weight: 600; color: #888;
+    cursor: pointer; transition: all 0.13s;
+  }
+  .meal-pick.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
+  .review-meal { font-size: 0.66rem; padding: 1px 6px; border-radius: 10px; background: #eef2f7; color: #4a5568; font-weight: 600; }
   .modal-stars { display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; }
   .modal-stars span { opacity: 0.22; transition: opacity 0.1s; }
   .modal-stars span.lit { opacity: 1; }
@@ -491,6 +500,14 @@
     <div class="modal-intro" id="modal-intro"></div>
     <div class="modal-reviews" id="modal-reviews"></div>
     <div class="modal-field">
+      <label>언제 방문</label>
+      <div class="modal-meal" id="modal-meal">
+        <button type="button" class="meal-pick" data-meal="점심" onclick="selectModalMeal(this)">🍚 점심</button>
+        <button type="button" class="meal-pick" data-meal="저녁" onclick="selectModalMeal(this)">🌙 저녁</button>
+        <button type="button" class="meal-pick" data-meal="술집" onclick="selectModalMeal(this)">🍺 술집</button>
+      </div>
+    </div>
+    <div class="modal-field">
       <label>이름</label>
       <input type="text" id="modal-name" placeholder="이름을 입력하세요" maxlength="20">
     </div>
@@ -558,12 +575,13 @@ async function loadComments() {
   }
 }
 
-async function insertComment(restaurantId, reviewerName, content, rating) {
+async function insertComment(restaurantId, reviewerName, content, rating, meal) {
   const body = {
     restaurant_id: restaurantId,
     reviewer_name: reviewerName,
     content: content || null,
     rating: rating || null,
+    meal: meal || null,
     created_at: new Date().toISOString()
   };
   const res = await fetch(`${SB_URL}/rest/v1/comments`, {
@@ -645,6 +663,7 @@ function buildCard(r) {
           <div class="review-right">
             <div class="review-header">
               <span class="review-name">${escHtml(c.reviewer_name)}</span>
+              ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
               ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
               <span class="review-date">${fmtDate(c.created_at)}</span>
             </div>
@@ -1060,10 +1079,20 @@ function escAttr(s) {
 }
 
 // ── 리뷰 모달 ─────────────────────────────────────────────────
-let mId = null, mRating = 0, mFeature = '';
+let mId = null, mRating = 0, mFeature = '', mMeal = '점심';
+
+function selectModalMeal(el) {
+  mMeal = el.dataset.meal;
+  document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
+    b.classList.toggle('on', b.dataset.meal === mMeal));
+}
 
 function openModal(name, feature) {
   mId = name; mRating = 0; mFeature = feature || '';
+  // 끼니 기본값: 현재 보고 있는 시간대 (없으면 점심)
+  mMeal = (typeof currentMeal !== 'undefined' && currentMeal) ? currentMeal : '점심';
+  document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
+    b.classList.toggle('on', b.dataset.meal === mMeal));
   document.getElementById('modal-title').textContent = `🍽️ ${name}`;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');
@@ -1081,6 +1110,7 @@ function openModal(name, feature) {
         <div class="review-right">
           <div class="review-header">
             <span class="review-name">${escHtml(c.reviewer_name)}</span>
+            ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
             ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
             <span class="review-date">${fmtDate(c.created_at)}</span>
           </div>
@@ -1136,7 +1166,7 @@ async function saveReview() {
   msg.textContent = '저장 중…';
 
   try {
-    const newComment = await insertComment(mId, name, text, mRating);
+    const newComment = await insertComment(mId, name, text, mRating, mMeal);
     if (!commentsState[mId]) commentsState[mId] = [];
     commentsState[mId].push(newComment);
     setBadge('ok', '☁️ 동기화됨');
