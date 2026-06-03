@@ -83,19 +83,24 @@ def get_naver_coords(name, naver_id, naver_secret):
     return None, None
 
 
-def enrich_distances(restaurants, kakao_key, naver_id=None, naver_secret=None):
-    """restaurants 리스트의 distance 필드를 Kakao/Naver 실측값으로 교체.
-    형식: "도보 5분 (카카오) / 6분 (네이버)" """
+def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
+    """Kakao에서 실제 존재하는 가게만 필터링 + 거리 계산.
+    반환: (verified_restaurants, failed_names)"""
+    verified, failed = [], []
+
     for r in restaurants:
         distances = {}
 
-        # Kakao
+        # Kakao (필수)
         lat, lng = get_kakao_coords(r["name"], kakao_key)
-        if lat and lng:
-            dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
-            distances["카카오"] = max(1, round(dist_m / 80))
+        if not lat or not lng:
+            failed.append(r["name"])
+            continue
 
-        # Naver
+        dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
+        distances["카카오"] = max(1, round(dist_m / 80))
+
+        # Naver (선택)
         if naver_id and naver_secret:
             lat, lng = get_naver_coords(r["name"], naver_id, naver_secret)
             if lat and lng:
@@ -103,16 +108,18 @@ def enrich_distances(restaurants, kakao_key, naver_id=None, naver_secret=None):
                 distances["네이버"] = max(1, round(dist_m / 80))
 
         # distance 필드 업데이트
-        if distances:
-            if len(distances) == 2:
-                r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
-            elif "카카오" in distances:
-                r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
-            else:
-                r["distance"] = f"도보 {distances['네이버']}분 (네이버)"
-            print(f"  📍 {r['name']}: {r['distance']}")
+        if len(distances) == 2:
+            r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
         else:
-            print(f"  ⚠️  {r['name']}: 좌표 없음, 기존값 유지")
+            r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
+
+        verified.append(r)
+        print(f"  ✅ {r['name']}: {r['distance']}")
+
+    if failed:
+        print(f"  ❌ 미검증 ({len(failed)}): {', '.join(failed)}")
+
+    return verified, failed
 
 
 def get_today_kst():
@@ -390,12 +397,20 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         for idx, r in enumerate(rlist):
             r["id"] = f"{id_prefix}-{cp}-{idx + 1}"
 
-    # 실측 거리 교체 (Kakao/Naver)
+    # 실제 존재하는 가게만 필터링 (Kakao 검증)
     if kakao_key or naver_id:
-        print(f"  📐 [{meal}] 실측 거리 계산 중...")
-        enrich_distances(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
-        for rlist in entry.get("by_condition", {}).values():
-            enrich_distances(rlist, kakao_key, naver_id, naver_secret)
+        print(f"  📐 [{meal}] 검증 + 거리 계산 중...")
+        restaurants, failed = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
+
+        if failed and len(restaurants) < 5:
+            print(f"  ⚠️  {len(restaurants)}/5 (재생성 필요)")
+
+        entry["restaurants"] = restaurants
+
+        # by_condition도 검증
+        for cond in list(entry.get("by_condition", {}).keys()):
+            verified, _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
+            entry["by_condition"][cond] = verified
 
     n = len(entry.get("restaurants", []))
     nc = len(entry.get("by_condition", {}))
