@@ -28,6 +28,13 @@ JB_LNG = 126.9319
 _coords_cache = {}
 
 
+def clean_name(name):
+    """가게명에서 괄호/대괄호 안 주소·층수 등 부가정보 제거 → 지도 검색 정확도 향상.
+    예: '로바(더현대서울 6층)' → '로바', '소몽 냉소바' → '소몽 냉소바' (유지)"""
+    cleaned = re.sub(r"\s*[\(\[\{].*?[\)\]\}]\s*", " ", name)
+    return cleaned.strip() or name.strip()
+
+
 def haversine_m(lat1, lng1, lat2, lng2):
     """두 좌표 간 직선거리(미터)."""
     R = 6371000
@@ -57,7 +64,7 @@ def get_kakao_place(name, kakao_key):
     cache_key = f"kakao:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
-    query = urllib.parse.quote(f"{name} 여의도")
+    query = urllib.parse.quote(f"{clean_name(name)} 여의도")
     url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={query}&size=1"
     try:
         req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
@@ -84,7 +91,7 @@ def get_naver_place(name, naver_id, naver_secret):
     cache_key = f"naver:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
-    query = urllib.parse.quote(f"{name} 여의도")
+    query = urllib.parse.quote(f"{clean_name(name)} 여의도")
     url = f"https://openapi.naver.com/v1/search/local.json?query={query}&display=1"
     try:
         req = urllib.request.Request(url, headers={
@@ -136,6 +143,9 @@ def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
         if food_votes and all(v is False for v in food_votes):
             failed.append(f"{r['name']}(비음식점)")
             continue
+
+        # 가게명 정리 (괄호 주소 제거 → 지도 버튼 검색 정확도 향상)
+        r["name"] = clean_name(r["name"])
 
         # distance 필드 업데이트 (찾은 소스만 표기)
         if "카카오" in distances and "네이버" in distances:
@@ -474,9 +484,9 @@ def main():
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
-    time.sleep(40)  # rate limit(10k tokens/min) 회피
+    time.sleep(70)  # rate limit(10k tokens/min) 회피 — 컨디션 10종이라 토큰 회복 여유 필요
     dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret)
-    time.sleep(40)
+    time.sleep(70)
     bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret)
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
