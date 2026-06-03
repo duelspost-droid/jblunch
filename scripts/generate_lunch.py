@@ -6,18 +6,69 @@ GitHub Actions에서 매일 오전 11시(KST) 자동 실행
 
 import anthropic
 import json
+import math
 import re
 import os
 import sys
 import smtplib
 import time
 import urllib.request
+import urllib.parse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 
 SB_URL = "https://nrdapzgtibbusvoaceuh.supabase.co"
 SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM"
+
+# JB빌딩 (여의나루로 77) 좌표
+JB_LAT = 37.5215
+JB_LNG = 126.9319
+
+_coords_cache = {}
+
+
+def haversine_m(lat1, lng1, lat2, lng2):
+    """두 좌표 간 직선거리(미터)."""
+    R = 6371000
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def get_kakao_coords(name, kakao_key):
+    """Kakao Local API로 장소 검색 → (lat, lng). 실패 시 (None, None)."""
+    if name in _coords_cache:
+        return _coords_cache[name]
+    query = urllib.parse.quote(f"{name} 여의도")
+    url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={query}&size=1"
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            docs = json.loads(r.read()).get("documents", [])
+        if docs:
+            lat, lng = float(docs[0]["y"]), float(docs[0]["x"])
+            _coords_cache[name] = (lat, lng)
+            return lat, lng
+    except Exception as e:
+        print(f"  ⚠️  좌표 조회 실패 ({name}): {e}")
+    _coords_cache[name] = (None, None)
+    return None, None
+
+
+def enrich_distances(restaurants, kakao_key):
+    """restaurants 리스트의 distance 필드를 Kakao 실측값으로 교체."""
+    for r in restaurants:
+        lat, lng = get_kakao_coords(r["name"], kakao_key)
+        if lat and lng:
+            dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35  # 도로 우회 보정
+            minutes = max(1, round(dist_m / 80))  # 도보 80m/분
+            r["distance"] = f"도보 {minutes}분"
+            print(f"  📍 {r['name']}: {r['distance']} ({dist_m:.0f}m)")
+        else:
+            print(f"  ⚠️  {r['name']}: 좌표 없음, 기존값 유지")
 
 
 def get_today_kst():
@@ -247,7 +298,7 @@ MEAL_CTX = {
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
 
-def generate_meal(client, today, date_compact, meal, with_conditions):
+def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
     idp = MEAL_IDP[meal]
@@ -295,6 +346,13 @@ def generate_meal(client, today, date_compact, meal, with_conditions):
         for idx, r in enumerate(rlist):
             r["id"] = f"{id_prefix}-{cp}-{idx + 1}"
 
+    # Kakao 실측 거리 교체
+    if kakao_key:
+        print(f"  📐 [{meal}] Kakao 실측 거리 계산 중...")
+        enrich_distances(entry.get("restaurants", []), kakao_key)
+        for rlist in entry.get("by_condition", {}).values():
+            enrich_distances(rlist, kakao_key)
+
     n = len(entry.get("restaurants", []))
     nc = len(entry.get("by_condition", {}))
     print(f"✅ [{meal}] 기본 {n}곳" + (f" + 컨디션 {nc}종" if nc else ""))
@@ -308,20 +366,21 @@ def main():
         sys.exit(1)
 
     client = anthropic.Anthropic(api_key=api_key)
+    kakao_key = os.environ.get("KAKAO_REST_API_KEY", "af04c6cff1c0c408283c25e84d5b481d")
     today = get_today_kst()
     date_compact = today.replace("-", "")
 
     print(f"📅 오늘 날짜 (KST): {today}")
 
     # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True)
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key)
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
     time.sleep(40)  # rate limit(10k tokens/min) 회피
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True)
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key)
     time.sleep(40)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key)
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
     new_entry = {
