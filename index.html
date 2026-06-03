@@ -298,6 +298,14 @@
     padding: 9px 16px; font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap;
   }
   .place-hint { font-size: 0.78rem; color: #aaa; padding: 12px 2px 2px; line-height: 1.5; }
+  .place-nearby-btn {
+    width: 100%; margin-top: 12px; padding: 13px 0;
+    background: linear-gradient(100deg, #0a3d7a, #1565c0); color: #fff;
+    border: none; border-radius: 12px; font-size: 0.92rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(10,61,122,0.22);
+    transition: opacity 0.13s;
+  }
+  .place-nearby-btn:hover { opacity: 0.92; }
   .place-origin { font-size: 0.74rem; color: #0a3d7a; font-weight: 600; padding: 10px 2px 4px; }
   .place-item {
     display: flex; align-items: center; gap: 10px;
@@ -1343,7 +1351,7 @@ function renderStats() {
     <div class="place-search-card">
       <div class="place-head-row">
         <div class="pref-title" style="margin:0">📍 내 주변 맛집에 리뷰 남기기</div>
-        <button class="place-refresh" onclick="loadNearby(true)" title="새로고침">🔄</button>
+        ${nearbyLoaded ? '<button class="place-refresh" onclick="loadNearby(true)" title="새로고침">🔄</button>' : ''}
       </div>
       <div class="place-search-row">
         <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
@@ -1401,6 +1409,11 @@ function getMyPosition() {
 
 function renderPlaceResults() {
   if (placeSearchBusy) return '<div class="place-hint">📍 주변 맛집 불러오는 중…</div>';
+  // 아직 안 불러왔고 검색도 안 했으면 → 버튼 노출
+  if (!nearbyLoaded && !placeSearchQ) {
+    return `<button class="place-nearby-btn" onclick="loadNearby(true)">📍 내 주변 맛집 보기</button>
+      <div class="place-hint" style="text-align:center">버튼을 누르면 내 위치 주변 맛집을 보여드려요. (위치 허용 권장)</div>`;
+  }
   if (!searchedPlaces.length) {
     return placeSearchQ
       ? '<div class="place-hint">검색 결과가 없어요. 다른 이름으로 시도해보세요.</div>'
@@ -1473,8 +1486,6 @@ function showTab(name, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
-  // 리뷰 탭 첫 진입 시 내 주변 맛집 자동 로드
-  if (name === 'stats') loadNearby();
 }
 
 // ── 초기화 ────────────────────────────────────────────────────
