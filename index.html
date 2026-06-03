@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍽️ JB 맛집 트래커</title>
+<title>🍽️ JB×AX 맛집 트래커</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,6 +32,12 @@
     flex-shrink: 0;
   }
   .app-header .title-block h1 { font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+  .app-header .title-block h1 .hl-ax {
+    background: linear-gradient(90deg, #ffd54a, #ffb300);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900; letter-spacing: 0;
+  }
   .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
   .sync-badge {
     margin-left: auto;
@@ -534,7 +540,7 @@
 <div class="app-header">
   <span class="logo">JB</span>
   <div class="title-block">
-    <h1>JB 맛집 트래커</h1>
+    <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
     <p>여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
   </div>
 </div>
