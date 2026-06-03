@@ -29,9 +29,11 @@ _coords_cache = {}
 
 
 def clean_name(name):
-    """가게명에서 괄호/대괄호 안 주소·층수 등 부가정보 제거 → 지도 검색 정확도 향상.
-    예: '로바(더현대서울 6층)' → '로바', '소몽 냉소바' → '소몽 냉소바' (유지)"""
+    """가게명에서 괄호 안 주소·층수, 대시로 붙인 메뉴 접미사 제거 → 지도 검색 정확도 향상.
+    예: '로바(더현대서울 6층)' → '로바', '소몽 - 고등어덮밥' → '소몽'"""
     cleaned = re.sub(r"\s*[\(\[\{].*?[\)\]\}]\s*", " ", name)
+    # ' - 메뉴', ' — 메뉴', ' · 메뉴' 같은 구분자 뒤 부가설명 제거
+    cleaned = re.split(r"\s+[-–—·:]\s+", cleaned)[0]
     return cleaned.strip() or name.strip()
 
 
@@ -424,8 +426,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 ```"""
 
     print(f"🔍 [{meal}] 생성 중...")
-    # 점심만 웹검색(날씨/신선도), 저녁·술집은 지식 기반(토큰 절감 → rate limit 회피)
-    text = call_claude(client, prompt, use_web=(meal == "점심"))
+    # 점심(날씨/신선도)·술집(실존 가게명 확보)은 웹검색 사용.
+    # 저녁은 컨디션 10종으로 토큰이 커 지식 기반(rate limit 회피).
+    text = call_claude(client, prompt, use_web=(meal in ("점심", "술집")))
     entry = extract_json(text) if text else None
     if not entry:
         print(f"❌ [{meal}] JSON 파싱 실패")
