@@ -38,8 +38,22 @@ def haversine_m(lat1, lng1, lat2, lng2):
     return 2 * R * math.asin(math.sqrt(a))
 
 
-def get_kakao_coords(name, kakao_key):
-    """Kakao Local API로 장소 검색 → (lat, lng). 실패 시 (None, None)."""
+# 음식점이 아닌 카테고리 키워드 (검증에서 제외)
+NON_FOOD_KEYWORDS = ["병원", "약국", "은행", "학원", "부동산", "미용", "마트", "편의점",
+                     "주유소", "세탁", "사무", "오피스", "관공서", "PC방", "노래"]
+
+
+def _is_food_category(category):
+    """카테고리 문자열이 음식점/카페인지 판단."""
+    if not category:
+        return None  # 카테고리 정보 없음 → 판단 보류
+    if any(kw in category for kw in NON_FOOD_KEYWORDS):
+        return False
+    return True
+
+
+def get_kakao_place(name, kakao_key):
+    """Kakao Local API로 장소 검색 → (lat, lng, category). 실패 시 (None, None, None)."""
     cache_key = f"kakao:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
@@ -50,17 +64,23 @@ def get_kakao_coords(name, kakao_key):
         with urllib.request.urlopen(req, timeout=5) as r:
             docs = json.loads(r.read()).get("documents", [])
         if docs:
-            lat, lng = float(docs[0]["y"]), float(docs[0]["x"])
-            _coords_cache[cache_key] = (lat, lng)
-            return lat, lng
+            d = docs[0]
+            lat, lng = float(d["y"]), float(d["x"])
+            # FD6=음식점, CE7=카페. 그 외 group_code면 음식점 아님
+            gc = d.get("category_group_code", "")
+            cat = d.get("category_name", "")
+            if gc and gc not in ("FD6", "CE7"):
+                cat = "비음식점:" + cat
+            _coords_cache[cache_key] = (lat, lng, cat)
+            return lat, lng, cat
     except Exception as e:
         pass
-    _coords_cache[cache_key] = (None, None)
-    return None, None
+    _coords_cache[cache_key] = (None, None, None)
+    return None, None, None
 
 
-def get_naver_coords(name, naver_id, naver_secret):
-    """Naver Local API로 장소 검색 → (lat, lng). 실패 시 (None, None)."""
+def get_naver_place(name, naver_id, naver_secret):
+    """Naver 지역검색 API로 장소 검색 → (lat, lng, category). 실패 시 (None, None, None)."""
     cache_key = f"naver:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
@@ -74,44 +94,56 @@ def get_naver_coords(name, naver_id, naver_secret):
         with urllib.request.urlopen(req, timeout=5) as r:
             items = json.loads(r.read()).get("items", [])
         if items:
-            lng, lat = float(items[0]["mapx"]) / 1e7, float(items[0]["mapy"]) / 1e7
-            _coords_cache[cache_key] = (lat, lng)
-            return lat, lng
+            it = items[0]
+            lng, lat = float(it["mapx"]) / 1e7, float(it["mapy"]) / 1e7
+            cat = it.get("category", "")
+            _coords_cache[cache_key] = (lat, lng, cat)
+            return lat, lng, cat
     except Exception as e:
         pass
-    _coords_cache[cache_key] = (None, None)
-    return None, None
+    _coords_cache[cache_key] = (None, None, None)
+    return None, None, None
 
 
 def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
-    """Kakao에서 실제 존재하는 가게만 필터링 + 거리 계산.
+    """Kakao 또는 Naver 중 한 곳이라도 실존 + 음식점이면 통과 (OR 검증).
     반환: (verified_restaurants, failed_names)"""
     verified, failed = [], []
 
     for r in restaurants:
         distances = {}
+        food_votes = []   # 카테고리 판정 결과 (True/False/None)
 
-        # Kakao (필수)
-        lat, lng = get_kakao_coords(r["name"], kakao_key)
-        if not lat or not lng:
+        # Kakao
+        klat, klng, kcat = get_kakao_place(r["name"], kakao_key)
+        if klat and klng:
+            distances["카카오"] = max(1, round(haversine_m(JB_LAT, JB_LNG, klat, klng) * 1.35 / 80))
+            food_votes.append(_is_food_category(kcat))
+
+        # Naver
+        if naver_id and naver_secret:
+            nlat, nlng, ncat = get_naver_place(r["name"], naver_id, naver_secret)
+            if nlat and nlng:
+                distances["네이버"] = max(1, round(haversine_m(JB_LAT, JB_LNG, nlat, nlng) * 1.35 / 80))
+                food_votes.append(_is_food_category(ncat))
+
+        # 어디서도 못 찾음 → 가짜 가게
+        if not distances:
             failed.append(r["name"])
             continue
 
-        dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
-        distances["카카오"] = max(1, round(dist_m / 80))
+        # 모든 소스가 "음식점 아님"으로 판정 → 이름 충돌(다른 업종) → 제외
+        if food_votes and all(v is False for v in food_votes):
+            failed.append(f"{r['name']}(비음식점)")
+            continue
 
-        # Naver (선택)
-        if naver_id and naver_secret:
-            lat, lng = get_naver_coords(r["name"], naver_id, naver_secret)
-            if lat and lng:
-                dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
-                distances["네이버"] = max(1, round(dist_m / 80))
-
-        # distance 필드 업데이트
-        if len(distances) == 2:
+        # distance 필드 업데이트 (찾은 소스만 표기)
+        if "카카오" in distances and "네이버" in distances:
             r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
-        else:
+        elif "카카오" in distances:
             r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
+        else:
+            r["distance"] = f"도보 {distances['네이버']}분 (네이버)"
 
         verified.append(r)
         print(f"  ✅ {r['name']}: {r['distance']}")
