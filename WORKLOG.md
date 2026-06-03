@@ -51,6 +51,7 @@ python -m http.server 3000   # → http://localhost:3000
 | ANTHROPIC_API_KEY | Claude 호출 | GitHub Secrets + Supabase Secrets |
 | GMAIL_USER / GMAIL_APP_PASSWORD | 이메일 발송 | GitHub Secrets |
 | KAKAO_REFRESH_TOKEN 등 | 카카오톡 발송 | GitHub Secrets |
+| ADMIN_PASSWORD | 관리자 페이지 비번 | Supabase Secrets (현재 임시값, 변경 필요) |
 
 > ⚠️ 이 문서·저장소에 **Supabase Access Token, Naver Secret 등 민감값을 절대 커밋하지 말 것.**
 
@@ -95,11 +96,12 @@ JB_LNG = 126.927376521939
 | `reviews` | id, visited |
 | `daily_preference` | date, preference |
 | `search_history` | id, text, meal, created_at |
+| `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS 켜짐 — service role 전용) |
 
 ### Edge Function 배포
 ```bash
 SUPABASE_ACCESS_TOKEN="sbp_..." npx --yes supabase@latest functions deploy <함수명> --project-ref nrdapzgtibbusvoaceuh
-# 함수: analyze, places-search
+# 함수: analyze, places-search, track, admin
 
 # 시크릿 등록(최초 1회 또는 변경 시)
 SUPABASE_ACCESS_TOKEN="sbp_..." npx supabase secrets set KAKAO_REST_API_KEY=... NAVER_CLIENT_ID=... NAVER_CLIENT_SECRET=... --project-ref nrdapzgtibbusvoaceuh
@@ -111,6 +113,23 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
   -H "Authorization: Bearer sbp_..." -H "Content-Type: application/json" \
   -d '{"query":"ALTER TABLE comments ADD COLUMN IF NOT EXISTS meal text;"}'
 ```
+
+---
+
+## 5-1. 관리자 페이지 & 접속/작업 로그
+
+- **접속 방법**: 사이트 주소 뒤에 `#admin` → https://duelspost-droid.github.io/jblunch/#admin
+- **비밀번호**: 모달에서 입력. 서버 시크릿 `ADMIN_PASSWORD`와 비교(Edge Function `admin`).
+  현재 임시 비번 `jbax-admin-2026` → **반드시 변경할 것**:
+  ```bash
+  SUPABASE_ACCESS_TOKEN="sbp_..." npx supabase secrets set ADMIN_PASSWORD="새비밀번호" --project-ref nrdapzgtibbusvoaceuh
+  ```
+- **로그 기록(Edge Function `track`)**: 클라이언트가 호출하면 서버가 **요청 헤더에서 IP·UA**를
+  읽어 `access_logs`에 service role로 저장 (클라이언트 위변조 불가).
+  - 기록 시점: 방문(visit), 리뷰 생성/수정/삭제, 주변검색(nearby/place_search), 맞춤추천(custom_recommend)
+- **로그 조회(Edge Function `admin`)**: 비번 검증 후 최근 로그(최대 500)+통계(총건수/고유IP/액션별) 반환.
+- **보안 설계**: 비번 검증·IP 기록·로그 조회 모두 서버측. `access_logs`는 RLS로 anon 접근 차단.
+- 프론트 구현: `index.html`의 `track()`, `openAdmin()/adminLogin()/renderAdmin()`.
 
 ---
 
@@ -159,6 +178,10 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
       (Kakao+Naver 병합, 출처 배지). 위치 거부 시 JB빌딩 폴백
 - [x] PC 반응형: 900px↑ 카드 2단 그리드, 상단 정렬 통일
 - [x] (시도→복원) 컨디션 영역은 **원래 위치(카드 위)** 유지
+
+### 관리자/로그
+- [x] 관리자 페이지(`#admin`) + 비밀번호(서버 시크릿) 검증
+- [x] 접속/작업 로그(IP 포함) — track/admin Edge Function + access_logs 테이블
 
 ### 앱
 - [x] Capacitor Android 프로젝트(`app/`) — server.url로 라이브 로드
