@@ -1023,10 +1023,10 @@ function escAttr(s) {
 }
 
 // ── 리뷰 모달 ─────────────────────────────────────────────────
-let mId = null, mRating = 0;
+let mId = null, mRating = 0, mFeature = '';
 
 function openModal(name, feature) {
-  mId = name; mRating = 0;
+  mId = name; mRating = 0; mFeature = feature || '';
   document.getElementById('modal-title').textContent = `🍽️ ${name}`;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');
@@ -1049,6 +1049,7 @@ function openModal(name, feature) {
           </div>
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
         </div>
+        <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(name)}')">✕</button>
       </div>`;
     }).join('');
     revEl.style.display = 'block';
@@ -1124,6 +1125,7 @@ async function confirmDelete(commentId, restaurantId) {
     renderHistory(); renderStats();
     setBadge('ok', '☁️ 동기화됨');
     showToast('🗑️ 리뷰가 삭제되었습니다.');
+    if (mId === restaurantId) openModal(mId, mFeature);
   } catch {
     setBadge('err', '⚠️ 삭제 실패');
     showToast('⚠️ 삭제에 실패했습니다. 다시 시도해주세요.');
