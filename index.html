@@ -289,6 +289,7 @@
     padding: 9px 16px; font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap;
   }
   .place-hint { font-size: 0.78rem; color: #aaa; padding: 12px 2px 2px; line-height: 1.5; }
+  .place-origin { font-size: 0.74rem; color: #0a3d7a; font-weight: 600; padding: 10px 2px 4px; }
   .place-item {
     display: flex; align-items: center; gap: 10px;
     padding: 11px 4px; border-bottom: 1px solid #f3f3f3;
@@ -1369,12 +1370,30 @@ function renderStats() {
 let searchedPlaces = [];   // [{name, cuisine, distance, address, verified}]
 let placeSearchQ = '';
 let placeSearchBusy = false;
+let placeOrigin = '';      // '현위치' | 'JB빌딩'
+let myPos = null;          // {lat, lng} (한 번 받으면 캐시)
+
+// 브라우저 GPS 위치 (권한 거부/실패 시 null → JB빌딩 폴백)
+function getMyPosition() {
+  return new Promise(resolve => {
+    if (myPos) { resolve(myPos); return; }
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => { myPos = { lat: p.coords.latitude, lng: p.coords.longitude }; resolve(myPos); },
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 300000 }
+    );
+  });
+}
 
 function renderPlaceResults() {
   if (placeSearchBusy) return '<div class="place-hint">🔎 검색 중…</div>';
-  if (!placeSearchQ) return '<div class="place-hint">추천에 없는 가게도 검색해서 리뷰를 남길 수 있어요.</div>';
+  if (!placeSearchQ) return '<div class="place-hint">추천에 없는 가게도 검색해서 리뷰를 남길 수 있어요. (위치 허용 시 내 주변 기준)</div>';
   if (!searchedPlaces.length) return '<div class="place-hint">검색 결과가 없어요. 다른 키워드로 시도해보세요.</div>';
-  return searchedPlaces.map(p => {
+  const originNote = placeOrigin === '현위치'
+    ? '<div class="place-origin">📍 현재 내 위치 기준</div>'
+    : '<div class="place-origin">📍 JB빌딩 기준 (위치 권한 없음)</div>';
+  return originNote + searchedPlaces.map(p => {
     const cms = commentsState[p.name] || [];
     const cnt = cms.length;
     return `<div class="place-item">
@@ -1397,14 +1416,19 @@ async function searchPlaces() {
   placeSearchBusy = true;
   const rwrap = document.getElementById('place-results');
   if (rwrap) rwrap.innerHTML = renderPlaceResults();
+  // GPS 위치 (허용 시 내 주변, 거부/실패 시 JB빌딩)
+  const pos = await getMyPosition();
   try {
+    const reqBody = { query: q };
+    if (pos) { reqBody.lat = pos.lat; reqBody.lng = pos.lng; }
     const res = await fetch(PLACES_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q })
+      body: JSON.stringify(reqBody)
     });
     const data = await res.json();
     searchedPlaces = Array.isArray(data.places) ? data.places : [];
+    placeOrigin = data.origin || (pos ? '현위치' : 'JB빌딩');
   } catch (e) {
     searchedPlaces = [];
   }

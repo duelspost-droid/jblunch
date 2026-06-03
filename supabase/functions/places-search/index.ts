@@ -26,9 +26,16 @@ Deno.serve(async (req) => {
     const kakaoKey = Deno.env.get("KAKAO_REST_API_KEY") || "";
     if (!kakaoKey) return json({ error: "kakao key missing" }, 500);
 
+    // 위치: GPS 좌표가 오면 그 기준, 없으면 JB빌딩 기준
+    const lat = Number(body.lat), lng = Number(body.lng);
+    const useGps = isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0;
+    const cy = useGps ? lat : JB_LAT;
+    const cx = useGps ? lng : JB_LNG;
+    const origin = useGps ? "현위치" : "JB빌딩";
+
     const q = encodeURIComponent(query);
     const url = `https://dapi.kakao.com/v2/local/search/keyword.json` +
-      `?query=${q}&x=${JB_LNG}&y=${JB_LAT}&radius=2000&sort=distance&size=15`;
+      `?query=${q}&x=${cx}&y=${cy}&radius=2000&sort=distance&size=15`;
     const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
     if (!r.ok) return json({ error: "kakao error", detail: await r.text() }, 502);
     const docs = (await r.json()).documents || [];
@@ -40,7 +47,7 @@ Deno.serve(async (req) => {
       return {
         name: d.place_name,
         cuisine: cat,
-        distance: `도보 ${mins}분 (카카오)`,
+        distance: `도보 ${mins}분 (${origin})`,
         address: d.road_address_name || d.address_name || "",
         group: d.category_group_code || "",
         verified: true,
@@ -52,7 +59,7 @@ Deno.serve(async (req) => {
     if (food.length) places = food;
     places.forEach((p: Record<string, unknown>) => { delete p.group; });
 
-    return json({ places });
+    return json({ places, origin });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
