@@ -40,8 +40,9 @@ def haversine_m(lat1, lng1, lat2, lng2):
 
 def get_kakao_coords(name, kakao_key):
     """Kakao Local API로 장소 검색 → (lat, lng). 실패 시 (None, None)."""
-    if name in _coords_cache:
-        return _coords_cache[name]
+    cache_key = f"kakao:{name}"
+    if cache_key in _coords_cache:
+        return _coords_cache[cache_key]
     query = urllib.parse.quote(f"{name} 여의도")
     url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={query}&size=1"
     try:
@@ -50,23 +51,66 @@ def get_kakao_coords(name, kakao_key):
             docs = json.loads(r.read()).get("documents", [])
         if docs:
             lat, lng = float(docs[0]["y"]), float(docs[0]["x"])
-            _coords_cache[name] = (lat, lng)
+            _coords_cache[cache_key] = (lat, lng)
             return lat, lng
     except Exception as e:
-        print(f"  ⚠️  좌표 조회 실패 ({name}): {e}")
-    _coords_cache[name] = (None, None)
+        pass
+    _coords_cache[cache_key] = (None, None)
     return None, None
 
 
-def enrich_distances(restaurants, kakao_key):
-    """restaurants 리스트의 distance 필드를 Kakao 실측값으로 교체."""
+def get_naver_coords(name, naver_id, naver_secret):
+    """Naver Local API로 장소 검색 → (lat, lng). 실패 시 (None, None)."""
+    cache_key = f"naver:{name}"
+    if cache_key in _coords_cache:
+        return _coords_cache[cache_key]
+    query = urllib.parse.quote(f"{name} 여의도")
+    url = f"https://openapi.naver.com/v1/search/local.json?query={query}&display=1"
+    try:
+        req = urllib.request.Request(url, headers={
+            "X-Naver-Client-Id": naver_id,
+            "X-Naver-Client-Secret": naver_secret
+        })
+        with urllib.request.urlopen(req, timeout=5) as r:
+            items = json.loads(r.read()).get("items", [])
+        if items:
+            lng, lat = float(items[0]["mapx"]) / 1e7, float(items[0]["mapy"]) / 1e7
+            _coords_cache[cache_key] = (lat, lng)
+            return lat, lng
+    except Exception as e:
+        pass
+    _coords_cache[cache_key] = (None, None)
+    return None, None
+
+
+def enrich_distances(restaurants, kakao_key, naver_id=None, naver_secret=None):
+    """restaurants 리스트의 distance 필드를 Kakao/Naver 실측값으로 교체.
+    형식: "도보 5분 (카카오) / 6분 (네이버)" """
     for r in restaurants:
+        distances = {}
+
+        # Kakao
         lat, lng = get_kakao_coords(r["name"], kakao_key)
         if lat and lng:
-            dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35  # 도로 우회 보정
-            minutes = max(1, round(dist_m / 80))  # 도보 80m/분
-            r["distance"] = f"도보 {minutes}분"
-            print(f"  📍 {r['name']}: {r['distance']} ({dist_m:.0f}m)")
+            dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
+            distances["카카오"] = max(1, round(dist_m / 80))
+
+        # Naver
+        if naver_id and naver_secret:
+            lat, lng = get_naver_coords(r["name"], naver_id, naver_secret)
+            if lat and lng:
+                dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng) * 1.35
+                distances["네이버"] = max(1, round(dist_m / 80))
+
+        # distance 필드 업데이트
+        if distances:
+            if len(distances) == 2:
+                r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
+            elif "카카오" in distances:
+                r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
+            else:
+                r["distance"] = f"도보 {distances['네이버']}분 (네이버)"
+            print(f"  📍 {r['name']}: {r['distance']}")
         else:
             print(f"  ⚠️  {r['name']}: 좌표 없음, 기존값 유지")
 
@@ -298,7 +342,7 @@ MEAL_CTX = {
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
 
-def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None):
+def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
     idp = MEAL_IDP[meal]
@@ -346,12 +390,12 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         for idx, r in enumerate(rlist):
             r["id"] = f"{id_prefix}-{cp}-{idx + 1}"
 
-    # Kakao 실측 거리 교체
-    if kakao_key:
-        print(f"  📐 [{meal}] Kakao 실측 거리 계산 중...")
-        enrich_distances(entry.get("restaurants", []), kakao_key)
+    # 실측 거리 교체 (Kakao/Naver)
+    if kakao_key or naver_id:
+        print(f"  📐 [{meal}] 실측 거리 계산 중...")
+        enrich_distances(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
         for rlist in entry.get("by_condition", {}).values():
-            enrich_distances(rlist, kakao_key)
+            enrich_distances(rlist, kakao_key, naver_id, naver_secret)
 
     n = len(entry.get("restaurants", []))
     nc = len(entry.get("by_condition", {}))
@@ -367,20 +411,26 @@ def main():
 
     client = anthropic.Anthropic(api_key=api_key)
     kakao_key = os.environ.get("KAKAO_REST_API_KEY", "af04c6cff1c0c408283c25e84d5b481d")
+    naver_id = os.environ.get("NAVER_CLIENT_ID")
+    naver_secret = os.environ.get("NAVER_CLIENT_SECRET")
     today = get_today_kst()
     date_compact = today.replace("-", "")
 
     print(f"📅 오늘 날짜 (KST): {today}")
+    if naver_id and naver_secret:
+        print("✅ Naver API 설정됨 (Kakao + Naver 병렬 사용)")
+    else:
+        print("⚠️  Naver API 미설정 (Kakao만 사용)")
 
     # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key)
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret)
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
     time.sleep(40)  # rate limit(10k tokens/min) 회피
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key)
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret)
     time.sleep(40)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret)
 
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
     new_entry = {

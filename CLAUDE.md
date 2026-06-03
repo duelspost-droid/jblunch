@@ -35,6 +35,8 @@ GitHub Actions (매일 오전 11시 KST)
 | `ANTHROPIC_API_KEY` | Claude API 키 |
 | `GMAIL_USER` | 발신 Gmail (duelspost@gmail.com) |
 | `GMAIL_APP_PASSWORD` | Gmail App Password |
+| `NAVER_CLIENT_ID` | Naver Local API 클라이언트 ID (선택) |
+| `NAVER_CLIENT_SECRET` | Naver Local API 클라이언트 시크릿 (선택) |
 
 ## 로컬 실행
 ```bash
