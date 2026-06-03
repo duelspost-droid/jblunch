@@ -429,6 +429,31 @@ def call_claude(client, prompt, use_web=True):
     return None
 
 
+def get_recent_names(history_path="history.json", days=3, limit=24):
+    """최근 N일간 추천된 가게 이름 (중복 추천 방지용). 기본 추천 + 추가 추천."""
+    if not os.path.exists(history_path):
+        return []
+    try:
+        with open(history_path, encoding="utf-8") as f:
+            history = json.load(f)
+    except Exception:
+        return []
+    recs = sorted(history.get("recommendations", []),
+                  key=lambda x: x.get("date", ""), reverse=True)[:days]
+    names = []
+    for day in recs:
+        buckets = [day.get("restaurants", []), day.get("extras", [])]
+        for m in (day.get("meals") or {}).values():
+            buckets.append(m.get("restaurants", []))
+            buckets.append(m.get("extras", []))
+        for b in buckets:
+            for r in b:
+                nm = r.get("name")
+                if nm and nm not in names:
+                    names.append(nm)
+    return names[:limit]
+
+
 def extract_json(text):
     """응답 텍스트에서 JSON 블록 추출."""
     # ```json ... ``` 블록
@@ -584,7 +609,7 @@ MEAL_CTX = {
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
 
-def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None):
+def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
     idp = MEAL_IDP[meal]
@@ -598,15 +623,22 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
                       + ", ".join(candidates)
                       + "\n위 목록을 우선 활용하되, 여기 없어도 네가 아는 여의도 유명 맛집은 추가해도 됨.\n")
 
+    # 다양성: 최근 추천한 곳은 겹치지 않게 + 거리대 분산
+    avoid_line = ""
+    if recent_names:
+        avoid_line = f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.\n"
+    band_line = ("restaurants 5곳은 거리대를 다양하게: 도보 0~3분 2곳 + 3~7분 2곳 + 7~10분 1곳, "
+                 "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
+
     if with_conditions:
         cond_list = " / ".join(CONDITIONS)
         hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
         weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
-{cand_block}
+{cand_block}{avoid_line}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-- restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 다양하게)
+- restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 2곳(둘 다 반드시 도보 10분 이내 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
@@ -618,9 +650,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 ```"""
     else:
         prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
-{cand_block}
+{cand_block}{avoid_line}
 웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
-- restaurants: 가까운 검증 맛집 5곳 (종류 다양하게, 가까운 순)
+- restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 2곳(둘 다 반드시 도보 10분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
 
@@ -688,15 +720,20 @@ def main():
     else:
         print("⚠️  Naver API 미설정 (Kakao만 사용)")
 
+    # 최근 며칠 추천 가게 (중복 방지) — 오늘 데이터 추가 전 history에서 조회
+    recent = get_recent_names(days=3)
+    if recent:
+        print(f"🔁 최근 추천 {len(recent)}곳 회피: {', '.join(recent[:8])}…")
+
     # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret)
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret, recent)
     if not lunch:
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
     time.sleep(70)  # rate limit(10k tokens/min) 회피 — 컨디션 10종이라 토큰 회복 여유 필요
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret)
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret, recent)
     time.sleep(70)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent)
 
     # 날씨 + JB금융 뉴스 (이메일/카카오 첨부용)
     print("\n🌤️  날씨/뉴스 수집 중...")
