@@ -61,9 +61,8 @@ def _is_food_category(category):
     return True
 
 
-def fetch_nearby_candidates(kakao_key, radius=600, max_count=40):
-    """Kakao 카테고리 검색으로 JB빌딩 반경 내 실제 음식점 목록 조회.
-    하이브리드 추천용 — Claude에게 '실존 후보'로 제공. 실패 시 빈 리스트."""
+def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
+    """Kakao 카테고리(반경) 검색으로 JB빌딩 근처 실제 음식점 → [(이름, 분, 카테고리)]."""
     if not kakao_key:
         return []
     out = []
@@ -76,16 +75,78 @@ def fetch_nearby_candidates(kakao_key, radius=600, max_count=40):
             with urllib.request.urlopen(req, timeout=5) as r:
                 data = json.loads(r.read())
             for d in data.get("documents", []):
-                cat = d.get("category_name", "").replace("음식점 > ", "")
-                mins = max(1, round(int(d.get("distance", 0)) * 1.0 / 80))
-                out.append(f"{d['place_name']}({cat.split(' > ')[0]}, 도보 {mins}분)")
+                cat = d.get("category_name", "").replace("음식점 > ", "").split(" > ")[0]
+                mins = max(1, round(int(d.get("distance", 0)) / 80))
+                out.append((d["place_name"], mins, cat))
                 if len(out) >= max_count:
                     return out
             if data.get("meta", {}).get("is_end"):
                 break
     except Exception as e:
-        print(f"  ⚠️  후보 목록 조회 실패: {e}")
+        print(f"  ⚠️  Kakao 후보 조회 실패: {e}")
     return out
+
+
+# 네이버 후보 수집용 키워드 (반경 검색 미지원 → 키워드 검색 후 거리 필터)
+NAVER_CAND_QUERIES = ["여의도 맛집", "여의나루 맛집", "여의도 점심", "여의도 일식", "여의도 한식", "여의도 술집"]
+
+
+def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
+    """Naver 지역검색은 반경 검색을 지원하지 않아, 여러 키워드로 검색 후
+    JB빌딩 반경 내만 거리 필터링 → [(이름, 분, 카테고리)]."""
+    if not (naver_id and naver_secret):
+        return []
+    out, seen = [], set()
+    headers = {"X-Naver-Client-Id": naver_id, "X-Naver-Client-Secret": naver_secret}
+    for kw in NAVER_CAND_QUERIES:
+        try:
+            q = urllib.parse.quote(kw)
+            url = f"https://openapi.naver.com/v1/search/local.json?query={q}&display=5&sort=comment"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=5) as r:
+                items = json.loads(r.read()).get("items", [])
+            for it in items:
+                name = re.sub(r"<[^>]+>", "", it.get("title", "")).strip()
+                if not name or name in seen:
+                    continue
+                try:
+                    lng, lat = float(it["mapx"]) / 1e7, float(it["mapy"]) / 1e7
+                except (KeyError, ValueError):
+                    continue
+                dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng)
+                if dist_m > radius * 1.4:   # 반경 밖 제외 (도로보정 감안 여유)
+                    continue
+                seen.add(name)
+                cat = (it.get("category", "").split(">")[-1]).strip()
+                out.append((name, max(1, round(dist_m * 1.35 / 80)), cat))
+                if len(out) >= max_count:
+                    return out
+        except Exception as e:
+            print(f"  ⚠️  Naver 후보 조회 실패({kw}): {e}")
+    return out
+
+
+_candidates_cache = None
+
+
+def fetch_nearby_candidates(kakao_key, naver_id=None, naver_secret=None, max_count=45):
+    """Kakao(반경) + Naver(키워드+거리필터) 후보를 합쳐 중복 제거 → 문자열 리스트.
+    끼니마다 동일하므로 1회만 조회 후 캐싱."""
+    global _candidates_cache
+    if _candidates_cache is not None:
+        return _candidates_cache
+    merged, seen = [], set()
+    for name, mins, cat in fetch_kakao_candidates(kakao_key) + fetch_naver_candidates(naver_id, naver_secret):
+        key = name.replace(" ", "")
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(f"{name}({cat}, 도보 {mins}분)" if cat else f"{name}(도보 {mins}분)")
+        if len(merged) >= max_count:
+            break
+    _candidates_cache = merged
+    print(f"  🗂️  근처 실제 음식점 후보 {len(merged)}곳 확보 (Kakao+Naver)")
+    return merged
 
 
 def get_kakao_place(name, kakao_key):
@@ -424,8 +485,8 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     idp = MEAL_IDP[meal]
     id_prefix = date_compact + (f"-{idp}" if idp else "")
 
-    # 하이브리드: JB빌딩 근처 실제 음식점 후보 목록 (거리 정확)
-    candidates = fetch_nearby_candidates(kakao_key)
+    # 하이브리드: JB빌딩 근처 실제 음식점 후보 목록 (Kakao 반경 + Naver 키워드)
+    candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
     cand_block = ""
     if candidates:
         cand_block = ("\n참고용 — JB빌딩 근처 실제 등록 음식점(거리 정확):\n"
