@@ -263,6 +263,61 @@ def get_today_kst():
     return datetime.now(kst).strftime("%Y-%m-%d")
 
 
+def fetch_weather():
+    """wttr.in으로 서울 여의도 날씨 (무료, 키 불필요). 실패 시 ''."""
+    try:
+        req = urllib.request.Request(
+            "https://wttr.in/Yeouido?format=j1&lang=ko",
+            headers={"User-Agent": "curl/8", "Accept-Language": "ko"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            data = json.loads(r.read())
+        cur = data["current_condition"][0]
+        today = data["weather"][0]
+        desc = ""
+        if cur.get("lang_ko"):
+            desc = cur["lang_ko"][0]["value"]
+        if not desc:
+            desc = cur.get("weatherDesc", [{}])[0].get("value", "")
+        temp = cur.get("temp_C", "")
+        tmin = today.get("mintempC", "")
+        tmax = today.get("maxtempC", "")
+        rain = today.get("hourly", [{}])[0].get("chanceofrain", "0")
+        line = f"{desc} {temp}°C (최저 {tmin}° / 최고 {tmax}°)"
+        if rain and int(rain) >= 40:
+            line += f", 강수확률 {rain}%☔"
+        print(f"🌤️  날씨: {line}")
+        return line
+    except Exception as e:
+        print(f"⚠️  날씨 조회 실패 (무시): {e}")
+        return ""
+
+
+def fetch_jb_news(naver_id, naver_secret, count=3):
+    """네이버 뉴스 검색으로 JB금융그룹 최신 기사 → [{title, link}]. 실패 시 []."""
+    if not (naver_id and naver_secret):
+        return []
+    try:
+        q = urllib.parse.quote("JB금융지주")
+        url = f"https://openapi.naver.com/v1/search/news.json?query={q}&display={count}&sort=date"
+        req = urllib.request.Request(url, headers={
+            "X-Naver-Client-Id": naver_id,
+            "X-Naver-Client-Secret": naver_secret,
+        })
+        with urllib.request.urlopen(req, timeout=6) as r:
+            items = json.loads(r.read()).get("items", [])
+        news = []
+        for it in items[:count]:
+            title = re.sub(r"<[^>]+>", "", it.get("title", "")).replace("&quot;", '"').replace("&amp;", "&").strip()
+            link = it.get("originallink") or it.get("link", "")
+            if title:
+                news.append({"title": title, "link": link})
+        print(f"📰 JB금융 뉴스 {len(news)}건")
+        return news
+    except Exception as e:
+        print(f"⚠️  뉴스 조회 실패 (무시): {e}")
+        return []
+
+
 def get_today_preference(today):
     """Supabase에서 오늘 저장된 컨디션/선호도 조회."""
     try:
@@ -401,8 +456,8 @@ def update_history(new_entry, history_path="history.json"):
     return history
 
 
-def send_email(restaurants, today, full_text, comment=""):
-    """Gmail SMTP로 점심 추천 이메일 발송."""
+def send_email(restaurants, today, full_text, comment="", weather="", news=None, extras=None):
+    """Gmail SMTP로 점심 추천 이메일 발송 (날씨 + JB금융 뉴스 포함)."""
     gmail_user = os.environ.get("GMAIL_USER")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
     if not gmail_user or not gmail_password:
@@ -416,9 +471,10 @@ def send_email(restaurants, today, full_text, comment=""):
     wd = weekdays[dt.weekday()]
     date_label = f"{dt.year}년 {dt.month}월 {dt.day}일 ({wd}요일)"
 
-    lines = [f"🍽️ 오늘의 여의나루 점심 맛집 추천 ({date_label})\n",
-             "여의도 JB빌딩 근처 추천 음식점 5곳입니다.\n",
-             "─" * 40]
+    lines = [f"🍽️ 오늘의 여의나루 점심 맛집 추천 ({date_label})\n"]
+    if weather:
+        lines.append(f"🌤️ 오늘 날씨: {weather}\n")
+    lines += ["여의도 JB빌딩 근처 추천 음식점입니다.\n", "─" * 40]
     for i, r in enumerate(restaurants, 1):
         lines += [
             f"\n{i}. {r['name']}",
@@ -427,9 +483,23 @@ def send_email(restaurants, today, full_text, comment=""):
             f"   • 가격대: {r['price']}",
             f"   • 도보 거리: {r['distance']}",
         ]
-    weather_line = comment if comment else "오늘도 맛있는 점심 되세요!"
+    # 추가 추천 (근처유명/검색유명)
+    TAG_LABEL = {"근처유명": "⭐ 10분내 유명", "검색유명": "🔍 검색 인기"}
+    if extras:
+        lines += ["\n" + "─" * 40, "\n✨ 이런 곳도 가볼 만해요"]
+        for r in extras:
+            tag = TAG_LABEL.get(r.get("tag"), "")
+            lines += [f"\n• {r['name']} ({r['cuisine']}) {tag}",
+                      f"   {r['feature']}  · {r['distance']}"]
+    # JB금융 뉴스
+    if news:
+        lines += ["\n" + "─" * 40, "\n📰 JB금융그룹 주요 소식"]
+        for n in news:
+            lines.append(f"\n• {n['title']}\n   {n.get('link','')}")
+
+    closing = comment if comment else "오늘도 맛있는 점심 되세요!"
     lines += ["\n" + "─" * 40,
-              f"\n🌤️ {weather_line}",
+              f"\n💬 {closing}",
               "\n—\nClaude AI 자동 발송"]
     body = "\n".join(lines)
 
@@ -599,10 +669,17 @@ def main():
     time.sleep(70)
     bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret)
 
+    # 날씨 + JB금융 뉴스 (이메일/카카오 첨부용)
+    print("\n🌤️  날씨/뉴스 수집 중...")
+    weather = fetch_weather()
+    news = fetch_jb_news(naver_id, naver_secret)
+
     # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
     new_entry = {
         "date": today,
         "comment": lunch.get("comment", ""),
+        "weather": weather,
+        "news": news,
         "restaurants": lunch.get("restaurants", []),
         "extras": lunch.get("extras", []),
         "by_condition": lunch.get("by_condition", {}),
@@ -630,7 +707,8 @@ def main():
     update_index_html(history)
 
     print("\n📧 이메일 발송 중...")
-    send_email(new_entry.get("restaurants", []), today, text, new_entry.get("comment", ""))
+    send_email(new_entry.get("restaurants", []), today, text, new_entry.get("comment", ""),
+               weather=weather, news=news, extras=new_entry.get("extras", []))
 
     print("\n✨ 완료!")
 

@@ -33,13 +33,26 @@ def refresh_access_token(refresh_token):
 SITE_URL = "https://duelspost-droid.github.io/jblunch/"
 
 
-def send_to_me(access_token, restaurants, today, comment):
-    """나에게 보내기 (메모) API로 점심 추천 발송. 본문에 링크 직접 노출."""
+def send_to_me(access_token, restaurants, today, comment, weather="", news=None, extras=None):
+    """나에게 보내기 (메모) API로 점심 추천 발송. 날씨 + JB금융 뉴스 포함."""
     lines = [f"🍽️ 오늘의 여의나루 점심 추천 ({today})", ""]
-    if comment:
+    if weather:
+        lines += [f"🌤️ 날씨: {weather}", ""]
+    elif comment:
         lines += [f"🌤️ {comment}", ""]
     for i, r in enumerate(restaurants[:5], 1):
         lines.append(f"{i}. {r['name']} ({r['cuisine']}) · {r['price']} · {r['distance']}")
+    # 추가 추천
+    TAG_LABEL = {"근처유명": "⭐", "검색유명": "🔍"}
+    if extras:
+        lines += ["", "✨ 이런 곳도:"]
+        for r in extras:
+            lines.append(f"{TAG_LABEL.get(r.get('tag'),'•')} {r['name']} ({r['cuisine']}) · {r['distance']}")
+    # JB금융 뉴스
+    if news:
+        lines += ["", "📰 JB금융 소식:"]
+        for n in news[:3]:
+            lines.append(f"• {n['title']}")
     lines += ["", "👉 전체보기 / 컨디션별 추천:", SITE_URL]
     text = "\n".join(lines)
 
@@ -87,7 +100,8 @@ def main():
 
     try:
         send_to_me(access_token, entry["restaurants"], entry["date"],
-                   entry.get("comment", ""))
+                   entry.get("comment", ""), weather=entry.get("weather", ""),
+                   news=entry.get("news", []), extras=entry.get("extras", []))
         print("✅ 카카오톡 발송 완료")
     except Exception as e:
         body = e.read().decode() if hasattr(e, "read") else str(e)
