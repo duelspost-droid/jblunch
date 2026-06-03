@@ -314,6 +314,9 @@
   .place-item:last-child { border-bottom: none; }
   .place-info { flex: 1; min-width: 0; cursor: pointer; }
   .place-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+  .src-badge { font-size: 0.64rem; padding: 1px 6px; border-radius: 9px; font-weight: 700; vertical-align: middle; }
+  .src-badge.src-kakao { background: #fee500; color: #3a1d1d; }
+  .src-badge.src-naver { background: #03c75a; color: #fff; }
   .place-sub { font-size: 0.76rem; color: #777; }
   .place-addr { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
   .place-review-btn {
@@ -1424,14 +1427,16 @@ function renderPlaceResults() {
   }
   const base = placeOrigin === '현위치' ? '현재 내 위치' : 'JB빌딩';
   const originNote = placeSearchQ
-    ? `<div class="place-origin">🔎 "${escHtml(placeSearchQ)}" 검색 · ${base} 기준</div>`
-    : `<div class="place-origin">📍 ${base} 주변 맛집 · 가까운 순</div>`;
+    ? `<div class="place-origin">🔎 "${escHtml(placeSearchQ)}" 검색 · ${base} 기준 · 카카오+네이버</div>`
+    : `<div class="place-origin">📍 ${base} 주변 맛집 · 가까운 순 · 카카오+네이버</div>`;
+  const SRC_CLS = { '카카오': 'src-kakao', '네이버': 'src-naver' };
   return originNote + searchedPlaces.map(p => {
     const cms = commentsState[p.name] || [];
     const cnt = cms.length;
+    const srcBadge = p.source ? `<span class="src-badge ${SRC_CLS[p.source]||''}">${escHtml(p.source)}</span>` : '';
     return `<div class="place-item">
       <div class="place-info" onclick="openModal('${escAttr(p.name)}','')">
-        <div class="place-name">${emo(p.cuisine)} ${escHtml(p.name)} ${cnt?`<span class="badge badge-review">리뷰 ${cnt}</span>`:''}</div>
+        <div class="place-name">${emo(p.cuisine)} ${escHtml(p.name)} ${srcBadge} ${cnt?`<span class="badge badge-review">리뷰 ${cnt}</span>`:''}</div>
         <div class="place-sub">${escHtml(p.cuisine||'')} · 🚶 ${escHtml(p.distance||'')}</div>
         ${p.address?`<div class="place-addr">📍 ${escHtml(p.address)}</div>`:''}
       </div>
