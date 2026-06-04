@@ -1318,9 +1318,10 @@ function renderModalDetail(name, info) {
   if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
   if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
+  const mapQ = name.includes('여의도') ? name : name + ' 여의도';
   const mapBtn = info.verified === false
     ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
-    : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`;
+    : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(mapQ)}" target="_blank" rel="noopener">📍 지도</a>`;
   detailEl.innerHTML = chips.join('') + mapBtn;
   detailEl.style.display = 'flex';
 }
