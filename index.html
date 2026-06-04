@@ -177,11 +177,40 @@
     text-decoration: none; font-weight: 600;
   }
   .modal-detail .md-map.nomap { border-color: #d0d0d0; background: #f3f3f3; color: #999; }
-  .modal-reviews { margin-bottom: 16px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
-  .modal-reviews .mr-head { font-size: 0.84rem; font-weight: 700; color: #0a3d7a; margin-bottom: 4px; }
-  .modal-reviews .review-item { background: #fafafa; border-radius: 9px; padding: 10px 12px; }
+  .modal-reviews {
+    margin-bottom: 16px; max-height: 42vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+    background: #f7f9fc; border: 1px solid #e9eef5; border-radius: 14px;
+    padding: 14px;
+  }
+  .modal-reviews .mr-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 0.92rem; font-weight: 800; color: #0a3d7a;
+    padding-bottom: 10px; margin-bottom: 2px; border-bottom: 1.5px solid #e3eaf3;
+  }
+  .modal-reviews .mr-head .mr-avg {
+    margin-left: auto; font-size: 0.82rem; font-weight: 700; color: #d69e2e;
+    background: #fff7e6; border: 1px solid #f5e3b8; border-radius: 20px; padding: 3px 10px;
+  }
+  .modal-reviews .review-item {
+    background: #fff; border: 1px solid #edf1f6; border-radius: 11px;
+    padding: 11px 13px; box-shadow: 0 1px 2px rgba(20,40,80,0.03);
+  }
   .modal-reviews .review-name { font-size: 0.86rem; }
-  .modal-reviews .review-content { font-size: 0.85rem; }
+  .modal-reviews .review-content {
+    font-size: 0.87rem; color: #3a4658; line-height: 1.55; margin-top: 4px;
+  }
+  .modal-reviews .review-stars { font-size: 0.82rem; }
+  /* 리뷰 작성 섹션 */
+  .modal-write {
+    border-top: 2px dashed #e2e8f0; padding-top: 16px; margin-top: 4px;
+  }
+  .modal-write .mw-head {
+    font-size: 0.92rem; font-weight: 800; color: #0a3d7a; margin-bottom: 12px;
+  }
+  .modal-row { display: flex; gap: 10px; }
+  .modal-row .mf-name { flex: 1; margin-bottom: 11px; }
+  .modal-row .mf-stars { flex-shrink: 0; margin-bottom: 11px; }
 
   .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
   .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
@@ -400,7 +429,7 @@
   }
   .meal-pick.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
   .review-meal { font-size: 0.66rem; padding: 1px 6px; border-radius: 10px; background: #eef2f7; color: #4a5568; font-weight: 600; }
-  .modal-stars { display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; }
+  .modal-stars { display: flex; gap: 5px; font-size: 1.5rem; cursor: pointer; padding-top: 2px; }
   .modal-stars span { opacity: 0.22; transition: opacity 0.1s; }
   .modal-stars span.lit { opacity: 1; }
   .modal textarea {
@@ -599,33 +628,38 @@
     <div class="modal-detail" id="modal-detail"></div>
     <div class="modal-intro" id="modal-intro"></div>
     <div class="modal-reviews" id="modal-reviews"></div>
-    <div class="modal-field">
-      <label>언제 방문</label>
-      <div class="modal-meal" id="modal-meal">
-        <button type="button" class="meal-pick" data-meal="점심" onclick="selectModalMeal(this)">🍚 점심</button>
-        <button type="button" class="meal-pick" data-meal="저녁" onclick="selectModalMeal(this)">🌙 저녁</button>
-        <button type="button" class="meal-pick" data-meal="술집" onclick="selectModalMeal(this)">🍺 술집</button>
+    <div class="modal-write" id="modal-write">
+      <div class="mw-head" id="modal-write-head">✍️ 리뷰 작성</div>
+      <div class="modal-field">
+        <label>언제 방문</label>
+        <div class="modal-meal" id="modal-meal">
+          <button type="button" class="meal-pick" data-meal="점심" onclick="selectModalMeal(this)">🍚 점심</button>
+          <button type="button" class="meal-pick" data-meal="저녁" onclick="selectModalMeal(this)">🌙 저녁</button>
+          <button type="button" class="meal-pick" data-meal="술집" onclick="selectModalMeal(this)">🍺 술집</button>
+        </div>
       </div>
-    </div>
-    <div class="modal-field">
-      <label>이름</label>
-      <input type="text" id="modal-name" placeholder="이름을 입력하세요" maxlength="20">
-    </div>
-    <div class="modal-field">
-      <label>별점</label>
-      <div class="modal-stars" id="modal-stars">
-        <span data-v="1">⭐</span><span data-v="2">⭐</span>
-        <span data-v="3">⭐</span><span data-v="4">⭐</span><span data-v="5">⭐</span>
+      <div class="modal-row">
+        <div class="modal-field mf-name">
+          <label>이름</label>
+          <input type="text" id="modal-name" placeholder="이름" maxlength="20">
+        </div>
+        <div class="modal-field mf-stars">
+          <label>별점</label>
+          <div class="modal-stars" id="modal-stars">
+            <span data-v="1">⭐</span><span data-v="2">⭐</span>
+            <span data-v="3">⭐</span><span data-v="4">⭐</span><span data-v="5">⭐</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="modal-field">
-      <label>리뷰 내용</label>
-      <textarea id="modal-text" placeholder="방문 소감을 자유롭게 적어주세요…"></textarea>
-    </div>
-    <div class="saving-msg" id="saving-msg"></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">취소</button>
-      <button class="btn-save" id="btn-save" onclick="saveReview()">저장</button>
+      <div class="modal-field">
+        <label>리뷰 내용</label>
+        <textarea id="modal-text" placeholder="방문 소감을 자유롭게 적어주세요…"></textarea>
+      </div>
+      <div class="saving-msg" id="saving-msg"></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">취소</button>
+        <button class="btn-save" id="btn-save" onclick="saveReview()">저장</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1358,7 +1392,11 @@ function openModal(name, feature, editC) {
   const cms = commentsState[name] || [];
   const revEl = document.getElementById('modal-reviews');
   if (cms.length) {
-    revEl.innerHTML = `<div class="mr-head">📝 리뷰 ${cms.length}개</div>` + cms.map(c => {
+    const rated = cms.map(c => c.rating).filter(Boolean);
+    const avg = rated.length ? (rated.reduce((a,b)=>a+b,0)/rated.length) : 0;
+    const avgBadge = rated.length
+      ? `<span class="mr-avg">${'⭐'.repeat(Math.round(avg))} ${avg.toFixed(1)}</span>` : '';
+    revEl.innerHTML = `<div class="mr-head">📝 리뷰 <span style="color:#3182ce">${cms.length}</span>개${avgBadge}</div>` + cms.map(c => {
       const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
       const color = avatarColor(c.reviewer_name||'?');
       return `<div class="review-item">
@@ -1378,11 +1416,14 @@ function openModal(name, feature, editC) {
         </div>
       </div>`;
     }).join('');
-    revEl.style.display = 'block';
+    revEl.style.display = 'flex';
   } else {
-    revEl.innerHTML = '';
-    revEl.style.display = 'none';
+    revEl.innerHTML = '<div class="mr-head" style="border:none;padding-bottom:0">📝 아직 리뷰가 없어요 — 첫 리뷰를 남겨보세요!</div>';
+    revEl.style.display = 'flex';
   }
+  // 작성/수정 섹션 헤더 전환
+  const writeHead = document.getElementById('modal-write-head');
+  if (writeHead) writeHead.textContent = editC ? '✏️ 리뷰 수정' : '✍️ 리뷰 작성';
   // 수정 모드면 기존 값 채우기
   document.getElementById('modal-name').value = editC ? (editC.reviewer_name || '') : '';
   document.getElementById('modal-text').value = editC ? (editC.content || '') : '';
