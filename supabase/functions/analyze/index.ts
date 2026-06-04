@@ -232,7 +232,10 @@ Deno.serve(async (req) => {
       if (dMatch) { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; }
       else intro = dContent.trim();
       if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
-      return json({ intro, price }, 200);
+      // 카카오·네이버 양쪽 거리 실측 (JB빌딩 기준)
+      const dObj: Record<string, unknown> = { name: describe };
+      await verifyOne(dObj, kakaoKey, naverId, naverSecret);
+      return json({ intro, price, distance: dObj.distance || "", verified: dObj.verified }, 200);
     }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명)

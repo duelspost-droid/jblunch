@@ -382,7 +382,11 @@
   .top-stars-inline { font-size: 0.74rem; font-weight: 500; color: #f0a020; white-space: nowrap; }
   .top-stars-inline small { color: #aaa; }
   .top-cuisine { font-size: 0.74rem; color: #2b6cb0; font-weight: 600; }
-  .top-feature { font-size: 0.78rem; color: #666; line-height: 1.45; margin: 3px 0; }
+  .top-feature {
+    font-size: 0.78rem; color: #666; line-height: 1.45; margin: 3px 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-overflow: ellipsis;
+  }
   .top-meta { display: flex; gap: 11px; font-size: 0.73rem; color: #999; flex-wrap: wrap; }
   .top-stars { font-size: 0.82rem; }
 
@@ -726,8 +730,14 @@ function normDist(d) {
 let placeIntros = {};
 try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
 let _introPending = {};   // 중복 호출 방지
+// 양쪽(카카오+네이버) 거리가 이미 채워졌는지
+function hasDualDist(name) {
+  const d = (placeDetails[name] || {}).distance || '';
+  return /카카오/.test(d) && /네이버/.test(d);
+}
 async function fetchPlaceIntro(name) {
-  if (placeIntros[name]) return placeIntros[name];
+  // 소개·가격·양쪽거리 모두 캐시됐으면 네트워크 호출 생략
+  if (placeIntros[name] && (placeDetails[name]||{}).price && hasDualDist(name)) return placeIntros[name];
   if (_introPending[name]) return _introPending[name];
   const d = placeDetails[name] || {};
   _introPending[name] = (async () => {
@@ -738,13 +748,17 @@ async function fetchPlaceIntro(name) {
         body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
       });
       const data = await res.json();
-      // 가격 정보가 없으면 AI 추정 가격으로 보강 (일관성)
-      if (data && data.price) {
+      // 가격·거리(카카오+네이버) 보강 (일관성)
+      if (data && (data.price || data.distance)) {
         if (!placeDetails[name]) placeDetails[name] = { name };
-        if (!placeDetails[name].price) {
-          placeDetails[name].price = data.price;
-          try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+        const pd = placeDetails[name];
+        if (data.price && !pd.price) pd.price = data.price;
+        // 양쪽 출처 거리가 있으면 단일 출처 거리보다 우선
+        if (data.distance && /카카오|네이버/.test(data.distance)) {
+          pd.distance = data.distance;
+          if (data.verified !== undefined) pd.verified = data.verified;
         }
+        try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
       }
       if (data && data.intro) {
         placeIntros[name] = data.intro;
@@ -822,13 +836,14 @@ async function backfillReviewedDetails() {
     renderStats();
     await new Promise(r => setTimeout(r, 400));   // 백엔드 과부하 방지
   }
-  // 디테일한 AI 소개가 없는 리뷰 맛집 → 소개 생성 (캐시되면 1회만)
+  // 소개·가격·양쪽거리가 부족한 리뷰 맛집 → 보강 (HISTORY 맛집 제외)
   const introTargets = Object.keys(commentsState).filter(n =>
-    (commentsState[n] || []).length && !placeIntros[n]);
+    (commentsState[n] || []).length && !known[n] &&
+    (!placeIntros[n] || !(placeDetails[n]||{}).price || !hasDualDist(n)));
   for (const name of introTargets) {
     await fetchPlaceIntro(name);
     renderStats();
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 1500));   // rate-limit 여유
   }
 }
 
@@ -1406,7 +1421,7 @@ function renderModalDetail(name, info) {
   const chips = [];
   if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
   if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
-  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(normDist(info.distance))}</span>`);
+  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
   const mapQ = name.includes('여의도') ? name : name + ' 여의도';
   const mapBtn = info.verified === false
@@ -1662,7 +1677,7 @@ function renderStats() {
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
             ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
-            ${r.distance ? `<span>🚶 ${escHtml(normDist(r.distance))}</span>` : ''}
+            ${r.distance ? `<span>🚶 ${escHtml(r.distance)}</span>` : ''}
             ${r.verified === false ? `<span style="color:#c05">🚫 지도없음</span>` : ''}
           </div>
         </div>
