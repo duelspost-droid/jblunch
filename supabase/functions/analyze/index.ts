@@ -210,11 +210,11 @@ Deno.serve(async (req) => {
       const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당을 잘 모르는 사람에게 소개하는 글을 써줘.
 식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : ""}
 규칙:
-- 반드시 정중한 존댓말("~합니다/~예요/~좋아요" 체)로만 써. 반말("~야/~어") 절대 금지.
-- 2~3문장. 대표 메뉴/맛 특징, 분위기, 어떤 자리(점심/회식/접대 등)에 좋은지 구체적으로.
-- 실제로 아는 정보를 우선하되, 과장·허위 금지. 모르면 종류/이름에서 합리적으로 유추하되 단정적 표현은 피해.
-- 가격·평점·전화번호 같은 변동 정보는 쓰지 마.
-- 반드시 JSON만 출력: {"intro":"..."}`;
+- intro: 반드시 정중한 존댓말("~합니다/~예요/~좋아요" 체)로만 써. 반말("~야/~어") 절대 금지.
+  2~3문장. 대표 메뉴/맛 특징, 분위기, 어떤 자리(점심/회식/접대 등)에 좋은지 구체적으로.
+  실제로 아는 정보를 우선하되 과장·허위 금지. intro 안에는 가격·평점·전화번호 같은 변동 정보를 쓰지 마.
+- price: 이 식당의 대략적 가격대를 "저렴"/"보통"/"비쌈" 중 하나로만. 종류·이름으로 합리적으로 추정.
+- 반드시 JSON만 출력: {"intro":"...","price":"보통"}`;
       const dResp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -228,8 +228,11 @@ Deno.serve(async (req) => {
       const dData = await dResp.json();
       const dContent = dData.content?.[0]?.text ?? "";
       const dMatch = dContent.match(/\{[\s\S]*\}/);
-      const intro = dMatch ? (JSON.parse(dMatch[0]).intro || "") : dContent.trim();
-      return json({ intro }, 200);
+      let intro = "", price = "";
+      if (dMatch) { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; }
+      else intro = dContent.trim();
+      if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
+      return json({ intro, price }, 200);
     }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명)

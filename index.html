@@ -714,6 +714,14 @@ function cachePlace(r) {
   try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
 }
 function cachePlaces(arr) { (arr || []).forEach(cachePlace); }
+// 거리 표기 정규화: "도보 1분 (카카오) / 1분 (네이버)" → "도보 1분" (가장 가까운 값)
+function normDist(d) {
+  if (!d) return '';
+  const nums = String(d).match(/\d+/g);
+  if (!nums) return String(d);
+  const min = Math.min(...nums.map(Number));
+  return `도보 ${min}분`;
+}
 // AI가 생성한 디테일한 맛집 소개 캐시 (이름 → intro 문장)
 let placeIntros = {};
 try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
@@ -730,6 +738,14 @@ async function fetchPlaceIntro(name) {
         body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
       });
       const data = await res.json();
+      // 가격 정보가 없으면 AI 추정 가격으로 보강 (일관성)
+      if (data && data.price) {
+        if (!placeDetails[name]) placeDetails[name] = { name };
+        if (!placeDetails[name].price) {
+          placeDetails[name].price = data.price;
+          try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+        }
+      }
       if (data && data.intro) {
         placeIntros[name] = data.intro;
         try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); } catch(e) {}
@@ -1390,7 +1406,7 @@ function renderModalDetail(name, info) {
   const chips = [];
   if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
   if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
-  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
+  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(normDist(info.distance))}</span>`);
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
   const mapQ = name.includes('여의도') ? name : name + ' 여의도';
   const mapBtn = info.verified === false
@@ -1646,7 +1662,7 @@ function renderStats() {
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
             ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
-            ${r.distance ? `<span>🚶 ${escHtml(r.distance)}</span>` : ''}
+            ${r.distance ? `<span>🚶 ${escHtml(normDist(r.distance))}</span>` : ''}
             ${r.verified === false ? `<span style="color:#c05">🚫 지도없음</span>` : ''}
           </div>
         </div>
