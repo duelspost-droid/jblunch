@@ -1564,7 +1564,8 @@ function openReserve(name) {
   reserveName = name;
   document.getElementById('reserve-title').textContent = `📞 ${name} 예약`;
   document.getElementById('reserve-sub').textContent = '원하는 방법으로 예약하세요.';
-  const naverUrl = `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+  // 지도앱 대신 네이버 웹 예약(통합검색의 예약 진입)으로 연결
+  const naverUrl = `https://search.naver.com/search.naver?query=${encodeURIComponent(name + ' 여의도 예약')}`;
   const cached = placeDetails[name] || {};
   const phoneRow = (phone) => phone
     ? `<a class="reserve-opt" href="tel:${fmtPhone(phone)}">
@@ -1577,7 +1578,7 @@ function openReserve(name) {
   document.getElementById('reserve-opts').innerHTML = `
     <a class="reserve-opt naver" href="${naverUrl}" target="_blank" rel="noopener">
       <span class="ro-emoji">🟢</span>
-      <span class="ro-text">네이버 예약 · 지도<div class="ro-desc">네이버 지도에서 예약·전화·길찾기</div></span>
+      <span class="ro-text">네이버 예약<div class="ro-desc">네이버 웹에서 바로 예약</div></span>
       <span class="ro-arrow">›</span></a>
     ${phoneRow(cached.phone)}`;
   document.getElementById('reserve-bg').classList.add('open');
