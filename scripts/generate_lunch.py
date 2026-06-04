@@ -263,6 +263,39 @@ def get_today_kst():
     return datetime.now(kst).strftime("%Y-%m-%d")
 
 
+def translate_weather_desc(desc):
+    """wttr.in 영문 날씨 설명을 한글로 변환 (lang_ko 누락 대비)."""
+    if not desc:
+        return desc
+    # 한글이 이미 섞여 있으면 그대로
+    if any('가' <= ch <= '힣' for ch in desc):
+        return desc
+    d = desc.strip().lower()
+    table = {
+        "clear": "맑음", "sunny": "맑음",
+        "partly cloudy": "부분적으로 흐림", "cloudy": "흐림", "overcast": "잔뜩 흐림",
+        "mist": "옅은 안개", "fog": "안개", "freezing fog": "어는 안개",
+        "patchy rain possible": "곳곳에 비", "patchy rain nearby": "주변에 비",
+        "patchy light rain": "약한 비", "light rain": "약한 비",
+        "light rain shower": "약한 소나기", "moderate rain": "비",
+        "heavy rain": "강한 비", "rain": "비", "showers": "소나기",
+        "patchy snow possible": "곳곳에 눈", "light snow": "약한 눈",
+        "snow": "눈", "heavy snow": "강한 눈", "blizzard": "눈보라",
+        "patchy sleet possible": "진눈깨비 가능", "sleet": "진눈깨비",
+        "thundery outbreaks possible": "천둥번개 가능",
+        "thundery outbreaks in nearby": "주변에 천둥번개",
+        "thunderstorm": "뇌우", "patchy light rain with thunder": "천둥 동반 약한 비",
+        "moderate or heavy rain with thunder": "천둥 동반 비",
+    }
+    if d in table:
+        return table[d]
+    # 부분 매칭 (긴 키 우선)
+    for k in sorted(table, key=len, reverse=True):
+        if k in d:
+            return table[k]
+    return desc  # 매칭 실패 시 원문 유지
+
+
 def fetch_weather():
     """wttr.in으로 서울 여의도 날씨 (무료, 키 불필요). 실패 시 ''."""
     try:
@@ -278,6 +311,7 @@ def fetch_weather():
             desc = cur["lang_ko"][0]["value"]
         if not desc:
             desc = cur.get("weatherDesc", [{}])[0].get("value", "")
+        desc = translate_weather_desc(desc)
         temp = cur.get("temp_C", "")
         tmin = today.get("mintempC", "")
         tmax = today.get("maxtempC", "")
@@ -322,8 +356,13 @@ def generate_daily_message(client, weather, news, restaurants):
     """날씨 + JB금융 뉴스 + 추천 맛집을 엮은 친근한 점심 한마디 생성."""
     names = ", ".join(r["name"] for r in restaurants[:5])
     headlines = " / ".join(n["title"] for n in (news or [])[:3]) or "(특이 소식 없음)"
-    prompt = f"""아래 정보로 여의도 JB금융 직장인에게 보내는 친근한 점심 안내 멘트를 2~3문장으로 써줘.
-존댓말, 이모지 약간 사용. 날씨에 어울리는 메뉴를 자연스럽게 권하고, 회사 소식이 있으면 가볍게 한 줄 엮어줘.
+    prompt = f"""아래 정보로 여의도 JB금융 임직원에게 전하는 오늘의 점심 안내 멘트를 2~3문장으로 작성해줘.
+
+문체 규칙:
+- 반드시 격식 있고 정중한 존댓말("~합니다/~하시기 바랍니다/~추천드립니다" 체)로만 작성.
+- 반말("~해/~네/~먹고 와")·구어체 감탄("화이팅!", "최고!")·과한 이모지 금지.
+- 이모지는 문장 끝에 1개 이내로 절제해서 사용(없어도 무방).
+- 날씨에 어울리는 메뉴를 자연스럽게 권하고, 회사 소식이 있으면 차분하게 한 줄 엮어줘.
 
 - 오늘 날씨: {weather or '정보 없음'}
 - JB금융그룹 소식: {headlines}
