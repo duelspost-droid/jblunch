@@ -1433,22 +1433,27 @@ function renderStats() {
   const ratings = allComments.map(c => c.rating).filter(Boolean);
   const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
 
-  // TOP 맛집: 평균 별점 기준 (이름으로 맛집 매칭)
-  const ratingMap = {};
-  allComments.forEach(c => {
-    if (!c.rating) return;
-    if (!ratingMap[c.restaurant_id]) ratingMap[c.restaurant_id] = [];
-    ratingMap[c.restaurant_id].push(c.rating);
-  });
-  const byId = byName;  // restaurant_id에는 이제 이름이 저장됨
-  const topList = Object.keys(ratingMap)
-    .filter(id => byId[id])
-    .map(id => ({
-      ...byId[id],
-      avg: ratingMap[id].reduce((a,b)=>a+b,0)/ratingMap[id].length,
-      cnt: ratingMap[id].length
-    }))
-    .sort((a,b) => b.avg - a.avg).slice(0,5);
+  // 리뷰가 있는 모든 맛집 (HISTORY_DATA에 없어도 — 직접검색·주변검색 포함)
+  const topList = Object.keys(commentsState)
+    .filter(name => (commentsState[name] || []).length)
+    .map(name => {
+      const cms = commentsState[name];
+      const rs = cms.map(c => c.rating).filter(Boolean);
+      const av = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0;
+      const base = byName[name] || {};
+      return {
+        name,
+        cuisine: base.cuisine || '',
+        feature: base.feature || '',
+        price: base.price || '',
+        distance: base.distance || '',
+        verified: base.verified,
+        avg: av,
+        cnt: cms.length,
+        rated: rs.length > 0
+      };
+    })
+    .sort((a, b) => (b.avg - a.avg) || (b.cnt - a.cnt));
 
   // 내 주변 맛집 카드 — 버튼 클릭(목록 로드) 후에만 검색창 노출
   const placeOpened = nearbyLoaded || !!placeSearchQ;
@@ -1480,7 +1485,7 @@ function renderStats() {
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
         <div class="top-rank">${i+1}</div>
         <div class="top-info">
-          <div class="top-name">${emo(r.cuisine)} ${r.name} <span class="top-stars-inline">${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · 리뷰 ${r.cnt}</span></div>
+          <div class="top-name">${emo(r.cuisine)} ${r.name} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span></div>
           <div class="top-cuisine">${r.cuisine||''}</div>
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
