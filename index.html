@@ -660,6 +660,43 @@ const HISTORY_DATA = [{"date": "2026-06-04", "comment": "천둥번개 예보에 
 // ── 인메모리 상태 ─────────────────────────────────────────────
 let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating, created_at}] }
 
+// HISTORY_DATA에 없는 직접검색/주변검색 맛집의 상세정보 캐시 (이름 → 상세)
+// localStorage 영속화 → 새로고침/다른 탭에서도 상세 표시 유지
+let placeDetails = {};
+try { placeDetails = JSON.parse(localStorage.getItem('placeDetails') || '{}') || {}; } catch(e) { placeDetails = {}; }
+function cachePlace(r) {
+  if (!r || !r.name) return;
+  const prev = placeDetails[r.name] || {};
+  const merged = {
+    name: r.name,
+    cuisine: r.cuisine || prev.cuisine || '',
+    price: r.price || prev.price || '',
+    distance: r.distance || prev.distance || '',
+    address: r.address || prev.address || '',
+    feature: r.feature || prev.feature || '',
+    verified: (r.verified !== undefined ? r.verified : prev.verified)
+  };
+  placeDetails[r.name] = merged;
+  try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+}
+function cachePlaces(arr) { (arr || []).forEach(cachePlace); }
+// 이름으로 장소검색 백엔드(Kakao/Naver) 재조회 → 상세 채우기 (캐시에 없을 때)
+async function fetchPlaceDetail(name) {
+  if (placeDetails[name] && placeDetails[name].cuisine) return placeDetails[name];
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: name })
+    });
+    const data = await res.json();
+    const list = Array.isArray(data.places) ? data.places : [];
+    const hit = list.find(p => p.name === name) || list.find(p => p.name && p.name.includes(name)) || list[0];
+    if (hit) { cachePlace(hit); return placeDetails[name]; }
+  } catch(e) {}
+  return placeDetails[name] || null;
+}
+
 // ── Supabase API ──────────────────────────────────────────────
 // 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
 function init() {
@@ -686,8 +723,22 @@ async function loadComments() {
     setBadge('ok', '☁️ 동기화됨');
     renderCondGroup();   // 현재 선택 유지하며 리뷰 반영
     renderStats();
+    backfillReviewedDetails();   // HISTORY에 없는 리뷰 맛집 상세 보강
   } catch(e) {
     setBadge('err', '⚠️ 오프라인');
+  }
+}
+
+// 리뷰는 있는데 상세정보가 없는 맛집(직접검색/주변검색)을 백엔드로 보강
+async function backfillReviewedDetails() {
+  const known = {};
+  allRestaurants().forEach(r => { if (r.name) known[r.name] = 1; });
+  const targets = Object.keys(commentsState).filter(n =>
+    (commentsState[n] || []).length && !known[n] && !(placeDetails[n] && placeDetails[n].cuisine));
+  for (const name of targets) {
+    await fetchPlaceDetail(name);
+    renderStats();
+    await new Promise(r => setTimeout(r, 400));   // 백엔드 과부하 방지
   }
 }
 
@@ -1126,6 +1177,7 @@ async function generateRecommend(text, meal, saveHist) {
     if (ok) {
       const label = text ? `🔎 "${text}" 맞춤 추천` : `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
       customResult = { label, comment, restaurants, extras };
+      cachePlaces([...(restaurants||[]), ...(extras||[])]);
       answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
       answerEl.classList.add('show');
       renderCustomGroup();
@@ -1251,9 +1303,27 @@ function findRestaurant(name) {
   }
   const inSearch = (searchedPlaces || []).find(r => r.name === name);
   if (inSearch) return inSearch;
-  return allRestaurants().find(r => r.name === name) || null;
+  const inHist = allRestaurants().find(r => r.name === name);
+  if (inHist) return inHist;
+  return placeDetails[name] || null;
 }
 
+// 모달 상단 상세정보(칩 + 주소 + 지도) 렌더 — info 없으면 이름만으로 지도 제공
+function renderModalDetail(name, info) {
+  const detailEl = document.getElementById('modal-detail');
+  if (!detailEl) return;
+  info = info || {};
+  const chips = [];
+  if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
+  if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
+  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
+  if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
+  const mapBtn = info.verified === false
+    ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
+    : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`;
+  detailEl.innerHTML = chips.join('') + mapBtn;
+  detailEl.style.display = 'flex';
+}
 function openModal(name, feature, editC) {
   mId = name; mRating = editC ? (editC.rating || 0) : 0; mFeature = feature || '';
   mEditId = editC ? editC.id : null;
@@ -1263,29 +1333,26 @@ function openModal(name, feature, editC) {
   document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
     b.classList.toggle('on', b.dataset.meal === mMeal));
   document.getElementById('modal-title').textContent = editC ? `✏️ 리뷰 수정 — ${name}` : `🍽️ ${name}`;
-  // 맛집 상세정보 (종류/가격/거리 + 지도)
+  // 맛집 상세정보 (종류/가격/거리/주소 + 지도) — 캐시/HISTORY/검색결과 통합
   const info = findRestaurant(name);
-  const detailEl = document.getElementById('modal-detail');
-  if (info) {
-    const chips = [];
-    if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
-    if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
-    if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
-    const mapBtn = info.verified === false
-      ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
-      : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`;
-    detailEl.innerHTML = chips.join('') + mapBtn;
-    detailEl.style.display = 'flex';
-    if (!feature && info.feature) feature = info.feature;
-  } else {
-    detailEl.innerHTML = '';
-    detailEl.style.display = 'none';
-  }
+  renderModalDetail(name, info);
+  if (info && !feature && info.feature) feature = info.feature;
   mFeature = feature || mFeature;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');
   introEl.innerHTML = feature ? `💬 ${escHtml(feature)}` : '';
   introEl.style.display = feature ? 'block' : 'none';
+  // 상세정보가 비어있으면(직접검색/주변검색 맛집) 백엔드로 재조회해 채움
+  if (!info || !info.cuisine) {
+    fetchPlaceDetail(name).then(d => {
+      if (d && mId === name) {   // 모달이 아직 같은 맛집을 보고 있을 때만
+        renderModalDetail(name, d);
+        const intro2 = document.getElementById('modal-intro');
+        const f2 = mFeature || d.feature;
+        if (f2 && !intro2.textContent) { intro2.innerHTML = `💬 ${escHtml(f2)}`; intro2.style.display = 'block'; }
+      }
+    });
+  }
   // 기존 리뷰 목록
   const cms = commentsState[name] || [];
   const revEl = document.getElementById('modal-reviews');
@@ -1440,13 +1507,14 @@ function renderStats() {
       const cms = commentsState[name];
       const rs = cms.map(c => c.rating).filter(Boolean);
       const av = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0;
-      const base = byName[name] || {};
+      const base = byName[name] || placeDetails[name] || {};
       return {
         name,
         cuisine: base.cuisine || '',
         feature: base.feature || '',
         price: base.price || '',
         distance: base.distance || '',
+        address: base.address || '',
         verified: base.verified,
         avg: av,
         cnt: cms.length,
@@ -1570,6 +1638,7 @@ async function fetchPlaces(query) {
     });
     const data = await res.json();
     searchedPlaces = Array.isArray(data.places) ? data.places : [];
+    cachePlaces(searchedPlaces);
     placeOrigin = data.origin || (pos ? '현위치' : 'JB빌딩');
   } catch (e) {
     searchedPlaces = [];
