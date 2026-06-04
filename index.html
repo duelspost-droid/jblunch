@@ -714,6 +714,38 @@ function cachePlace(r) {
   try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
 }
 function cachePlaces(arr) { (arr || []).forEach(cachePlace); }
+// AI가 생성한 디테일한 맛집 소개 캐시 (이름 → intro 문장)
+let placeIntros = {};
+try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
+let _introPending = {};   // 중복 호출 방지
+async function fetchPlaceIntro(name) {
+  if (placeIntros[name]) return placeIntros[name];
+  if (_introPending[name]) return _introPending[name];
+  const d = placeDetails[name] || {};
+  _introPending[name] = (async () => {
+    try {
+      const res = await fetch(ANALYZE_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
+      });
+      const data = await res.json();
+      if (data && data.intro) {
+        placeIntros[name] = data.intro;
+        try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); } catch(e) {}
+        return data.intro;
+      }
+    } catch(e) {}
+    return '';
+  })();
+  return _introPending[name];
+}
+// 어떤 소스든 가장 풍부한 소개 반환 (AI 소개 > HISTORY feature)
+function bestIntro(name) {
+  if (placeIntros[name]) return placeIntros[name];
+  const base = (typeof findRestaurant === 'function' ? findRestaurant(name) : null) || {};
+  return base.feature || '';
+}
 // 이름으로 장소검색 백엔드(Kakao/Naver) 재조회 → 상세 채우기 (캐시에 없을 때)
 async function fetchPlaceDetail(name) {
   if (placeDetails[name] && placeDetails[name].cuisine) return placeDetails[name];
@@ -773,6 +805,14 @@ async function backfillReviewedDetails() {
     await fetchPlaceDetail(name);
     renderStats();
     await new Promise(r => setTimeout(r, 400));   // 백엔드 과부하 방지
+  }
+  // 디테일한 AI 소개가 없는 리뷰 맛집 → 소개 생성 (캐시되면 1회만)
+  const introTargets = Object.keys(commentsState).filter(n =>
+    (commentsState[n] || []).length && !placeIntros[n]);
+  for (const name of introTargets) {
+    await fetchPlaceIntro(name);
+    renderStats();
+    await new Promise(r => setTimeout(r, 600));
   }
 }
 
@@ -1371,21 +1411,27 @@ function openModal(name, feature, editC) {
   // 맛집 상세정보 (종류/가격/거리/주소 + 지도) — 캐시/HISTORY/검색결과 통합
   const info = findRestaurant(name);
   renderModalDetail(name, info);
-  if (info && !feature && info.feature) feature = info.feature;
+  // 디테일한 AI 소개가 있으면 우선 사용
+  if (placeIntros[name]) feature = placeIntros[name];
+  else if (info && !feature && info.feature) feature = info.feature;
   mFeature = feature || mFeature;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');
-  introEl.innerHTML = feature ? `💬 ${escHtml(feature)}` : '';
-  introEl.style.display = feature ? 'block' : 'none';
+  function setIntro(txt) {
+    introEl.innerHTML = txt ? `💬 ${escHtml(txt)}` : '';
+    introEl.style.display = txt ? 'block' : 'none';
+  }
+  setIntro(feature);
   // 상세정보가 비어있으면(직접검색/주변검색 맛집) 백엔드로 재조회해 채움
   if (!info || !info.cuisine) {
     fetchPlaceDetail(name).then(d => {
-      if (d && mId === name) {   // 모달이 아직 같은 맛집을 보고 있을 때만
-        renderModalDetail(name, d);
-        const intro2 = document.getElementById('modal-intro');
-        const f2 = mFeature || d.feature;
-        if (f2 && !intro2.textContent) { intro2.innerHTML = `💬 ${escHtml(f2)}`; intro2.style.display = 'block'; }
-      }
+      if (d && mId === name) renderModalDetail(name, d);
+    });
+  }
+  // 디테일한 AI 소개가 아직 없으면 생성해서 채움
+  if (!placeIntros[name]) {
+    fetchPlaceIntro(name).then(intro => {
+      if (intro && mId === name) { mFeature = intro; setIntro(intro); }
     });
   }
   // 기존 리뷰 목록
@@ -1553,7 +1599,7 @@ function renderStats() {
       return {
         name,
         cuisine: base.cuisine || '',
-        feature: base.feature || '',
+        feature: placeIntros[name] || base.feature || '',
         price: base.price || '',
         distance: base.distance || '',
         address: base.address || '',

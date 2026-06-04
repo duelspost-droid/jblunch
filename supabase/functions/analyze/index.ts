@@ -195,12 +195,41 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const text = (body.text || "").toString().trim();
     const meal = MEAL_DESC[body.meal] ? body.meal : "점심";
+    const describe = (body.describe || "").toString().trim();
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "API key not set" }, 500);
     const kakaoKey = Deno.env.get("KAKAO_REST_API_KEY") || "";
     const naverId = Deno.env.get("NAVER_CLIENT_ID") || "";
     const naverSecret = Deno.env.get("NAVER_CLIENT_SECRET") || "";
+
+    // ── describe 모드: 특정 맛집의 디테일한 소개 1건 생성 ──────────
+    if (describe) {
+      const hintCuisine = (body.cuisine || "").toString().trim();
+      const hintAddr = (body.address || "").toString().trim();
+      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당을 잘 모르는 사람에게 소개하는 글을 써줘.
+식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : ""}
+규칙:
+- 2~3문장의 친근한 존댓말. 대표 메뉴/맛 특징, 분위기, 어떤 자리(점심/회식/접대 등)에 좋은지 구체적으로.
+- 실제로 아는 정보를 우선하되, 과장·허위 금지. 모르면 종류/이름에서 합리적으로 유추하되 단정적 표현은 피해.
+- 가격·평점·전화번호 같은 변동 정보는 쓰지 마.
+- 반드시 JSON만 출력: {"intro":"..."}`;
+      const dResp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 300, messages: [{ role: "user", content: dPrompt }] }),
+      });
+      if (!dResp.ok) {
+        const err = await dResp.text();
+        const rl = dResp.status === 429 || err.includes("rate_limit");
+        return json({ error: rl ? "rate_limited" : "claude error" }, rl ? 429 : 502);
+      }
+      const dData = await dResp.json();
+      const dContent = dData.content?.[0]?.text ?? "";
+      const dMatch = dContent.match(/\{[\s\S]*\}/);
+      const intro = dMatch ? (JSON.parse(dMatch[0]).intro || "") : dContent.trim();
+      return json({ intro }, 200);
+    }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명)
     const candBlock = await fetchCandidates(meal, kakaoKey, naverId, naverSecret);
