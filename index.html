@@ -603,6 +603,10 @@
     transition: all 0.12s;
   }
   .hist-chip .hc-del:hover { color: #fff; background: #e53e3e; }
+  /* 모바일에서 입력창 포커스 시 자동 확대(줌) 방지 — 폰트 16px 이상이면 iOS가 확대하지 않음 */
+  @media (max-width: 600px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
 </style>
 </head>
 <body>
