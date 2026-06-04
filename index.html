@@ -772,6 +772,28 @@ function normDist(d) {
 let placeIntros = {};
 try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
 let _introPending = {};   // 중복 호출 방지
+// 서버 공유 캐시(place_meta)에서 여러 맛집 소개·가격·거리를 한 번에 로드 (크레딧 절약)
+async function loadSharedMeta(names) {
+  const need = names.filter(n => !placeIntros[n] || !(placeDetails[n]||{}).price || !hasDualDist(n));
+  if (!need.length) return;
+  try {
+    const inList = need.map(n => `"${n.replace(/"/g,'')}"`).join(',');
+    const res = await fetch(`${SB_URL}/rest/v1/place_meta?name=in.(${encodeURIComponent(inList)})&select=name,intro,price,distance,verified`, { headers: SB_HEADERS });
+    if (!res.ok) return;
+    const rows = await res.json();
+    rows.forEach(r => {
+      if (r.intro) {
+        placeIntros[r.name] = r.intro;
+        if (!placeDetails[r.name]) placeDetails[r.name] = { name: r.name };
+        const pd = placeDetails[r.name];
+        if (r.price && !pd.price) pd.price = r.price;
+        if (r.distance && /카카오|네이버/.test(r.distance)) pd.distance = r.distance;
+        if (r.verified !== undefined && r.verified !== null) pd.verified = r.verified;
+      }
+    });
+    try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+  } catch(e) {}
+}
 // 양쪽(카카오+네이버) 거리가 이미 채워졌는지
 function hasDualDist(name) {
   const d = (placeDetails[name] || {}).distance || '';
@@ -871,6 +893,10 @@ async function loadComments() {
 async function backfillReviewedDetails() {
   const known = {};
   allRestaurants().forEach(r => { if (r.name) known[r.name] = 1; });
+  // 서버 공유 캐시 일괄 로드 → 이미 생성된 맛집은 Claude 재호출 없이 즉시 표시
+  const reviewed = Object.keys(commentsState).filter(n => (commentsState[n]||[]).length && !known[n]);
+  await loadSharedMeta(reviewed);
+  renderStats();
   const targets = Object.keys(commentsState).filter(n =>
     (commentsState[n] || []).length && !known[n] && !(placeDetails[n] && placeDetails[n].cuisine));
   for (const name of targets) {

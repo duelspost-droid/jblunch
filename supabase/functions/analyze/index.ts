@@ -203,8 +203,24 @@ Deno.serve(async (req) => {
     const naverId = Deno.env.get("NAVER_CLIENT_ID") || "";
     const naverSecret = Deno.env.get("NAVER_CLIENT_SECRET") || "";
 
-    // ── describe 모드: 특정 맛집의 디테일한 소개 1건 생성 ──────────
+    // ── describe 모드: 특정 맛집의 디테일한 소개 1건 생성 (서버 공유 캐시) ──
     if (describe) {
+      const SB_URL = Deno.env.get("SUPABASE_URL") || "";
+      const SB_SRV = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+      const metaHeaders = { apikey: SB_SRV, Authorization: `Bearer ${SB_SRV}`, "Content-Type": "application/json" };
+      // ① 캐시 조회 — 있으면 Claude 호출 없이 즉시 반환 (크레딧 절약)
+      if (SB_URL && SB_SRV) {
+        try {
+          const cr = await fetch(
+            `${SB_URL}/rest/v1/place_meta?name=eq.${encodeURIComponent(describe)}&select=intro,price,distance,verified`,
+            { headers: metaHeaders },
+          );
+          const rows = await cr.json();
+          if (Array.isArray(rows) && rows.length && rows[0].intro) {
+            return json({ ...rows[0], cached: true }, 200);
+          }
+        } catch (_e) { /* 캐시 실패 시 생성으로 진행 */ }
+      }
       const hintCuisine = (body.cuisine || "").toString().trim();
       const hintAddr = (body.address || "").toString().trim();
       const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당을 잘 모르는 사람에게 소개하는 글을 써줘.
@@ -235,7 +251,18 @@ Deno.serve(async (req) => {
       // 카카오·네이버 양쪽 거리 실측 (JB빌딩 기준)
       const dObj: Record<string, unknown> = { name: describe };
       await verifyOne(dObj, kakaoKey, naverId, naverSecret);
-      return json({ intro, price, distance: dObj.distance || "", verified: dObj.verified }, 200);
+      const result = { intro, price, distance: dObj.distance || "", verified: dObj.verified };
+      // ② 결과를 서버 캐시에 저장 (upsert) — 다음부터 모든 사용자가 재사용
+      if (SB_URL && SB_SRV && intro) {
+        try {
+          await fetch(`${SB_URL}/rest/v1/place_meta?on_conflict=name`, {
+            method: "POST",
+            headers: { ...metaHeaders, Prefer: "resolution=merge-duplicates" },
+            body: JSON.stringify({ name: describe, ...result, updated_at: new Date().toISOString() }),
+          });
+        } catch (_e) { /* 저장 실패 무시 */ }
+      }
+      return json(result, 200);
     }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명)
