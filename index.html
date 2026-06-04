@@ -603,6 +603,31 @@
     transition: all 0.12s;
   }
   .hist-chip .hc-del:hover { color: #fff; background: #e53e3e; }
+  /* 예약 팝업 */
+  .reserve-modal { max-width: 420px; }
+  .reserve-sub { font-size: 0.82rem; color: #888; margin: -6px 0 14px; }
+  .reserve-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+  .reserve-opt {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+    background: #fff; cursor: pointer; text-decoration: none; color: #222;
+    font-size: 0.92rem; font-weight: 700; transition: all 0.13s;
+  }
+  .reserve-opt:hover { border-color: #0a3d7a; background: #f0f5fb; }
+  .reserve-opt.naver { border-color: #03c75a; }
+  .reserve-opt.naver:hover { background: #ecfbf1; }
+  .reserve-opt.disabled { opacity: 0.55; cursor: default; pointer-events: none; }
+  .reserve-opt .ro-emoji { font-size: 1.3rem; flex-shrink: 0; }
+  .reserve-opt .ro-text { flex: 1; min-width: 0; }
+  .reserve-opt .ro-desc { font-size: 0.76rem; font-weight: 500; color: #888; margin-top: 2px; }
+  .reserve-opt .ro-arrow { color: #bbb; font-size: 1rem; }
+  /* 추천 카드 예약 버튼 */
+  .btn-reserve {
+    font-size: 0.71rem; padding: 5px 9px; border-radius: 8px; cursor: pointer;
+    font-weight: 600; white-space: nowrap; transition: all 0.13s;
+    border: 1.5px solid #d69e2e; background: #fff; color: #b7791f;
+  }
+  .btn-reserve:hover { background: #d69e2e; color: #fff; }
   /* 모바일에서 입력창 포커스 시 자동 확대(줌) 방지 — 폰트 16px 이상이면 iOS가 확대하지 않음 */
   @media (max-width: 600px) {
     input, textarea, select { font-size: 16px !important; }
@@ -627,6 +652,18 @@
 <div class="content">
   <div id="tab-history" class="section active"></div>
   <div id="tab-stats" class="section"></div>
+</div>
+
+<!-- 예약 팝업 -->
+<div class="modal-bg" id="reserve-bg">
+  <div class="modal reserve-modal">
+    <h3 id="reserve-title">📞 예약</h3>
+    <div class="reserve-sub" id="reserve-sub"></div>
+    <div class="reserve-opts" id="reserve-opts"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeReserve()">닫기</button>
+    </div>
+  </div>
 </div>
 
 <!-- 리뷰 작성 모달 -->
@@ -716,6 +753,7 @@ function cachePlace(r) {
     distance: r.distance || prev.distance || '',
     address: r.address || prev.address || '',
     feature: r.feature || prev.feature || '',
+    phone: r.phone || prev.phone || '',
     verified: (r.verified !== undefined ? r.verified : prev.verified)
   };
   placeDetails[r.name] = merged;
@@ -995,6 +1033,7 @@ function buildCard(r) {
         ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
         : `<a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`}
       <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
+      <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
     </div>
   </div>`;
 }
@@ -1517,6 +1556,64 @@ function openModal(name, feature, editC) {
 }
 function closeModal() { document.getElementById('modal-bg').classList.remove('open'); mId = null; }
 
+// ── 예약 팝업 ────────────────────────────────────────────────
+let reserveName = null;
+function closeReserve() { document.getElementById('reserve-bg').classList.remove('open'); reserveName = null; }
+function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
+function openReserve(name) {
+  reserveName = name;
+  document.getElementById('reserve-title').textContent = `📞 ${name} 예약`;
+  document.getElementById('reserve-sub').textContent = '원하는 방법으로 예약하세요.';
+  const naverUrl = `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+  const cached = placeDetails[name] || {};
+  const phoneRow = (phone) => phone
+    ? `<a class="reserve-opt" href="tel:${fmtPhone(phone)}">
+         <span class="ro-emoji">📞</span>
+         <span class="ro-text">전화 예약<div class="ro-desc">${escHtml(phone)}</div></span>
+         <span class="ro-arrow">›</span></a>`
+    : `<div class="reserve-opt disabled" id="reserve-phone-row">
+         <span class="ro-emoji">📞</span>
+         <span class="ro-text">전화 예약<div class="ro-desc">전화번호 확인 중…</div></span></div>`;
+  document.getElementById('reserve-opts').innerHTML = `
+    <a class="reserve-opt naver" href="${naverUrl}" target="_blank" rel="noopener">
+      <span class="ro-emoji">🟢</span>
+      <span class="ro-text">네이버 예약 · 지도<div class="ro-desc">네이버 지도에서 예약·전화·길찾기</div></span>
+      <span class="ro-arrow">›</span></a>
+    ${phoneRow(cached.phone)}`;
+  document.getElementById('reserve-bg').classList.add('open');
+  // 전화번호가 캐시에 없으면 백엔드로 조회해서 채움
+  if (!cached.phone) {
+    fetchPlacePhone(name).then(phone => {
+      if (reserveName !== name) return;
+      const row = document.getElementById('reserve-phone-row');
+      if (!row) return;
+      if (phone) {
+        row.outerHTML = `<a class="reserve-opt" href="tel:${fmtPhone(phone)}">
+           <span class="ro-emoji">📞</span>
+           <span class="ro-text">전화 예약<div class="ro-desc">${escHtml(phone)}</div></span>
+           <span class="ro-arrow">›</span></a>`;
+      } else {
+        row.querySelector('.ro-desc').textContent = '등록된 전화번호가 없어요 (네이버에서 확인)';
+      }
+    });
+  }
+}
+async function fetchPlacePhone(name) {
+  if (placeDetails[name] && placeDetails[name].phone) return placeDetails[name].phone;
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: name })
+    });
+    const data = await res.json();
+    const list = Array.isArray(data.places) ? data.places : [];
+    const hit = list.find(p => p.name === name) || list.find(p => p.name && p.name.includes(name)) || list[0];
+    if (hit) { cachePlace(hit); return hit.phone || ''; }
+  } catch(e) {}
+  return '';
+}
+
 function renderModalStars() {
   document.querySelectorAll('#modal-stars span').forEach(s => {
     s.classList.toggle('lit', parseInt(s.dataset.v) <= mRating);
@@ -1527,6 +1624,9 @@ document.querySelectorAll('#modal-stars span').forEach(s => {
 });
 document.getElementById('modal-bg').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById('reserve-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeReserve();
 });
 
 async function saveReview() {

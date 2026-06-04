@@ -12,7 +12,7 @@ const CORS = {
 const JB_LAT = 37.5240914884765;
 const JB_LNG = 126.927376521939;
 
-type Place = { name: string; cuisine: string; distM: number; address: string; source: string };
+type Place = { name: string; cuisine: string; distM: number; address: string; source: string; phone: string };
 
 function walkMin(distM: number): number {
   return Math.max(1, Math.round((distM * 1.35) / 80));
@@ -46,6 +46,7 @@ async function kakaoSearch(key: string, query: string, cx: number, cy: number): 
         distM: Number(d.distance || 0),
         address: d.road_address_name || d.address_name || "",
         source: "카카오",
+        phone: d.phone || "",
       }));
   } catch {
     return [];
@@ -103,6 +104,7 @@ async function naverSearch(
         distM,
         address: it.roadAddress || it.address || "",
         source: "네이버",
+        phone: it.telephone || "",
       });
     }
   }
@@ -147,10 +149,15 @@ Deno.serve(async (req) => {
     // 병합: 이름 정규화로 중복 제거(카카오 우선 — 거리 정확), 거리순 정렬
     const merged: Place[] = [];
     const seen = new Set<string>();
+    const byKey: Record<string, Place> = {};
     for (const p of [...kakaoList, ...naverList]) {
       const key = p.name.replace(/\s+/g, "");
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        if (!byKey[key].phone && p.phone) byKey[key].phone = p.phone;  // 전화번호 보강
+        continue;
+      }
       seen.add(key);
+      byKey[key] = p;
       merged.push(p);
     }
     merged.sort((a, b) => a.distM - b.distM);
@@ -161,6 +168,7 @@ Deno.serve(async (req) => {
       distance: `도보 ${walkMin(p.distM)}분`,
       address: p.address,
       source: p.source,
+      phone: p.phone,
       verified: true,
     }));
 
