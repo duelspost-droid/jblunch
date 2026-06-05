@@ -1147,6 +1147,27 @@ function buildCard(r) {
   const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
   const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
   const tagBadge = r.tag && TAG_BADGE[r.tag] ? `<span class="badge badge-tag">${TAG_BADGE[r.tag]}</span>` : '';
+  // 리뷰가 있을 때만 카드에 인라인 표시 (없으면 안 보임)
+  const reviewsHtml = cnt ? `<div class="reviews-block">${cms.map(c => {
+      const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+      const color = avatarColor(c.reviewer_name||'?');
+      return `<div class="review-item">
+        <div class="review-avatar" style="background:${color}">${initial}</div>
+        <div class="review-right">
+          <div class="review-header">
+            <span class="review-name">${escHtml(c.reviewer_name)}</span>
+            ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
+            ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+            <span class="review-date">${fmtDate(c.created_at)}</span>
+          </div>
+          ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+        </div>
+        <div class="review-actions">
+          <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
+          <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
+        </div>
+      </div>`;
+    }).join('')}</div>` : '';
   return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
     <div class="card-stripe"></div>
     <div class="card-emoji">${emo(r.cuisine)}</div>
@@ -1162,6 +1183,7 @@ function buildCard(r) {
         <span>💰 ${r.price}</span>
         <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
       </div>
+      ${reviewsHtml}
     </div>
     <div class="card-actions">
       ${r.verified === false
