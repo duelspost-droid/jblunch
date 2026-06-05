@@ -174,8 +174,9 @@
   .modal-detail .md-map {
     margin-left: auto; font-size: 0.78rem; padding: 5px 12px; border-radius: 20px;
     border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
-    text-decoration: none; font-weight: 600;
+    text-decoration: none; font-weight: 600; cursor: pointer; font-family: inherit;
   }
+  .modal-detail .md-map:hover { background: #03c75a; color: #fff; }
   .modal-detail .md-map.nomap { border-color: #d0d0d0; background: #f3f3f3; color: #999; }
   .modal-reviews {
     margin-bottom: 16px; max-height: 42vh; overflow-y: auto;
@@ -301,6 +302,7 @@
     transition: all 0.13s;
     border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
     text-decoration: none; display: inline-block; text-align: center;
+    cursor: pointer; font-family: inherit;
   }
   .btn-map:hover { background: #03c75a; color: #fff; }
   .btn-map.nomap {
@@ -779,6 +781,8 @@ function cachePlace(r) {
     address: r.address || prev.address || '',
     feature: r.feature || prev.feature || '',
     phone: r.phone || prev.phone || '',
+    lat: r.lat || prev.lat || 0,
+    lng: r.lng || prev.lng || 0,
     verified: (r.verified !== undefined ? r.verified : prev.verified)
   };
   placeDetails[r.name] = merged;
@@ -1083,7 +1087,7 @@ function buildCard(r) {
     <div class="card-actions">
       ${r.verified === false
         ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
-        : `<a class="btn-map" href="https://map.naver.com/p/search/${encodeURIComponent(r.name + ' 여의도')}" target="_blank" rel="noopener">📍 지도</a>`}
+        : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 도보경로</button>`}
       <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
       <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
     </div>
@@ -1534,10 +1538,9 @@ function renderModalDetail(name, info) {
   if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
   if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
-  const mapQ = name.includes('여의도') ? name : name + ' 여의도';
   const mapBtn = info.verified === false
     ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
-    : `<a class="md-map" href="https://map.naver.com/p/search/${encodeURIComponent(mapQ)}" target="_blank" rel="noopener">📍 지도</a>`;
+    : `<button class="md-map" onclick="openMapRoute('${escAttr(name)}')">🚶 도보경로</button>`;
   detailEl.innerHTML = chips.join('') + mapBtn;
   detailEl.style.display = 'flex';
 }
@@ -1628,6 +1631,27 @@ function closeModal() { document.getElementById('modal-bg').classList.remove('op
 let reserveName = null;
 function closeReserve() { document.getElementById('reserve-bg').classList.remove('open'); reserveName = null; }
 function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
+
+// JB빌딩(여의나루로 77) 좌표 — 도보 경로 출발지
+const JB_LAT = 37.5240914884765, JB_LNG = 126.927376521939;
+function routeUrl(name, lng, lat) {
+  const start = `${JB_LNG},${JB_LAT},${encodeURIComponent('JB빌딩')},,`;
+  return (lng && lat)
+    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
+    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+}
+// 지도 버튼: 네이버 지도 웹(새 탭)으로 JB빌딩→식당 도보 경로 표시 (앱 대신 웹)
+async function openMapRoute(name) {
+  const c = placeDetails[name] || {};
+  if (c.lat && c.lng) { window.open(routeUrl(name, c.lng, c.lat), '_blank', 'noopener'); return; }
+  // 좌표 미보유: 빈 새 탭을 먼저 열어 클릭 제스처 유지 → 좌표 조회 후 경로로 이동
+  const w = window.open('about:blank', '_blank');
+  await fetchPlaceDetail(name);
+  const cc = placeDetails[name] || {};
+  const url = routeUrl(name, cc.lng, cc.lat);
+  if (w && !w.closed) w.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+}
 // 네이버 웹 예약 페이지를 새 창으로 (인앱 브라우저에서도 강제 새 창)
 function reserveNaver() {
   if (!reserveName) return;

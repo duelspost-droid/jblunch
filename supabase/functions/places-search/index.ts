@@ -12,7 +12,7 @@ const CORS = {
 const JB_LAT = 37.5240914884765;
 const JB_LNG = 126.927376521939;
 
-type Place = { name: string; cuisine: string; distM: number; address: string; source: string; phone: string };
+type Place = { name: string; cuisine: string; distM: number; address: string; source: string; phone: string; lat: number; lng: number };
 
 function walkMin(distM: number): number {
   return Math.max(1, Math.round((distM * 1.35) / 80));
@@ -47,6 +47,8 @@ async function kakaoSearch(key: string, query: string, cx: number, cy: number): 
         address: d.road_address_name || d.address_name || "",
         source: "카카오",
         phone: d.phone || "",
+        lng: Number(d.x || 0),
+        lat: Number(d.y || 0),
       }));
   } catch {
     return [];
@@ -105,6 +107,8 @@ async function naverSearch(
         address: it.roadAddress || it.address || "",
         source: "네이버",
         phone: it.telephone || "",
+        lat: plat,
+        lng: plng,
       });
     }
   }
@@ -169,6 +173,8 @@ Deno.serve(async (req) => {
       address: p.address,
       source: p.source,
       phone: p.phone,
+      lat: p.lat,
+      lng: p.lng,
       verified: true,
     }));
 
