@@ -129,6 +129,11 @@
     <a href="./">← 사이트로</a>
   </div>
 
+  <!-- 자동 로그인 확인 중 (새로고침 시 깜빡임 방지) -->
+  <div class="card hidden" id="loading-card">
+    <div style="text-align:center;color:#8794a6;font-size:0.9rem;padding:8px 0">🔄 로그인 확인 중…</div>
+  </div>
+
   <!-- 로그인 -->
   <div class="card" id="login-card">
     <h2>관리자 로그인</h2>
@@ -176,6 +181,16 @@
     </div>
   </div>
 </div>
+
+<!-- 새로고침 깜빡임 방지: 세션 있으면 페인트 전에 동기적으로 로그인 화면 숨김 -->
+<script>
+  try {
+    if (sessionStorage.getItem('jbadm')) {
+      document.getElementById('login-card').classList.add('hidden');
+      document.getElementById('loading-card').classList.remove('hidden');
+    }
+  } catch (e) {}
+</script>
 
 <script>
 const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
@@ -253,7 +268,13 @@ const SESSION_KEY = 'jbadm';
 
 function showPanel(){
   document.getElementById('login-card').classList.add('hidden');
+  document.getElementById('loading-card').classList.add('hidden');
   document.getElementById('panel').classList.remove('hidden');
+}
+function showLoginCard(){
+  document.getElementById('loading-card').classList.add('hidden');
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-card').classList.remove('hidden');
 }
 
 async function login(){
@@ -269,21 +290,21 @@ async function login(){
   render(data);
 }
 
-// 새로고침 시 세션에 저장된 비번으로 자동 재로그인
+// 새로고침 시 세션에 저장된 비번으로 자동 재로그인 (로그인 화면 깜빡임 없음)
 async function restoreSession(){
   let pw = '';
   try { pw = sessionStorage.getItem(SESSION_KEY) || ''; } catch(e) {}
-  if(!pw) return;
+  if(!pw){ showLoginCard(); return; }   // 세션 없음 → 로그인 화면
+  // (조기 인라인 스크립트가 이미 로그인 화면을 숨기고 로딩을 표시함)
   const { ok, data } = await adminCall({ password: pw, limit: 300 });
   if(ok){ curPw = pw; showPanel(); render(data); }
-  else { try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} }
+  else { try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} showLoginCard(); }
 }
 
 function logout(){
   curPw = '';
   try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-  document.getElementById('panel').classList.add('hidden');
-  document.getElementById('login-card').classList.remove('hidden');
+  showLoginCard();
   document.getElementById('pw').value = '';
   const m = document.getElementById('login-msg'); if(m){ m.className='msg'; m.textContent=''; }
 }
