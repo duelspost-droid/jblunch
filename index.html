@@ -895,8 +895,32 @@ function init() {
   loadStock();
   track('visit');
   refreshHistoryForApp();   // 앱(번들)에서 최신 추천 갱신
+  setupDailyNotification();  // 앱: 매일 점심 추천 알림 예약
   // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
   if (location.hash === '#admin') location.href = 'manage-jbax.html';
+}
+
+// 앱: 매일 오전 11:30 '오늘의 점심 추천' 로컬 알림 (Firebase 불필요)
+async function setupDailyNotification() {
+  try {
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+    const LN = cap.Plugins && cap.Plugins.LocalNotifications;
+    if (!LN) return;
+    const perm = await LN.requestPermissions();
+    if (perm.display !== 'granted') return;
+    // 중복 예약 방지: 기존 동일 id 취소 후 재등록
+    await LN.cancel({ notifications: [{ id: 1101 }] }).catch(() => {});
+    await LN.schedule({
+      notifications: [{
+        id: 1101,
+        title: '🍽️ 오늘의 점심 추천',
+        body: '여의도 JB빌딩 근처 맛집 추천이 준비됐어요. 확인해보세요!',
+        schedule: { on: { hour: 11, minute: 30 }, allowWhileIdle: true },
+        smallIcon: 'ic_launcher',
+      }]
+    });
+  } catch (e) {}
 }
 
 // 번들 앱(Capacitor/localhost)에서는 내장된 추천이 오래될 수 있어
