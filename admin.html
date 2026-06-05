@@ -48,6 +48,38 @@
   .t-detail { color: #666; word-break: break-all; }
   .hidden { display: none; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* ── 모바일 반응형 ────────────────────────────────── */
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .app-header { padding: 13px 15px; border-radius: 12px; margin-bottom: 14px; }
+    .app-header h1 { font-size: 0.98rem; }
+    .card { padding: 14px; border-radius: 12px; }
+    /* iOS 자동확대 방지 */
+    input[type=password] { font-size: 16px; }
+    .btn { padding: 11px 16px; }
+    .row { gap: 8px; }
+    .logs { max-height: none; border: none; overflow: visible; }
+    /* 테이블 → 카드형 변환 */
+    table, thead, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    table { font-size: 0.82rem; }
+    tbody tr {
+      background: #fff; border: 1px solid #eef1f5; border-radius: 11px;
+      padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(20,40,80,0.04);
+    }
+    tbody td {
+      display: flex; justify-content: space-between; gap: 12px;
+      padding: 4px 0; border: none; white-space: normal; text-align: right;
+    }
+    tbody td::before {
+      content: attr(data-label); color: #9aa6b5; font-weight: 700;
+      font-size: 0.72rem; flex-shrink: 0; text-align: left;
+    }
+    .t-detail { word-break: break-all; }
+    tbody td[colspan] { justify-content: center; }
+    tbody td[colspan]::before { content: ''; }
+  }
 </style>
 </head>
 <body>
@@ -134,8 +166,8 @@ function render(data){
   document.getElementById('stats').innerHTML =
     `<div><b>${s.total||0}</b> 기록 · <b>${s.uniqueIPs||0}</b> 고유 IP</div><div class="act">${acts}</div>`;
   const rows = (data.logs||[]).map(l=>`
-    <tr><td class="t-time">${fmt(l.created_at)}</td><td class="t-ip">${esc(l.ip)}</td>
-    <td class="t-act">${esc(l.action)}</td><td class="t-detail">${esc(l.detail)}</td></tr>`).join('');
+    <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
+    <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`).join('');
   document.getElementById('logs').innerHTML =
     `<table><thead><tr><th>시간</th><th>IP</th><th>액션</th><th>상세</th></tr></thead>
      <tbody>${rows||'<tr><td colspan="4" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
