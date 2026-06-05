@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📱 JB×AX 맛집 앱 다운로드</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #f5f6fa; color: #1a1a2e; min-height: 100vh; padding: 20px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .wrap { max-width: 460px; width: 100%; }
+  .hero {
+    background: linear-gradient(135deg, #0a3d7a 0%, #1565c0 100%); color: #fff;
+    border-radius: 20px; padding: 30px 24px; text-align: center; margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(10,61,122,0.25);
+  }
+  .logo {
+    width: 76px; height: 76px; border-radius: 20px; background: #fff; color: #0a3d7a;
+    font-weight: 900; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+  }
+  .hero h1 { font-size: 1.3rem; font-weight: 800; }
+  .hero .ax { background: linear-gradient(90deg,#ffd54a,#ffb300); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 0.86rem; color: rgba(255,255,255,0.85); margin-top: 6px; }
+  .dl-btn {
+    display: block; text-align: center; text-decoration: none;
+    background: #03c75a; color: #fff; font-size: 1.05rem; font-weight: 800;
+    padding: 16px; border-radius: 14px; margin: 18px 0;
+    box-shadow: 0 3px 12px rgba(3,199,90,0.3);
+  }
+  .dl-btn small { display: block; font-size: 0.74rem; font-weight: 500; opacity: 0.9; margin-top: 3px; }
+  .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 14px; }
+  .card h2 { font-size: 0.95rem; font-weight: 700; color: #0a3d7a; margin-bottom: 12px; }
+  ol { padding-left: 20px; }
+  ol li { font-size: 0.88rem; line-height: 1.7; color: #444; margin-bottom: 6px; }
+  .note { font-size: 0.8rem; color: #8794a6; line-height: 1.55; background: #f4f7fb; border-radius: 10px; padding: 12px 14px; }
+  .note b { color: #c05; }
+  .web-link { display: block; text-align: center; font-size: 0.85rem; color: #0a3d7a; margin-top: 14px; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="logo">JB</div>
+    <h1>JB<span class="ax">×AX</span> 맛집</h1>
+    <p>여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
+  </div>
+
+  <a class="dl-btn" id="dl" href="https://github.com/duelspost-droid/jblunch/releases/latest/download/app-debug.apk">
+    📥 안드로이드 앱 다운로드
+    <small>APK 직접 설치 (Android only)</small>
+  </a>
+
+  <div class="card">
+    <h2>📲 설치 방법</h2>
+    <ol>
+      <li>위 <b>다운로드</b> 버튼을 눌러 APK 파일 받기</li>
+      <li>다운로드 알림(또는 파일앱)에서 APK 열기</li>
+      <li>"출처를 알 수 없는 앱" 경고가 뜨면 <b>설정 → 허용</b> 후 설치</li>
+      <li>설치 완료 → 홈 화면에서 <b>JB×AX 맛집</b> 실행</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="note">
+      ⚠️ <b>아이폰(iOS)은 미지원</b>이에요 (Android 전용 APK).<br>
+      📍 위치를 허용하면 "내 주변 맛집"이 현재 위치 기준으로 나와요.<br>
+      🔄 앱은 항상 최신 추천을 자동으로 불러옵니다 (재설치 불필요).
+    </div>
+  </div>
+
+  <a class="web-link" href="./">🌐 앱 설치 없이 웹으로 바로 보기 →</a>
+</div>
+</body>
+</html>
