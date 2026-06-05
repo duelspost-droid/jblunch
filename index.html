@@ -506,6 +506,11 @@
     background: #f4f7fb; border-radius: 9px; padding: 8px 11px; margin-bottom: 14px;
   }
   .meal-info b { color: #0a3d7a; font-weight: 700; }
+  .batch-note {
+    font-size: 0.72rem; color: #9aa6b5; line-height: 1.5;
+    margin: -8px 2px 14px; padding: 0 2px;
+  }
+  .batch-note b { color: #4a6285; font-weight: 700; }
 
   /* 컨디션 입력 */
   .pref-card {
@@ -1128,7 +1133,8 @@ function renderHistory() {
       <button class="meal-btn${defMeal==='저녁'?' on':''}" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
       <button class="meal-btn${defMeal==='술집'?' on':''}" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
     </div>
-    <div class="meal-info" id="meal-info"></div>`;
+    <div class="meal-info" id="meal-info"></div>
+    <div class="batch-note">🕗 점심·저녁·술집 추천은 <b>평일(월~금) 오전 8:30</b>에 그날치를 한 번에 자동 생성해요.</div>`;
 
   const prefHtml = bannerHtml + `
     <div class="pref-card">
