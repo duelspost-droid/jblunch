@@ -1766,10 +1766,11 @@ async function openMapRoute(name) {
   if (w && !w.closed) w.location.href = url;
   else window.open(url, '_blank', 'noopener');
 }
-// 네이버 웹 예약 페이지를 새 창으로 (인앱 브라우저에서도 강제 새 창)
+// 네이버 플레이스(예약·메뉴·전화가 있는 실제 가게 페이지)로 이동
 function reserveNaver() {
   if (!reserveName) return;
-  const url = `https://search.naver.com/search.naver?query=${encodeURIComponent(reserveName + ' 여의도 예약')}`;
+  // m.place 검색 → 해당 가게 페이지로 바로 진입 (예약 탭 포함). 검색결과 페이지 X
+  const url = `https://m.place.naver.com/restaurant/list?query=${encodeURIComponent(reserveName + ' 여의도')}`;
   window.open(url, '_blank', 'noopener');
 }
 function openReserve(name) {
@@ -1786,11 +1787,11 @@ function openReserve(name) {
          <span class="ro-emoji">📞</span>
          <span class="ro-text">전화 예약<div class="ro-desc">전화번호 확인 중…</div></span></div>`;
   document.getElementById('reserve-opts').innerHTML = `
+    ${phoneRow(cached.phone)}
     <div class="reserve-opt naver" onclick="reserveNaver()">
       <span class="ro-emoji">🟢</span>
-      <span class="ro-text">네이버 예약<div class="ro-desc">네이버 웹에서 바로 예약 (새 창)</div></span>
-      <span class="ro-arrow">›</span></div>
-    ${phoneRow(cached.phone)}`;
+      <span class="ro-text">네이버 플레이스<div class="ro-desc">예약·메뉴·정보 보기 (예약 가능 시 예약 탭)</div></span>
+      <span class="ro-arrow">›</span></div>`;
   document.getElementById('reserve-bg').classList.add('open');
   // 전화번호가 캐시에 없으면 백엔드로 조회해서 채움
   if (!cached.phone) {
