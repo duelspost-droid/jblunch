@@ -1133,7 +1133,6 @@ function renderHistory() {
       <button class="meal-btn${defMeal==='저녁'?' on':''}" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
       <button class="meal-btn${defMeal==='술집'?' on':''}" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
     </div>
-    <div class="meal-info" id="meal-info"></div>
     <div class="batch-note">🌙 점심·저녁·술집 추천은 <b>평일(월~금) 새벽 1시경</b>에 그날치를 한 번에 미리 생성해요.</div>`;
 
   const prefHtml = bannerHtml + `
@@ -1296,15 +1295,7 @@ function rerunHistory(text) {
 let currentMeal = '점심';     // 점심 / 저녁 / 술집
 let customResult = null;       // {label, comment, restaurants}
 const MEAL_EMOJI = { '점심':'🍚', '저녁':'🌙', '술집':'🍺' };
-const MEAL_INFO = {
-  '점심': '<b>날씨·요일</b>을 반영한 점심 맛집을 매일 자동 추천해요. (오후 3시 전 기본)',
-  '저녁': '<b>분위기·회식·모임</b>에 어울리는 저녁 맛집을 추천해요. (오후 3~6시 기본)',
-  '술집': '<b>이자카야·와인바·호프</b> 등 술 한잔 좋은 곳을 추천해요. (오후 6시 이후 기본)',
-};
-function updateMealInfo() {
-  const el = document.getElementById('meal-info');
-  if (el) el.innerHTML = MEAL_INFO[currentMeal] || '';
-}
+function updateMealInfo() {}
 
 // 자유 입력 추천
 function applyFreeText() {
