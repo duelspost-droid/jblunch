@@ -73,7 +73,7 @@ JB_LNG = 126.927376521939
 | 파일 | 설명 |
 |------|------|
 | `index.html` | 프론트엔드 전체 (UI/CSS/JS, HISTORY_DATA 내장) |
-| `admin.html` | 관리자 페이지 (로그인·접속로그·비번변경, 독립 페이지) |
+| `manage-jbax.html` | 관리자 페이지 (토큰 로그인·기간/액션 로그 필터·방문통계·비번변경) |
 | `history.json` | 날짜별 추천 데이터 (daily 스크립트가 갱신) |
 | `scripts/generate_lunch.py` | 일일 추천 생성 (Claude + Kakao/Naver + 날씨/뉴스 + 이메일) |
 | `scripts/kakao_send.py` | 카카오톡 '나에게 보내기' 발송 |
@@ -100,7 +100,8 @@ JB_LNG = 126.927376521939
 | `daily_preference` | date, preference |
 | `search_history` | id, text, meal, created_at |
 | `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS — service role 전용) |
-| `admin_config` | id, password_hash(SHA-256), updated_at (RLS — service role 전용) |
+| `admin_config` | id, password_hash(PBKDF2), salt, iterations, updated_at (RLS — service role 전용) |
+| `admin_sessions` | token, ip, created_at, expires_at (RLS — service role 전용) |
 
 ### Edge Function 배포
 ```bash
@@ -122,20 +123,31 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 
 ## 5-1. 관리자 페이지 & 접속/작업 로그
 
-- **접속**: **별도 페이지** https://duelspost-droid.github.io/jblunch/admin.html
-  (`index.html`에서 `#admin` 접근 시 이 페이지로 리다이렉트. `noindex` 메타로 검색 비노출)
-- **비밀번호**: `admin_config` 테이블에 **SHA-256 해시로 저장**(앱에서 변경 가능).
-  - 최초 1회: 시크릿 `ADMIN_PASSWORD`를 해시해 자동 시드 (초기값 = `jbax-admin-2026`, **변경 권장**)
-  - **변경 방법**: admin.html 로그인 → "🔑 비밀번호 변경" (현재 비번 검증 후 갱신). CLI 불필요.
-- **로그 기록(Edge Function `track`)**: 클라이언트 호출 시 서버가 **요청 헤더에서 IP·UA**를
-  읽어 `access_logs`에 service role로 저장 (클라이언트 위변조 불가).
-  - 기록 시점: 방문(visit), 리뷰 생성/수정/삭제, 주변검색(nearby/place_search), 맞춤추천(custom_recommend)
-- **Edge Function `admin`** (액션):
-  - 기본(`logs`): 비번 검증 후 최근 로그(최대 500)+통계(총건수/고유IP/액션별) 반환
-  - `change_password`: 현재 비번 검증 → 새 비번(6자+) SHA-256 해시로 `admin_config` 갱신
-- **보안**: 비번 해시 비교·IP 기록·로그 조회 모두 서버측. `access_logs`/`admin_config`는 RLS로 anon 차단.
-- 프론트: `admin.html`(독립), `index.html`의 `track()`.
-- 테이블: `admin_config(id, password_hash, updated_at)` 추가됨.
+- **접속**: **별도 페이지** https://duelspost-droid.github.io/jblunch/manage-jbax.html
+  (`index.html`에서 `#admin` 접근 시 리다이렉트. `noindex` 메타로 검색 비노출)
+- **초기 비밀번호**: `jbax-admin-2026` → 로그인 후 "🔑 비밀번호 변경"에서 변경(**변경 권장**, CLI 불필요).
+
+### 보안 (PBKDF2 + 토큰 + 잠금 + 감사) — 강화됨
+- **비번 해시**: `admin_config`에 **PBKDF2(솔트+12만회)** 저장. 레거시 SHA-256은 로그인 성공 시 자동 마이그레이션.
+- **세션 토큰**: 로그인 시 랜덤 토큰(8h) 발급 → 클라이언트는 **비번 대신 토큰**을 sessionStorage에 저장
+  (XSS 시 비번 유출 방지). 비번 변경 시 **모든 세션 무효화** + 새 토큰 발급.
+- **무차별 대입 잠금**: IP당 15분 내 5회 실패 → 429 차단.
+- **감사 로그**: `admin_login` / `admin_fail` / `admin_pw_change` 기록. 타이밍 안전 비교.
+- **비번 변경**: 현재 비번 재확인 필수, **8자 이상**.
+
+### Edge Functions
+- **`track`**: 클라이언트 호출 시 서버가 요청 헤더에서 **IP·UA**를 읽어 `access_logs`에 service role로 저장.
+  기록 시점: visit / review_create·edit·delete / nearby·place_search / custom_recommend.
+- **`admin`** 액션:
+  - `login {password}` → 토큰 발급 + 대시보드(로그·통계·방문통계) 반환
+  - `logs {token, period, from, to, action, limit}` → **기간·액션 필터** 조회 (matched 총건수 포함)
+  - `change_password {token, currentPassword, newPassword}` / `logout {token}`
+- **기간 필터(KST)**: `period` = day(오늘) / month(이번달) / range(from~to) / all(전체). `action`으로 액션별 조회.
+
+### 보안/RLS
+- `access_logs` / `admin_config` / `admin_sessions` 모두 RLS로 anon 차단, service role(Edge Function)만 접근.
+- 프론트: `manage-jbax.html`(독립, 토큰 인증·기간/액션 필터·페이지네이션·UA 파싱·방문 그래프), `index.html`의 `track()`.
+- 테이블: `admin_config(id, password_hash, salt, iterations, updated_at)`, `admin_sessions(token, ip, created_at, expires_at)`.
 
 ---
 
@@ -186,9 +198,11 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 - [x] (시도→복원) 컨디션 영역은 **원래 위치(카드 위)** 유지
 
 ### 관리자/로그
-- [x] 관리자 **별도 페이지** `admin.html` + 비밀번호 로그인
+- [x] 관리자 **별도 페이지** `manage-jbax.html` + 비밀번호 로그인
 - [x] 접속/작업 로그(IP 포함) — track/admin Edge Function + access_logs 테이블
 - [x] **비밀번호 자체 변경** — admin_config 해시 저장 + change_password 액션
+- [x] **보안 강화** — PBKDF2 + 세션토큰 + 무차별대입 잠금 + 감사로그 (admin_sessions)
+- [x] **로그 기간(일/월/기간/전체)·액션별 필터** 조회 (KST)
 
 ### 앱
 - [x] Capacitor Android 프로젝트(`app/`) — server.url로 라이브 로드
