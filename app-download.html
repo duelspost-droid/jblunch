@@ -50,10 +50,20 @@
     <p>여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
   </div>
 
-  <a class="dl-btn" id="dl" href="https://github.com/duelspost-droid/jblunch/releases/latest/download/app-debug.apk">
+  <a class="dl-btn" id="dl" href="https://github.com/duelspost-droid/jblunch/releases/latest">
     📥 안드로이드 앱 다운로드
-    <small>APK 직접 설치 (Android only)</small>
+    <small id="dl-sub">APK 직접 설치 (Android only)</small>
   </a>
+  <script>
+    // version.json에서 최신 버전·APK 링크를 읽어 버튼에 반영
+    fetch('https://raw.githubusercontent.com/duelspost-droid/jblunch/master/version.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(v => {
+        if (v && v.apk) document.getElementById('dl').href = v.apk;
+        if (v && v.version) document.getElementById('dl-sub').textContent =
+          '최신 버전 v' + v.version + ' · Android only';
+      }).catch(() => {});
+  </script>
 
   <div class="card">
     <h2>📲 설치 방법</h2>

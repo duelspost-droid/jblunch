@@ -458,6 +458,20 @@
 
   .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
 
+  /* 앱 업데이트 배너 */
+  .update-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 200;
+    background: #0a3d7a; color: #fff; padding: 11px 14px;
+    display: flex; align-items: center; gap: 10px; font-size: 0.84rem;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.25);
+  }
+  .update-bar span { flex: 1; line-height: 1.4; }
+  .update-bar .ub-btn {
+    background: #ffd54a; color: #1a1a2e; font-weight: 800; text-decoration: none;
+    padding: 7px 14px; border-radius: 8px; white-space: nowrap; font-size: 0.84rem;
+  }
+  .update-bar .ub-x { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 1rem; cursor: pointer; padding: 4px; }
+
   /* 삭제 확인 토스트 */
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -896,8 +910,41 @@ function init() {
   track('visit');
   refreshHistoryForApp();   // 앱(번들)에서 최신 추천 갱신
   setupDailyNotification();  // 앱: 매일 점심 추천 알림 예약
+  checkAppUpdate();          // 앱: 새 버전 확인
   // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
   if (location.hash === '#admin') location.href = 'manage-jbax.html';
+}
+
+// ── 앱 자동 업데이트 ──────────────────────────────────────────
+const APP_VERSION = '1.0.1';   // 빌드 시 release.ps1이 갱신
+function isNewerVersion(a, b) { // a > b ?
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+async function checkAppUpdate() {
+  const cap = window.Capacitor;
+  if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/duelspost-droid/jblunch/master/version.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const v = await r.json();
+    if (v && v.version && v.apk && isNewerVersion(v.version, APP_VERSION)) showUpdateBar(v);
+  } catch (e) {}
+}
+function showUpdateBar(v) {
+  if (document.getElementById('update-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'update-bar';
+  bar.className = 'update-bar';
+  bar.innerHTML =
+    `<span>🆕 새 버전 <b>${escHtml(v.version)}</b> 업데이트 가능${v.notes ? ' · ' + escHtml(v.notes) : ''}</span>
+     <a class="ub-btn" href="${escAttr(v.apk)}" target="_blank" rel="noopener">업데이트</a>
+     <button class="ub-x" onclick="document.getElementById('update-bar').remove()">✕</button>`;
+  document.body.appendChild(bar);
 }
 
 // 앱: 매일 오전 8:30 '오늘의 점심 추천' 로컬 알림 (Firebase 불필요)
