@@ -76,6 +76,14 @@
   }
   .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
   .pager .pinfo { font-size: 0.8rem; color: #667; font-weight: 600; }
+  /* 로그 검색 */
+  .log-search { display: flex; gap: 8px; margin-bottom: 12px; }
+  .log-search input {
+    flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 12px; font-size: 0.85rem; font-family: inherit;
+  }
+  .log-search input:focus { outline: none; border-color: #0a3d7a; }
+  .log-search .btn { padding: 9px 14px; }
 
   /* ── 모바일 반응형 ────────────────────────────────── */
   @media (max-width: 600px) {
@@ -86,7 +94,7 @@
     .app-header h1 { font-size: 0.98rem; }
     .card { padding: 14px; border-radius: 12px; }
     /* iOS 자동확대 방지 */
-    input[type=password] { font-size: 16px; }
+    input[type=password], input[type=text] { font-size: 16px; }
     .btn { padding: 11px 16px; }
     .row { gap: 8px; }
     .logs { max-height: none; border: none; overflow: visible; }
@@ -147,6 +155,11 @@
         <button class="btn gray" onclick="loadLogs()">새로고침</button>
       </div>
       <div class="stats" id="stats"></div>
+      <div class="log-search">
+        <input type="text" id="logq" placeholder="🔍 IP·액션·상세·기기 검색 (예: review_create, iPhone, 211.234)"
+               oninput="applyLogSearch()">
+        <button class="btn gray" id="logq-clear" onclick="clearLogSearch()" style="display:none">✕</button>
+      </div>
       <div class="logs" id="logs"></div>
       <div class="pager" id="pager"></div>
     </div>
@@ -170,7 +183,33 @@ const ADMIN_URL = `${SB_URL}/functions/v1/admin`;
 let curPw = '';
 let allLogs = [];      // 전체 로그 (페이지네이션용)
 let logPage = 0;       // 현재 페이지 (0-base)
+let logQuery = '';     // 로그 검색어
 const PAGE_SIZE = 10;  // 한 페이지 로그 수
+
+// 검색어로 로그 필터 (IP·액션·상세·기기/브라우저·원본 UA 통합)
+function getFilteredLogs(){
+  const q = logQuery.trim().toLowerCase();
+  if(!q) return allLogs;
+  return allLogs.filter(l=>{
+    const e = parseUA(l.user_agent);
+    const hay = [l.ip, l.action, l.detail, e.os, e.browser, l.user_agent, fmt(l.created_at)]
+      .map(x=>String(x||'').toLowerCase()).join(' ');
+    return hay.includes(q);
+  });
+}
+function applyLogSearch(){
+  logQuery = document.getElementById('logq').value || '';
+  document.getElementById('logq-clear').style.display = logQuery ? '' : 'none';
+  logPage = 0;
+  renderLogPage();
+}
+function clearLogSearch(){
+  logQuery = '';
+  const inp = document.getElementById('logq'); if(inp) inp.value = '';
+  document.getElementById('logq-clear').style.display = 'none';
+  logPage = 0;
+  renderLogPage();
+}
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -297,7 +336,8 @@ function renderChart(daily){
 
 // 로그 한 페이지(10개) 렌더 + 페이지 이동 컨트롤
 function renderLogPage(){
-  const page = allLogs.slice(logPage*PAGE_SIZE, (logPage+1)*PAGE_SIZE);
+  const list = getFilteredLogs();
+  const page = list.slice(logPage*PAGE_SIZE, (logPage+1)*PAGE_SIZE);
   const rows = page.map(l=>{
     const e = parseUA(l.user_agent);
     return `
@@ -305,17 +345,19 @@ function renderLogPage(){
     <td class="t-env" data-label="기기·브라우저" title="${esc(l.user_agent||'')}">${e.emoji} ${esc(e.os)} · ${esc(e.browser)}</td>
     <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`;
   }).join('');
+  const empty = logQuery ? `'${esc(logQuery)}' 검색 결과 없음` : '기록 없음';
   document.getElementById('logs').innerHTML =
     `<table><thead><tr><th>시간</th><th>IP</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
-     <tbody>${rows||'<tr><td colspan="5" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
-  const totalPages = Math.max(1, Math.ceil(allLogs.length/PAGE_SIZE));
-  document.getElementById('pager').innerHTML = allLogs.length ? `
+     <tbody>${rows||`<tr><td colspan="5" style="padding:14px;color:#aaa">${empty}</td></tr>`}</tbody></table>`;
+  const totalPages = Math.max(1, Math.ceil(list.length/PAGE_SIZE));
+  const countLabel = logQuery ? `검색 ${list.length}건 / 전체 ${allLogs.length}` : `총 ${allLogs.length}건`;
+  document.getElementById('pager').innerHTML = list.length ? `
     <button onclick="gotoPage(${logPage-1})" ${logPage<=0?'disabled':''}>← 이전</button>
-    <span class="pinfo">${logPage+1} / ${totalPages} 페이지 · 총 ${allLogs.length}건</span>
+    <span class="pinfo">${logPage+1} / ${totalPages} 페이지 · ${countLabel}</span>
     <button onclick="gotoPage(${logPage+1})" ${logPage>=totalPages-1?'disabled':''}>다음 →</button>` : '';
 }
 function gotoPage(p){
-  const totalPages = Math.max(1, Math.ceil(allLogs.length/PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(getFilteredLogs().length/PAGE_SIZE));
   logPage = Math.max(0, Math.min(p, totalPages-1));
   renderLogPage();
   document.getElementById('logs').scrollIntoView({ behavior:'smooth', block:'nearest' });
