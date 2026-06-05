@@ -45,6 +45,7 @@
   .t-time { white-space: nowrap; color: #999; }
   .t-ip { white-space: nowrap; font-family: monospace; color: #2b6cb0; }
   .t-act { white-space: nowrap; font-weight: 600; }
+  .t-env { white-space: nowrap; color: #555; font-size: 0.74rem; }
   .t-detail { color: #666; word-break: break-all; }
   .hidden { display: none; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -147,6 +148,30 @@ const ADMIN_URL = `${SB_URL}/functions/v1/admin`;
 let curPw = '';
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// User-Agent → 기기/브라우저 추출
+function parseUA(ua){
+  ua = ua || '';
+  if(!ua) return { os:'알수없음', browser:'-', emoji:'❓' };
+  let browser='기타';
+  if(/KAKAOTALK/i.test(ua)) browser='카카오톡';
+  else if(/NAVER\(inapp|NAVER\//i.test(ua)) browser='네이버앱';
+  else if(/Instagram/i.test(ua)) browser='인스타그램';
+  else if(/Edg(A|iOS|)?\//i.test(ua)) browser='Edge';
+  else if(/SamsungBrowser/i.test(ua)) browser='삼성인터넷';
+  else if(/Whale/i.test(ua)) browser='웨일';
+  else if(/FxiOS|Firefox/i.test(ua)) browser='Firefox';
+  else if(/CriOS|Chrome/i.test(ua)) browser='Chrome';
+  else if(/Safari/i.test(ua)) browser='Safari';
+  let os='기타', emoji='🖥️';
+  if(/iPhone/i.test(ua)){ os='iPhone'; emoji='📱'; }
+  else if(/iPad/i.test(ua)){ os='iPad'; emoji='📲'; }
+  else if(/Android/i.test(ua)){ os = /Mobile/i.test(ua)?'Android폰':'Android태블릿'; emoji='📱'; }
+  else if(/Windows/i.test(ua)){ os='Windows'; emoji='💻'; }
+  else if(/Macintosh|Mac OS X/i.test(ua)){ os='Mac'; emoji='💻'; }
+  else if(/Linux/i.test(ua)){ os='Linux'; emoji='💻'; }
+  return { os, browser, emoji };
+}
 function fmt(iso){ if(!iso) return ''; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
 async function adminCall(payload){
@@ -194,12 +219,16 @@ function render(data){
   if (vEl) vEl.innerHTML =
     box('오늘', v.day, u.day) + box('이번 달', v.month, u.month) +
     box('올해', v.year, u.year) + box('전체', v.total, u.total);
-  const rows = (data.logs||[]).map(l=>`
+  const rows = (data.logs||[]).map(l=>{
+    const e = parseUA(l.user_agent);
+    return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
-    <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`).join('');
+    <td class="t-env" data-label="기기·브라우저" title="${esc(l.user_agent||'')}">${e.emoji} ${esc(e.os)} · ${esc(e.browser)}</td>
+    <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`;
+  }).join('');
   document.getElementById('logs').innerHTML =
-    `<table><thead><tr><th>시간</th><th>IP</th><th>액션</th><th>상세</th></tr></thead>
-     <tbody>${rows||'<tr><td colspan="4" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
+    `<table><thead><tr><th>시간</th><th>IP</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
+     <tbody>${rows||'<tr><td colspan="5" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
 }
 
 async function changePw(){
