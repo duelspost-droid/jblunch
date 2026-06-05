@@ -1223,7 +1223,7 @@ function renderHistory() {
   const newsLine = news.length ? `
       <div class="tb-news">
         <div class="tb-news-head">📰 JB금융 소식</div>
-        ${news.slice(0,4).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">· ${escHtml(n.title)}</a>`).join('')}
+        ${news.slice(0,3).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">· ${escHtml(n.title)}</a>`).join('')}
       </div>` : '';
   const bannerHtml = `
     <div class="top-banner">

@@ -346,7 +346,7 @@ def _clean_news_text(s):
             .replace("&lt;", "<").replace("&gt;", ">").replace("&apos;", "'").strip())
 
 
-def fetch_jb_news(naver_id, naver_secret, count=4):
+def fetch_jb_news(naver_id, naver_secret, count=3):
     """네이버 뉴스를 여러 키워드로 폭넓게 검색 → JB 관련만 추려
     AX·AI·디지털·혁신·외국인 주제 우선 + 최신순. → [{title, link, date}]."""
     if not (naver_id and naver_secret):
@@ -395,7 +395,7 @@ def fetch_jb_news(naver_id, naver_secret, count=4):
     return news
 
 
-def fetch_jb_news_web(client, count=4):
+def fetch_jb_news_web(client, count=3):
     """Claude 웹검색으로 JB금융 AX/AI/디지털/혁신/외국인 최신 소식 → [{title, link}]."""
     prompt = """웹 검색으로 'JB금융그룹'(JB금융지주, 전북은행, 광주은행, JB우리캐피탈) 관련
 가장 최근 뉴스를 찾아줘. 특히 다음 주제를 최우선으로 골라줘:
@@ -908,7 +908,7 @@ def main():
     # JB 소식 보강: 웹검색(AX/AI/디지털/혁신/외국인) + 네이버 병합 (식사 생성 후 → rate limit 여유)
     time.sleep(40)
     news_web = fetch_jb_news_web(client)
-    news = merge_news(news_web, news, count=4)
+    news = merge_news(news_web, news, count=3)
     print(f"📰 최종 JB 소식 {len(news)}건")
 
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
