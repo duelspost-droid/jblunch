@@ -126,7 +126,7 @@ async function visitorStats() {
   const monthUTC = new Date(Date.UTC(y, m, 1) - KST).toISOString();
   const yearUTC = new Date(Date.UTC(y, 0, 1) - KST).toISOString();
 
-  const [day, month, year, total, uDay, uMonth, uYear, uTotal] = await Promise.all([
+  const [day, month, year, total, uDay, uMonth, uYear, uTotal, daily] = await Promise.all([
     countSince("visit", dayUTC),
     countSince("visit", monthUTC),
     countSince("visit", yearUTC),
@@ -135,11 +135,41 @@ async function visitorStats() {
     uniqueSince(monthUTC),
     uniqueSince(yearUTC),
     uniqueSince(),
+    dailySeries(14),
   ]);
   return {
     day, month, year, total,
     unique: { day: uDay, month: uMonth, year: uYear, total: uTotal },
+    daily,
   };
+}
+
+// 최근 N일 일별 방문 수 (KST 기준) → [{date:'MM/DD', count}]
+async function dailySeries(days: number) {
+  const KST = 9 * 3600 * 1000;
+  const k = new Date(Date.now() + KST);
+  const startKST = Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()) - (days - 1) * 86400000;
+  const startUTC = new Date(startKST - KST).toISOString();
+  const r = await fetch(
+    `${SB_URL}/rest/v1/access_logs?select=created_at&action=eq.visit&created_at=gte.${encodeURIComponent(startUTC)}&limit=100000`,
+    { headers: SH },
+  );
+  const rows = r.ok ? await r.json() : [];
+  const bucket: Record<string, number> = {};
+  for (const row of rows) {
+    const t = new Date(row.created_at).getTime() + KST;
+    const dk = new Date(t);
+    const key = `${dk.getUTCFullYear()}-${String(dk.getUTCMonth() + 1).padStart(2, "0")}-${String(dk.getUTCDate()).padStart(2, "0")}`;
+    bucket[key] = (bucket[key] || 0) + 1;
+  }
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const t = startKST + i * 86400000;
+    const dk = new Date(t);
+    const key = `${dk.getUTCFullYear()}-${String(dk.getUTCMonth() + 1).padStart(2, "0")}-${String(dk.getUTCDate()).padStart(2, "0")}`;
+    out.push({ date: `${dk.getUTCMonth() + 1}/${dk.getUTCDate()}`, count: bucket[key] || 0 });
+  }
+  return out;
 }
 
 function json(obj: unknown, status = 200) {

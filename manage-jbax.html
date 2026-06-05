@@ -60,6 +60,22 @@
   .vbox .vnum small { font-size: 0.7rem; font-weight: 600; }
   .vbox .vuniq { font-size: 0.7rem; color: #8794a6; margin-top: 4px; }
   .vbox .vuniq b { color: #2b6cb0; }
+  /* 방문 추이 그래프 */
+  .chart-head { font-size: 0.8rem; font-weight: 700; color: #0a3d7a; margin: 16px 0 8px; }
+  .chart { width: 100%; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .bar { fill: #1565c0; transition: fill .12s; }
+  .chart .bar:hover { fill: #0a3d7a; }
+  .chart .blabel { font-size: 9px; fill: #9aa6b5; }
+  .chart .bval { font-size: 9px; fill: #2b6cb0; font-weight: 700; }
+  /* 페이지네이션 */
+  .pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; }
+  .pager button {
+    border: 1.5px solid #e2e8f0; background: #fff; color: #0a3d7a; cursor: pointer;
+    border-radius: 9px; padding: 7px 14px; font-size: 0.82rem; font-weight: 700;
+  }
+  .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pager .pinfo { font-size: 0.8rem; color: #667; font-weight: 600; }
 
   /* ── 모바일 반응형 ────────────────────────────────── */
   @media (max-width: 600px) {
@@ -118,6 +134,8 @@
     <div class="card">
       <h2>👥 방문자 통계</h2>
       <div class="vstats" id="vstats"></div>
+      <div class="chart-head">📈 최근 14일 방문 추이</div>
+      <div class="chart" id="chart"></div>
     </div>
 
     <div class="card">
@@ -127,6 +145,7 @@
       </div>
       <div class="stats" id="stats"></div>
       <div class="logs" id="logs"></div>
+      <div class="pager" id="pager"></div>
     </div>
 
     <div class="card">
@@ -146,6 +165,9 @@ const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM';
 const ADMIN_URL = `${SB_URL}/functions/v1/admin`;
 let curPw = '';
+let allLogs = [];      // 전체 로그 (페이지네이션용)
+let logPage = 0;       // 현재 페이지 (0-base)
+const PAGE_SIZE = 10;  // 한 페이지 로그 수
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -219,7 +241,35 @@ function render(data){
   if (vEl) vEl.innerHTML =
     box('오늘', v.day, u.day) + box('이번 달', v.month, u.month) +
     box('올해', v.year, u.year) + box('전체', v.total, u.total);
-  const rows = (data.logs||[]).map(l=>{
+  renderChart(v.daily || []);
+  // 로그 페이지네이션 (10개씩)
+  allLogs = data.logs || [];
+  logPage = 0;
+  renderLogPage();
+}
+
+// 방문 추이 막대그래프 (의존성 없는 인라인 SVG)
+function renderChart(daily){
+  const el = document.getElementById('chart');
+  if (!el) return;
+  if (!daily.length){ el.innerHTML = '<div style="color:#aaa;font-size:0.8rem">데이터 없음</div>'; return; }
+  const W = 700, H = 150, padB = 22, padT = 16, n = daily.length;
+  const max = Math.max(1, ...daily.map(d=>d.count));
+  const gap = 6, bw = (W - gap*(n-1)) / n;
+  const bars = daily.map((d,i)=>{
+    const h = Math.round((H - padB - padT) * d.count / max);
+    const x = i*(bw+gap), y = H - padB - h;
+    const val = d.count>0 ? `<text class="bval" x="${x+bw/2}" y="${y-3}" text-anchor="middle">${d.count}</text>` : '';
+    return `<rect class="bar" x="${x}" y="${y}" width="${bw}" height="${h}" rx="3"><title>${d.date}: ${d.count}회</title></rect>
+      ${val}<text class="blabel" x="${x+bw/2}" y="${H-7}" text-anchor="middle">${d.date}</text>`;
+  }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${bars}</svg>`;
+}
+
+// 로그 한 페이지(10개) 렌더 + 페이지 이동 컨트롤
+function renderLogPage(){
+  const page = allLogs.slice(logPage*PAGE_SIZE, (logPage+1)*PAGE_SIZE);
+  const rows = page.map(l=>{
     const e = parseUA(l.user_agent);
     return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
@@ -229,6 +279,17 @@ function render(data){
   document.getElementById('logs').innerHTML =
     `<table><thead><tr><th>시간</th><th>IP</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
      <tbody>${rows||'<tr><td colspan="5" style="padding:14px;color:#aaa">기록 없음</td></tr>'}</tbody></table>`;
+  const totalPages = Math.max(1, Math.ceil(allLogs.length/PAGE_SIZE));
+  document.getElementById('pager').innerHTML = allLogs.length ? `
+    <button onclick="gotoPage(${logPage-1})" ${logPage<=0?'disabled':''}>← 이전</button>
+    <span class="pinfo">${logPage+1} / ${totalPages} 페이지 · 총 ${allLogs.length}건</span>
+    <button onclick="gotoPage(${logPage+1})" ${logPage>=totalPages-1?'disabled':''}>다음 →</button>` : '';
+}
+function gotoPage(p){
+  const totalPages = Math.max(1, Math.ceil(allLogs.length/PAGE_SIZE));
+  logPage = Math.max(0, Math.min(p, totalPages-1));
+  renderLogPage();
+  document.getElementById('logs').scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 async function changePw(){
