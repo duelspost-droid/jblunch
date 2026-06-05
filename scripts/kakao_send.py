@@ -55,7 +55,7 @@ def send_to_me(access_token, restaurants, today, comment, weather="", news=None,
     # JB금융 뉴스
     if news:
         lines += ["", "📰 JB금융 소식:"]
-        for n in news[:3]:
+        for n in news[:4]:
             lines.append(f"• {n['title']}")
     lines += ["", "👉 전체보기 / 컨디션별 추천:", SITE_URL]
     text = "\n".join(lines)

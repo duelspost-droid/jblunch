@@ -14,6 +14,7 @@ import smtplib
 import time
 import urllib.request
 import urllib.parse
+import email.utils
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
@@ -326,30 +327,117 @@ def fetch_weather():
         return ""
 
 
-def fetch_jb_news(naver_id, naver_secret, count=3):
-    """네이버 뉴스 검색으로 JB금융그룹 최신 기사 → [{title, link}]. 실패 시 []."""
+# JB금융 뉴스: 폭넓게 검색할 쿼리 (AX/AI/디지털/혁신/외국인 위주)
+JB_NEWS_QUERIES = [
+    "JB금융 AX", "JB금융 AI", "JB금융 인공지능", "JB금융 디지털",
+    "JB금융 혁신", "JB금융지주 외국인", "JB금융 디지털전환",
+    "전북은행 디지털", "광주은행 AI", "JB금융지주",
+]
+# 우선 추출할 주제 키워드 (제목·요약에 있으면 가점)
+JB_FOCUS_KEYWORDS = ["AX", "AI", "인공지능", "디지털", "DX", "혁신", "외국인",
+                     "데이터", "핀테크", "플랫폼", "전환", "테크", "생성형", "클라우드"]
+# JB 관련 기사인지 판별 (무관한 기사 제외)
+JB_RELATED = ["JB금융", "JB금융지주", "전북은행", "광주은행", "JBFG", "핀다", "JB우리캐피탈"]
+
+
+def _clean_news_text(s):
+    return (re.sub(r"<[^>]+>", "", s or "")
+            .replace("&quot;", '"').replace("&amp;", "&")
+            .replace("&lt;", "<").replace("&gt;", ">").replace("&apos;", "'").strip())
+
+
+def fetch_jb_news(naver_id, naver_secret, count=4):
+    """네이버 뉴스를 여러 키워드로 폭넓게 검색 → JB 관련만 추려
+    AX·AI·디지털·혁신·외국인 주제 우선 + 최신순. → [{title, link, date}]."""
     if not (naver_id and naver_secret):
         return []
-    try:
-        q = urllib.parse.quote("JB금융지주")
-        url = f"https://openapi.naver.com/v1/search/news.json?query={q}&display={count}&sort=date"
-        req = urllib.request.Request(url, headers={
-            "X-Naver-Client-Id": naver_id,
-            "X-Naver-Client-Secret": naver_secret,
-        })
-        with urllib.request.urlopen(req, timeout=6) as r:
-            items = json.loads(r.read()).get("items", [])
-        news = []
-        for it in items[:count]:
-            title = re.sub(r"<[^>]+>", "", it.get("title", "")).replace("&quot;", '"').replace("&amp;", "&").strip()
+    headers = {"X-Naver-Client-Id": naver_id, "X-Naver-Client-Secret": naver_secret}
+    collected = {}   # link → {title, link, score, ts}
+    for query in JB_NEWS_QUERIES:
+        try:
+            q = urllib.parse.quote(query)
+            url = f"https://openapi.naver.com/v1/search/news.json?query={q}&display=10&sort=date"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=6) as r:
+                items = json.loads(r.read()).get("items", [])
+        except Exception:
+            continue
+        for it in items:
+            title = _clean_news_text(it.get("title", ""))
+            desc = _clean_news_text(it.get("description", ""))
             link = it.get("originallink") or it.get("link", "")
-            if title:
-                news.append({"title": title, "link": link})
-        print(f"📰 JB금융 뉴스 {len(news)}건")
-        return news
+            if not title or not link:
+                continue
+            text = title + " " + desc
+            if not any(k in text for k in JB_RELATED):
+                continue   # JB 무관 기사 제외
+            # 발행시각
+            ts = 0
+            try:
+                ts = email.utils.parsedate_to_datetime(it.get("pubDate", "")).timestamp()
+            except Exception:
+                pass
+            score = sum(1 for k in JB_FOCUS_KEYWORDS if k in text)
+            prev = collected.get(link)
+            if prev and prev["score"] >= score:
+                continue
+            collected[link] = {"title": title, "link": link, "date": it.get("pubDate", ""), "score": score, "ts": ts}
+
+    # 주제 적합도(가점) → 최신순 정렬. 포커스 기사 우선, 부족하면 일반으로 채움
+    items_all = list(collected.values())
+    focus = [x for x in items_all if x["score"] > 0]
+    others = [x for x in items_all if x["score"] == 0]
+    focus.sort(key=lambda x: (x["score"], x["ts"]), reverse=True)
+    others.sort(key=lambda x: x["ts"], reverse=True)
+    picked = (focus + others)[:count]
+    news = [{"title": x["title"], "link": x["link"]} for x in picked]
+    print(f"📰 JB금융 뉴스 {len(news)}건 (포커스 {len(focus)}건 중)")
+    return news
+
+
+def fetch_jb_news_web(client, count=4):
+    """Claude 웹검색으로 JB금융 AX/AI/디지털/혁신/외국인 최신 소식 → [{title, link}]."""
+    prompt = """웹 검색으로 'JB금융그룹'(JB금융지주, 전북은행, 광주은행, JB우리캐피탈) 관련
+가장 최근 뉴스를 찾아줘. 특히 다음 주제를 최우선으로 골라줘:
+- AX(인공지능 전환), AI/인공지능/생성형AI
+- 디지털 전환(DX)·디지털 혁신·핀테크·플랫폼
+- 경영 혁신·신사업
+- 외국인(고객·투자자·주주·인재) 관련
+
+최신순으로 실제 기사 4건을 아래 JSON으로만 출력(제목은 실제 기사 제목, link는 원문 URL):
+```json
+{"news":[{"title":"...","link":"https://..."}]}
+```"""
+    try:
+        text = call_claude(client, prompt, use_web=True)
+        data = extract_json(text) if text else None
+        items = (data or {}).get("news", []) if isinstance(data, dict) else []
+        out = []
+        for it in items[:count]:
+            t = (it.get("title") or "").strip()
+            l = (it.get("link") or it.get("url") or "").strip()
+            if t:
+                out.append({"title": t, "link": l})
+        print(f"📰 (웹검색) JB 소식 {len(out)}건")
+        return out
     except Exception as e:
-        print(f"⚠️  뉴스 조회 실패 (무시): {e}")
+        print(f"⚠️  웹검색 뉴스 실패 (무시): {e}")
         return []
+
+
+def merge_news(*lists, count=4):
+    """여러 뉴스 리스트 병합 + 제목 기준 중복 제거 (앞쪽 우선)."""
+    out, seen = [], set()
+    for lst in lists:
+        for n in (lst or []):
+            key = re.sub(r"\s+", "", n.get("title", ""))[:18]
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append({"title": n["title"], "link": n.get("link", "")})
+            if len(out) >= count:
+                return out
+    return out
 
 
 def fetch_jb_stock():
@@ -816,6 +904,12 @@ def main():
     dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
     time.sleep(70)
     bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent, mood_ctx)
+
+    # JB 소식 보강: 웹검색(AX/AI/디지털/혁신/외국인) + 네이버 병합 (식사 생성 후 → rate limit 여유)
+    time.sleep(40)
+    news_web = fetch_jb_news_web(client)
+    news = merge_news(news_web, news, count=4)
+    print(f"📰 최종 JB 소식 {len(news)}건")
 
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
 
