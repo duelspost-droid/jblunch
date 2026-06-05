@@ -489,6 +489,20 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .top-banner .tb-news-item:hover { color: #0a3d7a; text-decoration: underline; }
+  .top-banner .tb-stock {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+    margin-top: 10px; padding-top: 9px; border-top: 1px dashed #e2e8f0;
+  }
+  .top-banner .tb-stock:empty { display: none; }
+  .tb-stock-head { font-size: 0.74rem; font-weight: 700; color: #0a3d7a; }
+  .tb-stock-loading { font-size: 0.74rem; color: #aab4c0; }
+  .tb-stock-price { font-size: 0.92rem; font-weight: 800; color: #1e3a5f; }
+  .tb-stock-change { font-size: 0.78rem; font-weight: 700; }
+  .tb-stock-change.up { color: #e03131; }
+  .tb-stock-change.down { color: #1c64f2; }
+  .tb-stock-change.flat { color: #868e96; }
+  .tb-stock-mk { font-size: 0.68rem; font-weight: 700; color: #98a2b3; background: #f1f3f6; border-radius: 10px; padding: 2px 8px; }
+  .tb-stock-mk.live { color: #2f9e44; background: #ebfbee; }
 
   /* 시간대(점심/저녁/술집) 토글 */
   .meal-toggle {
@@ -874,6 +888,7 @@ function init() {
   renderHistory();
   renderStats();
   loadComments();
+  loadStock();
   track('visit');
   // 관리자 페이지는 별도(admin.html). #admin 접근 시 리다이렉트
   if (location.hash === '#admin') location.href = 'admin.html';
@@ -1127,6 +1142,7 @@ function renderHistory() {
       ${weatherLine}
       ${msgLine}
       ${newsLine}
+      <div class="tb-stock" id="tb-stock"></div>
     </div>
     <div class="meal-toggle">
       <button class="meal-btn${defMeal==='점심'?' on':''}" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>
@@ -1225,6 +1241,29 @@ function matchCondition(text) {
 
 const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
 const PLACES_URL = `${SB_URL}/functions/v1/places-search`;
+const STOCK_URL = `${SB_URL}/functions/v1/stock`;
+
+// JB금융지주 주가 조회 → 배너에 표시 (네이버 금융 프록시)
+async function loadStock() {
+  const el = document.getElementById('tb-stock');
+  if (!el) return;
+  el.innerHTML = `<span class="tb-stock-head">📈 JB금융지주</span><span class="tb-stock-loading">시세 불러오는 중…</span>`;
+  try {
+    const res = await fetch(STOCK_URL, { headers: SB_HEADERS });
+    const d = await res.json();
+    if (!d || !d.price || d.error) { el.innerHTML = ''; return; }
+    const up = d.direction === 'RISING', down = d.direction === 'FALLING';
+    const cls = up ? 'up' : (down ? 'down' : 'flat');
+    const arrow = up ? '▲' : (down ? '▼' : '–');
+    const rate = (d.changeRate !== '' && d.changeRate != null) ? `${d.changeRate > 0 ? '+' : ''}${d.changeRate}%` : '';
+    const open = d.marketStatus === 'OPEN';
+    el.innerHTML = `
+      <span class="tb-stock-head">📈 JB금융지주</span>
+      <span class="tb-stock-price">${escHtml(d.price)}원</span>
+      <span class="tb-stock-change ${cls}">${arrow} ${escHtml(String(d.change).replace('-',''))} (${escHtml(rate)})</span>
+      <span class="tb-stock-mk ${open ? 'live' : ''}">${open ? '● 장중' : '종가'}</span>`;
+  } catch(e) { el.innerHTML = ''; }
+}
 const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
 
 // ── 검색 히스토리 (Supabase 공유) ────────────────────────────
