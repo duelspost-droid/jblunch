@@ -1,13 +1,17 @@
-# JB 맛집 트래커 — 네이티브 앱 (Capacitor)
+# JB×AX 맛집 — 네이티브 앱 (Capacitor)
 
 여의나루 점심 맛집 트래커 웹앱을 Android 네이티브 앱으로 감싼 프로젝트.
 
 ## 구조 / 동작 방식
-- **server.url 방식**: 앱이 라이브 사이트(`https://duelspost-droid.github.io/jblunch/`)를
-  WebView로 로드해요. 매일 GitHub Actions가 갱신하는 추천이 **앱에서도 항상 최신**입니다.
-  → 추천이 바뀔 때마다 앱을 재빌드할 필요가 없어요.
-- `www/index.html` 은 네트워크 불가 시 보이는 폴백 로딩 화면.
-- 설정: `capacitor.config.json`
+- **server.url 방식**: 앱이 라이브 사이트(`https://lunch.jbax.co.kr`)를 WebView로 로드.
+  매일 갱신되는 추천이 **앱에서도 항상 최신** → 추천 바뀔 때마다 재빌드 불필요.
+- `www/index.html` 은 네트워크 불가 시 폴백 로딩 화면.
+- 위치 권한(`ACCESS_FINE/COARSE_LOCATION`) 추가됨 — '내 주변 맛집' GPS용(거부 시 JB빌딩 폴백).
+- 설정: `capacitor.config.json` (변경 시 `cd app && npx cap sync android`).
+
+> ⚠️ **SSL 의존성**: `lunch.jbax.co.kr`의 HTTPS 인증서가 발급 완료돼야 앱이 정상 로드돼요.
+> (발급 전엔 빈 화면) — 인증서 발급 후 빌드/테스트하세요. 현재 발급 대기 중이면
+> `gh api repos/duelspost-droid/jblunch/pages` 의 `https_certificate.state`가 `approved`인지 확인.
 
 ## 빌드하려면 (Android)
 
