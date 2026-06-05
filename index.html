@@ -828,8 +828,18 @@ function normDist(d) {
   return `도보 ${min}분`;
 }
 // AI가 생성한 디테일한 맛집 소개 캐시 (이름 → intro 문장)
+// 면책·사과성 소개(또는 과도하게 긴 응답)는 유효한 소개로 보지 않음
+function isBadIntro(t) {
+  return !t || /죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다|도와드(릴|리)/.test(t) || t.length > 280;
+}
 let placeIntros = {};
 try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
+// 캐시에 남은 사과문 제거 (이전 버전에서 저장된 것)
+try {
+  let changed = false;
+  for (const k of Object.keys(placeIntros)) { if (isBadIntro(placeIntros[k])) { delete placeIntros[k]; changed = true; } }
+  if (changed) localStorage.setItem('placeIntros', JSON.stringify(placeIntros));
+} catch(e) {}
 let _introPending = {};   // 중복 호출 방지
 // 서버 공유 캐시(place_meta)에서 여러 맛집 소개·가격·거리를 한 번에 로드 (크레딧 절약)
 async function loadSharedMeta(names) {
@@ -883,7 +893,7 @@ async function fetchPlaceIntro(name) {
         }
         try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
       }
-      if (data && data.intro) {
+      if (data && data.intro && !isBadIntro(data.intro)) {
         placeIntros[name] = data.intro;
         try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); } catch(e) {}
         return data.intro;
@@ -1683,9 +1693,13 @@ function openModal(name, feature, editC) {
   // 맛집 상세정보 (종류/가격/거리/주소 + 지도) — 캐시/HISTORY/검색결과 통합
   const info = findRestaurant(name);
   renderModalDetail(name, info);
-  // 디테일한 AI 소개가 있으면 우선 사용
+  // 디테일한 AI 소개가 있으면 우선 사용 (면책성이면 무시 + 캐시 제거)
+  if (placeIntros[name] && isBadIntro(placeIntros[name])) {
+    delete placeIntros[name];
+    try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); } catch(e) {}
+  }
   if (placeIntros[name]) feature = placeIntros[name];
-  else if (info && !feature && info.feature) feature = info.feature;
+  else if (info && info.feature) feature = info.feature;
   mFeature = feature || mFeature;
   // 맛집 소개
   const introEl = document.getElementById('modal-intro');

@@ -223,14 +223,16 @@ Deno.serve(async (req) => {
       }
       const hintCuisine = (body.cuisine || "").toString().trim();
       const hintAddr = (body.address || "").toString().trim();
-      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당을 잘 모르는 사람에게 소개하는 글을 써줘.
+      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당의 짧은 소개글을 써줘.
 식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : ""}
 규칙:
-- intro: 반드시 정중한 존댓말("~합니다/~예요/~좋아요" 체)로만 써. 반말("~야/~어") 절대 금지.
-  2~3문장. 대표 메뉴/맛 특징, 분위기, 어떤 자리(점심/회식/접대 등)에 좋은지 구체적으로.
-  실제로 아는 정보를 우선하되 과장·허위 금지. intro 안에는 가격·평점·전화번호 같은 변동 정보를 쓰지 마.
-- price: 이 식당의 대략적 가격대를 "저렴"/"보통"/"비쌈" 중 하나로만. 종류·이름으로 합리적으로 추정.
-- 반드시 JSON만 출력: {"intro":"...","price":"보통"}`;
+- 이 가게를 정확히 몰라도 절대 사과하거나 "정보가 부족/잘 모르겠다"고 쓰지 마. 그런 면책 문구 금지.
+  이름과 종류에서 자연스럽게 연상되는 소개를 그럴듯하게 작성해.
+- intro: 정중한 존댓말("~합니다/~예요/~좋아요" 체) 1~2문장. 종류·이름으로 떠오르는 대표 메뉴·맛·분위기,
+  어떤 자리(점심/회식/접대 등)에 어울리는지. 구체적 수상·연혁 같은 확인 불가한 허위는 만들지 말되,
+  무난하고 일반적인 소개는 OK. 가격·평점·전화번호는 쓰지 마.
+- price: 종류·이름으로 합리적으로 추정 → "저렴"/"보통"/"비쌈" 중 하나.
+- 반드시 JSON만 출력(다른 말·사과 없이): {"intro":"...","price":"보통"}`;
       const dResp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -245,8 +247,9 @@ Deno.serve(async (req) => {
       const dContent = dData.content?.[0]?.text ?? "";
       const dMatch = dContent.match(/\{[\s\S]*\}/);
       let intro = "", price = "";
-      if (dMatch) { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; }
-      else intro = dContent.trim();
+      if (dMatch) { try { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; } catch (_e) { /* 파싱 실패 → intro 비움 */ } }
+      // 면책/사과성 응답이면 소개로 쓰지 않음 (프론트가 기본 설명으로 폴백)
+      if (/죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다/.test(intro)) intro = "";
       if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
       // 카카오·네이버 양쪽 거리 실측 (JB빌딩 기준)
       const dObj: Record<string, unknown> = { name: describe };
