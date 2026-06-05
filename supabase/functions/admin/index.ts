@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
       }
       await logAdmin("admin_login", ip, "", ua);
       const sess = await createSession(ip);
-      const data = await dashboard(body.limit);
+      const data = await dashboard(body);
       return json({ ok: true, token: sess.token, expiresAt: sess.expires_at, ...data });
     }
 
@@ -169,18 +169,45 @@ Deno.serve(async (req) => {
       return json({ ok: true, changed: true, token: sess.token, expiresAt: sess.expires_at });
     }
 
-    // ── 로그/통계 조회 (기본) ──
-    return json({ ok: true, ...(await dashboard(body.limit)) });
+    // ── 로그/통계 조회 (기본, 기간·액션 필터) ──
+    return json({ ok: true, ...(await dashboard(body)) });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
 });
 
-// ── 대시보드 데이터 ───────────────────────────────────────────
-async function dashboard(limitRaw?: unknown) {
-  const limit = Math.min(Number(limitRaw) || 300, 500);
-  const r = await fetch(`${SB_URL}/rest/v1/access_logs?select=*&order=created_at.desc&limit=${limit}`, { headers: SH });
+// 기간(일/월/기간/전체) → UTC 범위 (KST 기준)
+function kstRange(period: string, from?: string, to?: string): { fromUTC?: string; toUTC?: string } {
+  const KST = 9 * 3600 * 1000;
+  const now = new Date(Date.now() + KST);
+  const y = now.getUTCFullYear(), m = now.getUTCMonth(), d = now.getUTCDate();
+  if (period === "day") return { fromUTC: new Date(Date.UTC(y, m, d) - KST).toISOString() };
+  if (period === "month") return { fromUTC: new Date(Date.UTC(y, m, 1) - KST).toISOString() };
+  if (period === "range") {
+    const out: { fromUTC?: string; toUTC?: string } = {};
+    if (from) { const [a, b, c] = from.split("-").map(Number); out.fromUTC = new Date(Date.UTC(a, b - 1, c) - KST).toISOString(); }
+    if (to) { const [a, b, c] = to.split("-").map(Number); out.toUTC = new Date(Date.UTC(a, b - 1, c + 1) - KST).toISOString(); }
+    return out;
+  }
+  return {}; // all
+}
+
+// ── 대시보드 데이터 (기간·액션 필터) ──────────────────────────
+async function dashboard(opts: Record<string, unknown> = {}) {
+  const limit = Math.min(Number(opts.limit) || 300, 1000);
+  const action = (opts.action || "").toString();
+  const { fromUTC, toUTC } = kstRange((opts.period || "").toString(), opts.from as string, opts.to as string);
+
+  let url = `${SB_URL}/rest/v1/access_logs?select=*&order=created_at.desc&limit=${limit}`;
+  if (action) url += `&action=eq.${encodeURIComponent(action)}`;
+  if (fromUTC) url += `&created_at=gte.${encodeURIComponent(fromUTC)}`;
+  if (toUTC) url += `&created_at=lt.${encodeURIComponent(toUTC)}`;
+
+  const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact", Range: `0-${limit - 1}` } });
   const logs = r.ok ? await r.json() : [];
+  const cr = r.headers.get("content-range") || "";   // "0-N/total"
+  const totalMatch = Number((cr.split("/")[1] || "")) || logs.length;
+
   const ipSet = new Set<string>();
   const actionCount: Record<string, number> = {};
   for (const l of logs) {
@@ -188,7 +215,7 @@ async function dashboard(limitRaw?: unknown) {
     actionCount[l.action] = (actionCount[l.action] || 0) + 1;
   }
   const visits = await visitorStats();
-  return { logs, stats: { total: logs.length, uniqueIPs: ipSet.size, actions: actionCount }, visits };
+  return { logs, logCount: totalMatch, stats: { total: logs.length, matched: totalMatch, uniqueIPs: ipSet.size, actions: actionCount }, visits };
 }
 
 // PostgREST count(content-range 헤더)로 visit 수 집계
