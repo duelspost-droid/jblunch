@@ -352,6 +352,28 @@ def fetch_jb_news(naver_id, naver_secret, count=3):
         return []
 
 
+def fetch_jb_stock():
+    """JB금융지주(175330) 주가 → '25,500원 (전일대비 -350, -1.35% 하락)'. 실패 시 ''."""
+    try:
+        req = urllib.request.Request(
+            "https://m.stock.naver.com/api/stock/175330/basic",
+            headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            d = json.loads(r.read())
+        price = d.get("closePrice", "")
+        change = d.get("compareToPreviousClosePrice", "")
+        rate = d.get("fluctuationsRatio", "")
+        direction = (d.get("compareToPreviousPrice") or {}).get("text", "")
+        if not price:
+            return ""
+        line = f"{price}원 (전일대비 {change}, {rate}% {direction})".strip()
+        print(f"📈 JB금융지주 주가: {line}")
+        return line
+    except Exception as e:
+        print(f"⚠️  주가 조회 실패 (무시): {e}")
+        return ""
+
+
 def generate_daily_message(client, weather, news, restaurants):
     """날씨 + JB금융 뉴스 + 추천 맛집을 엮은 친근한 점심 한마디 생성."""
     names = ", ".join(r["name"] for r in restaurants[:5])
@@ -768,12 +790,22 @@ def main():
     print("\n🌤️  날씨/뉴스 수집 중...")
     weather = fetch_weather()
     news = fetch_jb_news(naver_id, naver_secret)
+    stock = fetch_jb_stock()
     headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
     mood_ctx = ""
-    if weather or headlines:
-        mood_ctx = (f"\n[오늘 분위기] 날씨: {weather or '정보 없음'}. "
-                    f"JB금융그룹 소식: {headlines or '특이사항 없음'}. "
-                    f"이 분위기(날씨·회사 소식)를 추천 comment에 자연스럽게 녹이고, 어울리는 곳을 골라줘.\n")
+    if weather or headlines or stock:
+        mood_ctx = (
+            "\n[오늘의 분위기 — 맛집 선정에 함께 반영]\n"
+            f"· 날씨: {weather or '정보 없음'}\n"
+            f"· JB금융지주 주가: {stock or '정보 없음'}\n"
+            f"· JB금융그룹 소식: {headlines or '특이사항 없음'}\n"
+            "위 날씨와 'JB금융 소식'의 분위기를 함께 판단해서 어울리는 맛집을 골라줘.\n"
+            "회사 소식 반영 가이드(과하지 않게 살짝 가중):\n"
+            "  · 호재(호실적·수상·자사주 매입·주가 강세 등) → 축하·회식 분위기 좋은 곳, 살짝 특별한 메뉴\n"
+            "  · 악재·무거운 소식(실적 부진·구조조정·시장 불안 등) → 든든하고 위로가 되는 따뜻한 메뉴\n"
+            "  · 중요 일정(주주총회·실적발표·인사·접대 이슈 등) → 격식 있고 조용한, 접대 가능한 식당\n"
+            "  · 특이사항 없으면 날씨와 평소 취향 위주로.\n"
+            "그리고 comment 한 줄에 오늘 날씨와 회사 분위기를 자연스럽게 녹여줘.\n")
 
     # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
     lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
@@ -781,9 +813,9 @@ def main():
         print("❌ 점심 생성 실패 — 중단")
         sys.exit(1)
     time.sleep(70)  # rate limit(10k tokens/min) 회피 — 컨디션 10종이라 토큰 회복 여유 필요
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret, recent)
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
     time.sleep(70)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent, mood_ctx)
 
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
 
