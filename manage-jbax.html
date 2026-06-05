@@ -48,10 +48,23 @@
   .t-detail { color: #666; word-break: break-all; }
   .hidden { display: none; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  /* 방문자 통계 그리드 */
+  .vstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .vbox {
+    background: linear-gradient(160deg,#f4f7fb,#eef3fa); border: 1px solid #e7eef7;
+    border-radius: 12px; padding: 13px 10px; text-align: center;
+  }
+  .vbox .vlabel { font-size: 0.74rem; color: #6b7a90; font-weight: 700; margin-bottom: 6px; }
+  .vbox .vnum { font-size: 1.4rem; font-weight: 800; color: #0a3d7a; line-height: 1.1; }
+  .vbox .vnum small { font-size: 0.7rem; font-weight: 600; }
+  .vbox .vuniq { font-size: 0.7rem; color: #8794a6; margin-top: 4px; }
+  .vbox .vuniq b { color: #2b6cb0; }
 
   /* ── 모바일 반응형 ────────────────────────────────── */
   @media (max-width: 600px) {
     body { padding: 12px; }
+    .vstats { grid-template-columns: repeat(2, 1fr); }
+    .vbox .vnum { font-size: 1.25rem; }
     .app-header { padding: 13px 15px; border-radius: 12px; margin-bottom: 14px; }
     .app-header h1 { font-size: 0.98rem; }
     .card { padding: 14px; border-radius: 12px; }
@@ -101,6 +114,11 @@
 
   <!-- 로그 + 비번변경 (로그인 후) -->
   <div id="panel" class="hidden">
+    <div class="card">
+      <h2>👥 방문자 통계</h2>
+      <div class="vstats" id="vstats"></div>
+    </div>
+
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <h2 style="margin:0">📊 접속/작업 로그</h2>
@@ -165,6 +183,17 @@ function render(data){
   const acts = Object.entries(s.actions||{}).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
   document.getElementById('stats').innerHTML =
     `<div><b>${s.total||0}</b> 기록 · <b>${s.uniqueIPs||0}</b> 고유 IP</div><div class="act">${acts}</div>`;
+  // 방문자 통계 (일/월/연/전체)
+  const v = data.visits || {};
+  const u = v.unique || {};
+  const box = (label, n, uniq) => `<div class="vbox">
+    <div class="vlabel">${label}</div>
+    <div class="vnum">${(n||0).toLocaleString()}<small>회</small></div>
+    <div class="vuniq">고유 <b>${(uniq||0).toLocaleString()}</b></div></div>`;
+  const vEl = document.getElementById('vstats');
+  if (vEl) vEl.innerHTML =
+    box('오늘', v.day, u.day) + box('이번 달', v.month, u.month) +
+    box('올해', v.year, u.year) + box('전체', v.total, u.total);
   const rows = (data.logs||[]).map(l=>`
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
     <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`).join('');

@@ -81,11 +81,66 @@ Deno.serve(async (req) => {
       if (l.ip) ipSet.add(l.ip);
       actionCount[l.action] = (actionCount[l.action] || 0) + 1;
     }
-    return json({ ok: true, logs, stats: { total: logs.length, uniqueIPs: ipSet.size, actions: actionCount } });
+
+    // ── 방문자 통계 (KST 기준 일/월/연/전체) ──
+    const visitStats = await visitorStats();
+
+    return json({
+      ok: true,
+      logs,
+      stats: { total: logs.length, uniqueIPs: ipSet.size, actions: actionCount },
+      visits: visitStats,
+    });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
 });
+
+// PostgREST count(content-range 헤더)로 visit 수 집계
+async function countSince(field: "visit_total" | string, sinceUTC?: string): Promise<number> {
+  let url = `${SB_URL}/rest/v1/access_logs?select=id&action=eq.visit`;
+  if (sinceUTC) url += `&created_at=gte.${encodeURIComponent(sinceUTC)}`;
+  const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact", Range: "0-0" } });
+  const cr = r.headers.get("content-range") || "";   // "0-0/123" 또는 "*/0"
+  const tot = cr.split("/")[1];
+  return !tot || tot === "*" ? 0 : Number(tot);
+}
+
+// 고유 방문자(IP) 수 — 기간 내 visit 로그의 distinct IP
+async function uniqueSince(sinceUTC?: string): Promise<number> {
+  let url = `${SB_URL}/rest/v1/access_logs?select=ip&action=eq.visit&ip=not.is.null`;
+  if (sinceUTC) url += `&created_at=gte.${encodeURIComponent(sinceUTC)}`;
+  url += "&limit=20000";
+  const r = await fetch(url, { headers: SH });
+  if (!r.ok) return 0;
+  const rows = await r.json();
+  return new Set(rows.map((x: { ip: string }) => x.ip)).size;
+}
+
+async function visitorStats() {
+  // KST(UTC+9) 기준 일/월/연 시작 시각을 UTC ISO로 변환
+  const KST = 9 * 3600 * 1000;
+  const k = new Date(Date.now() + KST);
+  const y = k.getUTCFullYear(), m = k.getUTCMonth(), d = k.getUTCDate();
+  const dayUTC = new Date(Date.UTC(y, m, d) - KST).toISOString();
+  const monthUTC = new Date(Date.UTC(y, m, 1) - KST).toISOString();
+  const yearUTC = new Date(Date.UTC(y, 0, 1) - KST).toISOString();
+
+  const [day, month, year, total, uDay, uMonth, uYear, uTotal] = await Promise.all([
+    countSince("visit", dayUTC),
+    countSince("visit", monthUTC),
+    countSince("visit", yearUTC),
+    countSince("visit"),
+    uniqueSince(dayUTC),
+    uniqueSince(monthUTC),
+    uniqueSince(yearUTC),
+    uniqueSince(),
+  ]);
+  return {
+    day, month, year, total,
+    unique: { day: uDay, month: uMonth, year: uYear, total: uTotal },
+  };
+}
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...CORS, "content-type": "application/json" } });

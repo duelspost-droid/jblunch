@@ -894,10 +894,10 @@ function init() {
   loadComments();
   loadStock();
   track('visit');
-  // 관리자 페이지는 별도(admin.html). #admin 접근 시 리다이렉트
-  if (location.hash === '#admin') location.href = 'admin.html';
+  // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
+  if (location.hash === '#admin') location.href = 'manage-jbax.html';
 }
-window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'admin.html'; });
+window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'manage-jbax.html'; });
 
 async function loadComments() {
   setBadge('loading', '동기화 중…');
