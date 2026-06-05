@@ -132,7 +132,10 @@
   <!-- 로그 + 비번변경 (로그인 후) -->
   <div id="panel" class="hidden">
     <div class="card">
-      <h2>👥 방문자 통계</h2>
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">👥 방문자 통계</h2>
+        <button class="btn gray" onclick="logout()">로그아웃</button>
+      </div>
       <div class="vstats" id="vstats"></div>
       <div class="chart-head">📈 최근 14일 방문 추이</div>
       <div class="chart" id="chart"></div>
@@ -206,6 +209,13 @@ async function adminCall(payload){
   return { ok: res.ok, data };
 }
 
+const SESSION_KEY = 'jbadm';
+
+function showPanel(){
+  document.getElementById('login-card').classList.add('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+}
+
 async function login(){
   const pw = document.getElementById('pw').value;
   const msg = document.getElementById('login-msg');
@@ -214,9 +224,28 @@ async function login(){
   const { ok, data } = await adminCall({ password: pw, limit: 300 });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'로그인 실패'); return; }
   curPw = pw;
-  document.getElementById('login-card').classList.add('hidden');
-  document.getElementById('panel').classList.remove('hidden');
+  try { sessionStorage.setItem(SESSION_KEY, pw); } catch(e) {}  // 새로고침 시 로그인 유지
+  showPanel();
   render(data);
+}
+
+// 새로고침 시 세션에 저장된 비번으로 자동 재로그인
+async function restoreSession(){
+  let pw = '';
+  try { pw = sessionStorage.getItem(SESSION_KEY) || ''; } catch(e) {}
+  if(!pw) return;
+  const { ok, data } = await adminCall({ password: pw, limit: 300 });
+  if(ok){ curPw = pw; showPanel(); render(data); }
+  else { try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} }
+}
+
+function logout(){
+  curPw = '';
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('login-card').classList.remove('hidden');
+  document.getElementById('pw').value = '';
+  const m = document.getElementById('login-msg'); if(m){ m.className='msg'; m.textContent=''; }
 }
 
 async function loadLogs(){
@@ -302,9 +331,13 @@ async function changePw(){
   const { ok, data } = await adminCall({ password: curPw, action:'change_password', newPassword: np1 });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'변경 실패'); return; }
   curPw = np1;
+  try { sessionStorage.setItem(SESSION_KEY, np1); } catch(e) {}  // 세션 비번도 갱신
   document.getElementById('np1').value=''; document.getElementById('np2').value='';
   msg.className='msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다.';
 }
+
+// 페이지 로드 시 자동 재로그인 시도
+restoreSession();
 </script>
 </body>
 </html>
