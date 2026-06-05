@@ -900,7 +900,7 @@ function init() {
   if (location.hash === '#admin') location.href = 'manage-jbax.html';
 }
 
-// 앱: 매일 오전 11:30 '오늘의 점심 추천' 로컬 알림 (Firebase 불필요)
+// 앱: 매일 오전 8:30 '오늘의 점심 추천' 로컬 알림 (Firebase 불필요)
 async function setupDailyNotification() {
   try {
     const cap = window.Capacitor;
@@ -916,7 +916,7 @@ async function setupDailyNotification() {
         id: 1101,
         title: '🍽️ 오늘의 점심 추천',
         body: '여의도 JB빌딩 근처 맛집 추천이 준비됐어요. 확인해보세요!',
-        schedule: { on: { hour: 11, minute: 30 }, allowWhileIdle: true },
+        schedule: { on: { hour: 8, minute: 30 }, allowWhileIdle: true },
         smallIcon: 'ic_launcher',
       }]
     });
