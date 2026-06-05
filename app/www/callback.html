@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카카오 인증 완료</title>
+<style>
+  body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f5f6fa; }
+  .box { background: #fff; border-radius: 16px; padding: 32px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 480px; width: 90%; }
+  .icon { font-size: 3rem; margin-bottom: 16px; }
+  h2 { color: #333; margin: 0 0 8px; }
+  p { color: #888; font-size: 0.9rem; margin: 0 0 24px; }
+  .code-box { background: #f8f8f8; border: 2px solid #e85d04; border-radius: 10px; padding: 14px; font-family: monospace; font-size: 0.85rem; word-break: break-all; color: #333; margin-bottom: 16px; }
+  .btn { background: #e85d04; color: #fff; border: none; border-radius: 10px; padding: 12px 24px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+  .error { color: #e53e3e; }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="icon">⏳</div>
+  <h2>처리 중...</h2>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const code = params.get('code');
+const error = params.get('error');
+const box = document.getElementById('box');
+
+if (code) {
+  box.innerHTML = `
+    <div class="icon">✅</div>
+    <h2>인증 완료!</h2>
+    <p>아래 인증 코드를 Claude에게 전달해 주세요</p>
+    <div class="code-box" id="code">${code}</div>
+    <button class="btn" onclick="navigator.clipboard.writeText('${code}').then(()=>this.textContent='✅ 복사됨!')">📋 코드 복사</button>
+  `;
+} else if (error) {
+  box.innerHTML = `
+    <div class="icon">❌</div>
+    <h2 class="error">오류 발생</h2>
+    <p>${error}: ${params.get('error_description') || ''}</p>
+  `;
+} else {
+  box.innerHTML = `
+    <div class="icon">❓</div>
+    <h2>파라미터 없음</h2>
+    <p>카카오 인증 후 이 페이지로 리다이렉트됩니다</p>
+  `;
+}
+</script>
+</body>
+</html>

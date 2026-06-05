@@ -894,8 +894,27 @@ function init() {
   loadComments();
   loadStock();
   track('visit');
+  refreshHistoryForApp();   // 앱(번들)에서 최신 추천 갱신
   // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
   if (location.hash === '#admin') location.href = 'manage-jbax.html';
+}
+
+// 번들 앱(Capacitor/localhost)에서는 내장된 추천이 오래될 수 있어
+// GitHub raw(HTTPS)에서 최신 history.json을 받아 HISTORY_DATA를 갱신.
+async function refreshHistoryForApp() {
+  const isApp = !!(window.Capacitor) || location.protocol === 'capacitor:'
+             || location.protocol === 'file:' || location.hostname === 'localhost';
+  if (!isApp) return;   // 일반 웹은 배포 시점 데이터가 이미 최신
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/duelspost-droid/jblunch/master/history.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const recs = Array.isArray(data) ? data : (data.recommendations || []);
+    if (recs.length) {
+      HISTORY_DATA.splice(0, HISTORY_DATA.length, ...recs);
+      renderHistory(); renderStats();
+    }
+  } catch (e) {}
 }
 window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'manage-jbax.html'; });
 

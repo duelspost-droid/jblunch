@@ -3,23 +3,2027 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JB 맛집 트래커</title>
+<title>🍽️ JB×AX 맛집 트래커</title>
 <style>
-  html,body{margin:0;height:100%;background:#0a3d7a;color:#fff;
-    font-family:-apple-system,'Noto Sans KR',sans-serif;
-    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-  .logo{font-size:1.4rem;font-weight:900;background:#fff;color:#0a3d7a;
-    width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center}
-  .sp{width:26px;height:26px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;
-    border-radius:50%;animation:s .7s linear infinite}
-  @keyframes s{to{transform:rotate(360deg)}}
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #f5f6fa;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+  .app-header {
+    background: linear-gradient(100deg, #0a3d7a 0%, #1565c0 100%);
+    padding: 15px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(10,61,122,0.18);
+  }
+  .app-header .logo {
+    font-size: 0.95rem; font-weight: 900; letter-spacing: 0.5px;
+    background: #fff; color: #0a3d7a;
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .app-header .title-block h1 { font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+  .app-header .title-block h1 .hl-ax {
+    background: linear-gradient(90deg, #ffd54a, #ffb300);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900; letter-spacing: 0;
+  }
+  .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .sync-badge {
+    margin-left: auto;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .sync-badge.ok { background: #c6f6d5; color: #22543d; }
+  .sync-badge.loading { background: #ebf8ff; color: #2b6cb0; }
+  .sync-badge.err { background: #fff5f5; color: #c53030; }
+
+  .tabs {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 0 16px;
+  }
+  .tab {
+    padding: 11px 16px;
+    border: none;
+    background: none;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab.active { color: #0a3d7a; border-bottom-color: #0a3d7a; }
+
+  .content { padding: 14px; max-width: 640px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* PC 반응형: 넓은 화면에서 폭 확대 + 카드 2단 */
+  @media (min-width: 900px) {
+    .content { max-width: 1000px; padding: 18px 24px; }
+    .section .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; align-items: start; }
+    /* 상단 영역도 카드와 같은 전체 폭으로 정렬 (가운데 몰림 방지) */
+    .top-banner, .meal-info, .pref-card { max-width: 100%; }
+    .meal-toggle { max-width: 560px; }   /* 토글 버튼만 과도하게 넓어지지 않게 살짝 제한(좌측 정렬) */
+    .tabs { padding: 0 24px; }
+  }
+
+  .sub-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .sub-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #aaa;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sub-tab.active { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
+
+  .date-group { margin-bottom: 22px; }
+  .date-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.05em;
+    margin-bottom: 9px;
+  }
+  .weather-comment {
+    background: linear-gradient(135deg, #eef4fb, #e3eef9);
+    border-left: 3px solid #0a3d7a;
+    border-radius: 10px;
+    padding: 10px 13px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    color: #555;
+    line-height: 1.5;
+  }
+  .cards { display: flex; flex-direction: column; gap: 9px; }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 13px 13px 13px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.1); }
+  .card-stripe {
+    width: 4px;
+    flex-shrink: 0;
+    background: #e2e8f0;
+    margin-right: 11px;
+  }
+  .card.visited .card-stripe { background: #48bb78; }
+
+  .card-emoji { font-size: 1.6rem; flex-shrink: 0; margin-right: 9px; align-self: flex-start; padding-top: 2px; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+  .card-name { font-weight: 700; font-size: 0.95rem; }
+  .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
+  .badge-review { background: #fff4d6; color: #b7791f; }
+  .badge-tag { background: #ede9fe; color: #6b46c1; }
+  .extra-head {
+    font-size: 0.8rem; font-weight: 700; color: #6b46c1;
+    margin: 16px 0 9px; padding-top: 13px;
+    border-top: 1px dashed #e2e2ea;
+  }
+  .card.card-extra { background: #faf9ff; }
+  .card.card-extra .card-stripe { background: #b794f4; }
+  .card.has-review .card-stripe { background: #f6b73c; }
+  .modal-intro {
+    background: #f0f5fb; border-radius: 10px; padding: 12px 14px;
+    font-size: 0.88rem; color: #44566b; line-height: 1.55; margin-bottom: 12px;
+  }
+  /* 모달 상단 맛집 상세 정보 */
+  .modal-detail {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  }
+  .modal-detail .md-chip {
+    font-size: 0.78rem; padding: 5px 11px; border-radius: 20px;
+    background: #f4f7fb; color: #44566b; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .modal-detail .md-map {
+    margin-left: auto; font-size: 0.78rem; padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
+    text-decoration: none; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .modal-detail .md-map:hover { background: #03c75a; color: #fff; }
+  .modal-detail .md-map.nomap { border-color: #d0d0d0; background: #f3f3f3; color: #999; }
+  .modal-reviews {
+    margin-bottom: 16px; max-height: 42vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+    background: #f7f9fc; border: 1px solid #e9eef5; border-radius: 14px;
+    padding: 14px;
+  }
+  .modal-reviews .mr-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 0.92rem; font-weight: 800; color: #0a3d7a;
+    padding-bottom: 10px; margin-bottom: 2px; border-bottom: 1.5px solid #e3eaf3;
+  }
+  .modal-reviews .mr-head .mr-avg {
+    margin-left: auto; font-size: 0.82rem; font-weight: 700; color: #d69e2e;
+    background: #fff7e6; border: 1px solid #f5e3b8; border-radius: 20px; padding: 3px 10px;
+  }
+  .modal-reviews .review-item {
+    background: #fff; border: 1px solid #edf1f6; border-radius: 11px;
+    padding: 11px 13px; box-shadow: 0 1px 2px rgba(20,40,80,0.03);
+  }
+  .modal-reviews .review-name { font-size: 0.86rem; }
+  .modal-reviews .review-content {
+    font-size: 0.87rem; color: #3a4658; line-height: 1.55; margin-top: 4px;
+  }
+  .modal-reviews .review-stars { font-size: 0.82rem; }
+  /* 리뷰 작성 섹션 */
+  .modal-write {
+    border-top: 2px dashed #e2e8f0; padding-top: 16px; margin-top: 4px;
+  }
+  .modal-write .mw-head {
+    font-size: 0.92rem; font-weight: 800; color: #0a3d7a; margin-bottom: 12px;
+  }
+  .modal-row { display: flex; gap: 10px; }
+  .modal-row .mf-name { flex: 1; margin-bottom: 11px; }
+  .modal-row .mf-stars { flex-shrink: 0; margin-bottom: 11px; }
+
+  .card-feature { font-size: 0.81rem; color: #555; margin-bottom: 6px; line-height: 1.5; }
+  .card-meta { display: flex; gap: 11px; font-size: 0.75rem; color: #999; flex-wrap: wrap; }
+
+  /* 다중 리뷰 블록 */
+  .reviews-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f3f3f3;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .review-item {
+    background: #fafafa;
+    border-radius: 9px;
+    padding: 8px 10px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    position: relative;
+  }
+  .review-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #0a3d7a;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .review-right { flex: 1; min-width: 0; }
+  .review-header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; flex-wrap: wrap; }
+  .review-name { font-size: 0.8rem; font-weight: 700; color: #333; }
+  .review-stars { font-size: 0.75rem; }
+  .review-date { font-size: 0.68rem; color: #bbb; }
+  .review-content { font-size: 0.8rem; color: #555; line-height: 1.5; }
+  .btn-del-review {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.13s, background 0.13s;
+    line-height: 1;
+  }
+  .btn-del-review:hover { color: #e53e3e; background: #fff0f0; }
+  .review-actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .btn-edit-review {
+    background: none; border: none; cursor: pointer; color: #bbb;
+    font-size: 0.8rem; padding: 2px 4px; border-radius: 4px;
+    transition: color 0.13s, background 0.13s; line-height: 1;
+  }
+  .btn-edit-review:hover { color: #0a3d7a; background: #eef4fb; }
+  .no-reviews { font-size: 0.76rem; color: #ccc; padding: 2px 0; }
+
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+    padding-left: 9px;
+    align-self: flex-start;
+    padding-top: 2px;
+  }
+  .btn-review {
+    font-size: 0.71rem;
+    padding: 5px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.13s;
+    border: 1.5px solid #0a3d7a; background: #fff; color: #0a3d7a;
+  }
+  .btn-review:hover { background: #0a3d7a; color: #fff; }
+  .btn-map {
+    font-size: 0.71rem;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.13s;
+    border: 1.5px solid #03c75a; background: #fff; color: #03c75a;
+    text-decoration: none; display: inline-block; text-align: center;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-map:hover { background: #03c75a; color: #fff; }
+  .btn-map.nomap {
+    border-color: #d0d0d0; background: #f3f3f3; color: #999;
+    cursor: default;
+  }
+  .btn-map.nomap:hover { background: #f3f3f3; color: #999; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media(min-width:400px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .stat-num { font-size: 1.8rem; font-weight: 800; color: #0a3d7a; line-height: 1; }
+  .stat-label { font-size: 0.72rem; color: #999; margin-top: 4px; }
+
+  /* 내 근처 맛집 검색 */
+  .place-search-card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; }
+  .place-head-row { display: flex; align-items: center; justify-content: space-between; }
+  .place-refresh { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 8px; }
+  .place-refresh:hover { background: #f0f5fb; }
+  .place-head-btns { display: flex; align-items: center; gap: 4px; }
+  .place-close {
+    background: #f1f3f6; border: none; cursor: pointer; color: #667;
+    font-size: 0.74rem; font-weight: 600; padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+  }
+  .place-close:hover { background: #e6534212; color: #e65342; }
+  .place-search-row { display: flex; gap: 8px; margin-top: 10px; }
+  .place-input {
+    flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 12px; font-size: 0.86rem; font-family: inherit; color: #333;
+  }
+  .place-input:focus { outline: none; border-color: #0a3d7a; }
+  .place-btn {
+    background: #0a3d7a; color: #fff; border: none; border-radius: 10px;
+    padding: 9px 16px; font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .place-hint { font-size: 0.78rem; color: #aaa; padding: 12px 2px 2px; line-height: 1.5; }
+  .place-nearby-btn {
+    width: 100%; margin-top: 12px; padding: 13px 0;
+    background: linear-gradient(100deg, #0a3d7a, #1565c0); color: #fff;
+    border: none; border-radius: 12px; font-size: 0.92rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(10,61,122,0.22);
+    transition: opacity 0.13s;
+  }
+  .place-nearby-btn:hover { opacity: 0.92; }
+  .place-origin { font-size: 0.74rem; color: #0a3d7a; font-weight: 600; padding: 10px 2px 4px; }
+  .place-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 4px; border-bottom: 1px solid #f3f3f3;
+  }
+  .place-item:last-child { border-bottom: none; }
+  .place-info { flex: 1; min-width: 0; cursor: pointer; }
+  .place-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+  .src-badge { font-size: 0.64rem; padding: 1px 6px; border-radius: 9px; font-weight: 700; vertical-align: middle; }
+  .src-badge.src-kakao { background: #fee500; color: #3a1d1d; }
+  .src-badge.src-naver { background: #03c75a; color: #fff; }
+  .place-sub { font-size: 0.76rem; color: #777; }
+  .place-addr { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
+  .place-review-btn {
+    flex-shrink: 0; border: 1.5px solid #0a3d7a; background: #fff; color: #0a3d7a;
+    border-radius: 9px; padding: 7px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    transition: all 0.13s;
+  }
+  .place-review-btn:hover { background: #0a3d7a; color: #fff; }
+  .top-list { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .top-list h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 11px; }
+  .top-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 8px; border-bottom: 1px solid #f5f5f5; cursor: pointer; border-radius: 8px; transition: background 0.13s; }
+  .top-item:hover { background: #f0f5fb; }
+  .top-item:last-child { border-bottom: none; }
+  .top-rank { font-size: 1rem; font-weight: 800; color: #0a3d7a; width: 20px; text-align: center; padding-top: 1px; }
+  .top-info { flex: 1; min-width: 0; }
+  .top-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+  .top-stars-inline { font-size: 0.74rem; font-weight: 500; color: #f0a020; white-space: nowrap; }
+  .top-stars-inline small { color: #aaa; }
+  .top-cuisine { font-size: 0.74rem; color: #2b6cb0; font-weight: 600; }
+  .top-feature {
+    font-size: 0.78rem; color: #666; line-height: 1.45; margin: 3px 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .top-meta { display: flex; gap: 11px; font-size: 0.73rem; color: #999; flex-wrap: wrap; }
+  .top-stars { font-size: 0.82rem; }
+
+  .skeleton { background: #eee; border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* 리뷰 작성 모달 */
+  .modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  @media(min-width:480px) { .modal-bg { align-items: center; } }
+  .modal {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 20px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  @media(min-width:480px) { .modal { border-radius: 18px; max-height: 88vh; } }
+  .modal h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 14px; }
+  .modal-field { margin-bottom: 11px; }
+  .modal-field label { font-size: 0.78rem; font-weight: 600; color: #555; display: block; margin-bottom: 5px; }
+  .modal-field input[type="text"] {
+    width: 100%;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 11px; font-size: 0.86rem;
+    font-family: inherit; color: #333;
+  }
+  .modal-field input[type="text"]:focus { outline: none; border-color: #0a3d7a; }
+  .modal-meal { display: flex; gap: 7px; }
+  .meal-pick {
+    flex: 1; padding: 8px 0; border-radius: 9px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-size: 0.82rem; font-weight: 600; color: #888;
+    cursor: pointer; transition: all 0.13s;
+  }
+  .meal-pick.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
+  .review-meal { font-size: 0.66rem; padding: 1px 6px; border-radius: 10px; background: #eef2f7; color: #4a5568; font-weight: 600; }
+  .modal-stars { display: flex; gap: 5px; font-size: 1.5rem; cursor: pointer; padding-top: 2px; }
+  .modal-stars span { opacity: 0.22; transition: opacity 0.1s; }
+  .modal-stars span.lit { opacity: 1; }
+  .modal textarea {
+    width: 100%; height: 80px;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 11px; font-size: 0.86rem; resize: none;
+    font-family: inherit; color: #333; line-height: 1.5;
+  }
+  .modal textarea:focus { outline: none; border-color: #0a3d7a; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 11px; justify-content: flex-end; }
+  .btn-cancel { background: #f5f5f5; color: #666; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
+  .btn-save { background: #0a3d7a; color: #fff; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
+  .saving-msg { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: right; min-height: 18px; }
+
+  .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
+
+  /* 삭제 확인 토스트 */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1a1a2e; color: #fff;
+    padding: 10px 18px; border-radius: 12px;
+    font-size: 0.83rem; font-weight: 500;
+    z-index: 100; display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    white-space: nowrap;
+  }
+  .toast.show { display: block; animation: fadeInUp 0.2s ease; }
+  @keyframes fadeInUp { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  /* 상단 날짜+날씨 배너 */
+  .top-banner {
+    background: #fff;
+    border-left: 4px solid #0a3d7a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 6px rgba(10,61,122,0.08);
+  }
+  .top-banner .tb-date { font-size: 0.95rem; font-weight: 800; color: #0a3d7a; margin-bottom: 5px; }
+  .top-banner .tb-weather { font-size: 0.83rem; line-height: 1.5; color: #556; }
+  .top-banner .tb-msg { font-size: 0.84rem; line-height: 1.55; color: #1e3a5f; margin-top: 7px; font-weight: 500; }
+  .top-banner .tb-news { margin-top: 10px; padding-top: 9px; border-top: 1px dashed #e2e8f0; }
+  .top-banner .tb-news-head { font-size: 0.74rem; font-weight: 700; color: #0a3d7a; margin-bottom: 5px; }
+  .top-banner .tb-news-item {
+    display: block; font-size: 0.78rem; color: #556; line-height: 1.5;
+    text-decoration: none; padding: 2px 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .top-banner .tb-news-item:hover { color: #0a3d7a; text-decoration: underline; }
+  .top-banner .tb-stock {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+    margin-top: 10px; padding-top: 9px; border-top: 1px dashed #e2e8f0;
+  }
+  .top-banner .tb-stock:empty { display: none; }
+  .tb-stock-head { font-size: 0.74rem; font-weight: 700; color: #0a3d7a; }
+  .tb-stock-loading { font-size: 0.74rem; color: #aab4c0; }
+  .tb-stock-price { font-size: 0.92rem; font-weight: 800; color: #1e3a5f; }
+  .tb-stock-change { font-size: 0.78rem; font-weight: 700; }
+  .tb-stock-change.up { color: #e03131; }
+  .tb-stock-change.down { color: #1c64f2; }
+  .tb-stock-change.flat { color: #868e96; }
+  .tb-stock-mk { font-size: 0.68rem; font-weight: 700; color: #98a2b3; background: #f1f3f6; border-radius: 10px; padding: 2px 8px; }
+  .tb-stock-mk.live { color: #2f9e44; background: #ebfbee; }
+
+  /* 시간대(점심/저녁/술집) 토글 */
+  .meal-toggle {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .meal-btn {
+    flex: 1; padding: 11px 0; border-radius: 12px;
+    border: 1.5px solid #d8e2ee; background: #fff;
+    font-size: 0.9rem; font-weight: 700; color: #8794a6;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .meal-btn.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; box-shadow: 0 2px 8px rgba(10,61,122,0.25); }
+  .meal-info {
+    font-size: 0.74rem; color: #8794a6; line-height: 1.5;
+    background: #f4f7fb; border-radius: 9px; padding: 8px 11px; margin-bottom: 14px;
+  }
+  .meal-info b { color: #0a3d7a; font-weight: 700; }
+  .batch-note {
+    font-size: 0.72rem; color: #9aa6b5; line-height: 1.5;
+    margin: -8px 2px 14px; padding: 0 2px;
+  }
+  .batch-note b { color: #4a6285; font-weight: 700; }
+
+  /* 컨디션 입력 */
+  .pref-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+  }
+  .pref-title { font-size: 0.82rem; font-weight: 700; color: #333; margin-bottom: 10px; }
+  .pref-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+  .pref-chip {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-size: 0.76rem; font-weight: 600; color: #888;
+    cursor: pointer; transition: all 0.13s;
+  }
+  .pref-chip.on { border-color: #0a3d7a; background: #0a3d7a; color: #fff; }
+  .pref-input-row { display: flex; gap: 8px; }
+  .pref-input {
+    flex: 1; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 8px 11px; font-size: 0.84rem; font-family: inherit; color: #333;
+  }
+  .pref-input:focus { outline: none; border-color: #0a3d7a; }
+  .pref-submit {
+    background: #0a3d7a; color: #fff; border: none;
+    border-radius: 10px; padding: 8px 14px;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer;
+    white-space: nowrap;
+  }
+  .pref-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pref-saved { font-size: 0.76rem; color: #48bb78; margin-top: 7px; min-height: 16px; }
+
+  /* 진행 프로그래스 + 답변 코멘트 */
+  .pref-progress {
+    margin-top: 10px;
+    display: none;
+  }
+  .pref-progress.show { display: block; }
+  .pref-progress-label {
+    font-size: 0.78rem; color: #0a3d7a; font-weight: 600;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .pref-progress-bar {
+    height: 6px; background: #f0f0f0; border-radius: 6px; overflow: hidden;
+  }
+  .pref-progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #0a3d7a, #1565c0);
+    border-radius: 6px; transition: width 0.25s ease;
+  }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid #bcd4ee; border-top-color: #0a3d7a;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pref-answer {
+    margin-top: 11px; padding: 11px 13px;
+    background: linear-gradient(135deg, #eef4fb, #e3eef9);
+    border: 1px solid #c5dbf0; border-radius: 12px;
+    font-size: 0.83rem; color: #1e3a5f; line-height: 1.55;
+    display: none; animation: fadeInUp 0.25s ease;
+  }
+  .pref-answer.show { display: block; }
+  .pref-answer .pa-head { font-weight: 700; color: #0a3d7a; margin-bottom: 3px; }
+
+  /* 검색 히스토리 */
+  .pref-history {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px dashed #eee;
+  }
+  .pref-history-head {
+    font-size: 0.72rem; color: #aaa; font-weight: 600;
+    margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .pref-history-clear {
+    background: none; border: none; color: #ccc; cursor: pointer;
+    font-size: 0.7rem; padding: 0;
+  }
+  .pref-history-clear:hover { color: #e53e3e; }
+  .pref-history-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 6px 5px 10px; border-radius: 16px;
+    background: #f7f7f9; border: 1px solid #ececf0;
+    font-size: 0.74rem; color: #555;
+    transition: all 0.13s; max-width: 220px;
+  }
+  .hist-chip:hover { background: #e3eef9; border-color: #c5dbf0; }
+  .hist-chip .hc-main { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-width: 0; }
+  .hist-chip:hover .hc-text { color: #0a3d7a; }
+  .hist-chip .hc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-chip .hc-cond { font-size: 0.68rem; color: #aaa; flex-shrink: 0; }
+  .hist-chip .hc-del {
+    flex-shrink: 0; border: none; background: none; cursor: pointer;
+    color: #bbb; font-size: 0.8rem; line-height: 1; padding: 2px 4px; border-radius: 50%;
+    transition: all 0.12s;
+  }
+  .hist-chip .hc-del:hover { color: #fff; background: #e53e3e; }
+  /* 예약 팝업 */
+  .reserve-modal { max-width: 420px; }
+  .reserve-sub { font-size: 0.82rem; color: #888; margin: -6px 0 14px; }
+  .reserve-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+  .reserve-opt {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+    background: #fff; cursor: pointer; text-decoration: none; color: #222;
+    font-size: 0.92rem; font-weight: 700; transition: all 0.13s;
+  }
+  .reserve-opt:hover { border-color: #0a3d7a; background: #f0f5fb; }
+  .reserve-opt.naver { border-color: #03c75a; }
+  .reserve-opt.naver:hover { background: #ecfbf1; }
+  .reserve-opt.disabled { opacity: 0.55; cursor: default; pointer-events: none; }
+  .reserve-opt .ro-emoji { font-size: 1.3rem; flex-shrink: 0; }
+  .reserve-opt .ro-text { flex: 1; min-width: 0; }
+  .reserve-opt .ro-desc { font-size: 0.76rem; font-weight: 500; color: #888; margin-top: 2px; }
+  .reserve-opt .ro-arrow { color: #bbb; font-size: 1rem; }
+  /* 추천 카드 예약 버튼 */
+  .btn-reserve {
+    font-size: 0.71rem; padding: 5px 9px; border-radius: 8px; cursor: pointer;
+    font-weight: 600; white-space: nowrap; transition: all 0.13s;
+    border: 1.5px solid #d69e2e; background: #fff; color: #b7791f;
+  }
+  .btn-reserve:hover { background: #d69e2e; color: #fff; }
+  /* 모바일에서 입력창 포커스 시 자동 확대(줌) 방지 — 폰트 16px 이상이면 iOS가 확대하지 않음 */
+  @media (max-width: 600px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
 </style>
 </head>
 <body>
-  <div class="logo">JB</div>
-  <div>맛집 트래커 불러오는 중…</div>
-  <div class="sp"></div>
-  <!-- server.url(라이브 사이트)이 설정되어 있어 실제로는 원격 페이지가 로드됩니다.
-       네트워크 불가 시 이 화면이 폴백으로 표시됩니다. -->
+
+<div class="app-header">
+  <span class="logo">JB</span>
+  <div class="title-block">
+    <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
+    <p>여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('history',this)">🍽️ 오늘의 추천</button>
+  <button class="tab" onclick="showTab('stats',this)">📝 리뷰</button>
+</div>
+
+<div class="content">
+  <div id="tab-history" class="section active"></div>
+  <div id="tab-stats" class="section"></div>
+</div>
+
+<!-- 예약 팝업 -->
+<div class="modal-bg" id="reserve-bg">
+  <div class="modal reserve-modal">
+    <h3 id="reserve-title">📞 예약</h3>
+    <div class="reserve-sub" id="reserve-sub"></div>
+    <div class="reserve-opts" id="reserve-opts"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeReserve()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 리뷰 작성 모달 -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h3 id="modal-title">📝 리뷰 남기기</h3>
+    <div class="modal-detail" id="modal-detail"></div>
+    <div class="modal-intro" id="modal-intro"></div>
+    <div class="modal-reviews" id="modal-reviews"></div>
+    <div class="modal-write" id="modal-write">
+      <div class="mw-head" id="modal-write-head">✍️ 리뷰 작성</div>
+      <div class="modal-field">
+        <label>언제 방문</label>
+        <div class="modal-meal" id="modal-meal">
+          <button type="button" class="meal-pick" data-meal="점심" onclick="selectModalMeal(this)">🍚 점심</button>
+          <button type="button" class="meal-pick" data-meal="저녁" onclick="selectModalMeal(this)">🌙 저녁</button>
+          <button type="button" class="meal-pick" data-meal="술집" onclick="selectModalMeal(this)">🍺 술집</button>
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-field mf-name">
+          <label>이름</label>
+          <input type="text" id="modal-name" placeholder="이름" maxlength="20">
+        </div>
+        <div class="modal-field mf-stars">
+          <label>별점</label>
+          <div class="modal-stars" id="modal-stars">
+            <span data-v="1">⭐</span><span data-v="2">⭐</span>
+            <span data-v="3">⭐</span><span data-v="4">⭐</span><span data-v="5">⭐</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>리뷰 내용</label>
+        <textarea id="modal-text" placeholder="방문 소감을 자유롭게 적어주세요…"></textarea>
+      </div>
+      <div class="saving-msg" id="saving-msg"></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">취소</button>
+        <button class="btn-save" id="btn-save" onclick="saveReview()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Supabase 설정 ─────────────────────────────────────────────
+const SB_URL = 'https://nrdapzgtibbusvoaceuh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM';
+const SB_HEADERS = {
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json'
+};
+
+// ── 접속/작업 로그 ────────────────────────────────────────────
+const TRACK_URL = `${SB_URL}/functions/v1/track`;
+function track(action, detail) {
+  try {
+    fetch(TRACK_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, detail: detail || '', path: location.pathname + location.hash })
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+// ── 추천 이력 데이터 (SKILL이 매일 자동 업데이트) ──────────────
+const HISTORY_DATA = [{"date": "2026-06-05", "comment": "부분적으로 흐린 날씨에 강수확률이 높으니, 따뜻한 국물 요리로 마음까지 따뜻하게 데워보세요. 시황의 변동성에도 근처 명가들은 안정적인 맛으로 신뢰를 주고 있습니다.", "message": "오늘은 부분적으로 흐리고 강수확률이 높으니 따뜻한 국물 요리인 희정식당이나 장어나루를 추천드립니다. 한편 오늘 코스피가 급락세를 보이고 있으나, 은행주가 강세를 보이는 만큼 JB금융의 임직원 여러분도 안정적인 하루를 보내시기를 바랍니다.", "weather": "부분적으로 흐림 19°C (최저 17° / 최고 25°), 강수확률 73%☔", "news": [{"title": "[이 시각 시황] 美 증시 강세에 제약·바이오 급등…국내 제약주 동반 강...", "link": "https://biz.sbs.co.kr/article_hub/20000314592?division=NAVER"}, {"title": "[특징주] 코스피 급락에 대피처로 쏠린 투심…은행株 강세", "link": "https://www.etoday.co.kr/news/view/2590769"}, {"title": "코스피, 장초반 5% 넘게 급락해 8100선 후퇴...반도체·자동차 급락에 금...", "link": "https://www.pinpointnews.co.kr/news/articleView.html?idxno=457745"}], "restaurants": [{"name": "희정식당", "cuisine": "한식", "feature": "국물 요리 명가, 깊은 국맛", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-1", "verified": true}, {"name": "카츠아지 여의도점", "cuisine": "일식", "feature": "프리미엄 돈카츠, 섬세한 조리", "price": "보통", "distance": "도보 4분 (네이버)", "id": "20260605-2", "verified": true}, {"name": "장어나루", "cuisine": "일식", "feature": "가성비 좋은 장어덮밥, 조용한 분위기", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-3", "verified": true}, {"name": "달리181 여의도점", "cuisine": "양식", "feature": "부티크 다이닝, 예술적 플레이팅", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-4", "verified": true}, {"name": "미도인 파이낸스 여의도점", "cuisine": "일식", "feature": "덮밥·온면, 주차 지원", "price": "저렴", "distance": "도보 5분 (카카오)", "id": "20260605-5", "verified": true}], "extras": [], "by_condition": {"해장 필요": [{"name": "희정식당", "cuisine": "한식", "feature": "깊은 국맛의 찌개·국수", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-해장-1", "verified": true}, {"name": "약산순대국", "cuisine": "한식", "feature": "전통 순대국", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-해장-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식", "feature": "아침 일찍부터, 구수한 국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-해장-3", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "진한 국물, 푸짐한 재료", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-해장-4", "verified": true}, {"name": "신송한식", "cuisine": "한식", "feature": "깔끔한 정식, 국물 요리", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-해장-5", "verified": true}], "매콤하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "자극적인 국물의 부대찌개", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-매콤-1", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "마라 요리, 중식 스타일", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-매콤-2", "verified": true}, {"name": "강공순할매집", "cuisine": "한식", "feature": "칼칼한 맛의 한식", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-매콤-3", "verified": true}, {"name": "지리산명가", "cuisine": "한식", "feature": "매콤한 양념 요리", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-매콤-4", "verified": true}, {"name": "고돈집", "cuisine": "한식", "feature": "칼칼한 한식 구이", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-매콤-5", "verified": true}], "가볍게": [{"name": "카츠아지 여의도점", "cuisine": "일식", "feature": "바삭한 튀김, 깔끔한 소스", "price": "보통", "distance": "도보 4분 (네이버)", "id": "20260605-가볍-1", "verified": true}, {"name": "장어나루", "cuisine": "일식", "feature": "담백한 장어 요리", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-가볍-2", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "신선한 일식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-가볍-3", "verified": true}, {"name": "온미동", "cuisine": "일식", "feature": "가정식 일본요리", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-가볍-4", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페/디저트", "feature": "가벼운 음료와 스낵", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-가볍-5", "verified": true}], "든든하게": [{"name": "독도참치앤전복 여의도점", "cuisine": "한식", "feature": "푸짐한 한끼, 흰살 생선", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260605-든든-1", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·정식, 푸짐한 구성", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-든든-2", "verified": true}, {"name": "화동활어복", "cuisine": "한식", "feature": "신선한 회, 푸짐한 한끼", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260605-든든-3", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브", "feature": "따뜻한 국물, 푸짐한 구성", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-든든-4", "verified": true}, {"name": "사랑채", "cuisine": "한식", "feature": "정성스러운 한식 정식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-든든-5", "verified": true}], "일식": [{"name": "카츠아지 여의도점", "cuisine": "일식", "feature": "프리미엄 돈카츠", "price": "보통", "distance": "도보 4분 (네이버)", "id": "20260605-일식-1", "verified": true}, {"name": "장어나루", "cuisine": "일식", "feature": "가성비 좋은 장어덮밥", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-일식-2", "verified": true}, {"name": "하반", "cuisine": "일식", "feature": "우아한 일식 코스", "price": "비쌈", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260605-일식-3", "verified": true}, {"name": "온미동", "cuisine": "일식", "feature": "일본가정식", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-일식-4", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식", "feature": "카레 전문", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260605-일식-5", "verified": true}], "한식": [{"name": "희정식단", "cuisine": "한식", "feature": "국물 명가", "price": "보통", "distance": "거리 미확인", "id": "20260605-한식-1", "verified": false}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·정식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-한식-2", "verified": true}, {"name": "화동활어복", "cuisine": "한식", "feature": "신선한 회 요리", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260605-한식-3", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식", "feature": "참치·전복 요리", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260605-한식-4", "verified": true}, {"name": "청식당", "cuisine": "한식", "feature": "정갈한 한식", "price": "보통", "distance": "도보 2분 (카카오) / 7분 (네이버)", "id": "20260605-한식-5", "verified": true}], "고기": [{"name": "고우가 여의도점", "cuisine": "한식", "feature": "1++ 한우 오마카세", "price": "비쌈", "distance": "도보 12분 (카카오) / 12분 (네이버)", "id": "20260605-고기-1", "verified": true}, {"name": "한암동 여의도점", "cuisine": "한식", "feature": "프라이빗 한우 다이닝", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-고기-2", "verified": true}, {"name": "모도우 여의도점", "cuisine": "한식", "feature": "한우 샤브샤브·구이", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-고기-3", "verified": true}, {"name": "로스옥 여의도점", "cuisine": "한식", "feature": "한우 무한리필(주말)", "price": "비쌈", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-고기-4", "verified": true}, {"name": "고돈집", "cuisine": "한식", "feature": "돼지고기 구이", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-고기-5", "verified": true}], "혼밥": [{"name": "장어나루", "cuisine": "일식", "feature": "조용한 분위기, 1인 가능", "price": "보통", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-혼밥-1", "verified": true}, {"name": "온미동", "cuisine": "일식", "feature": "혼자 편하게", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-혼밥-2", "verified": true}, {"name": "미도인 파이낸스 여의도점", "cuisine": "일식", "feature": "덮밥·온면, 1인 식사 최적", "price": "저렴", "distance": "도보 5분 (카카오)", "id": "20260605-혼밥-3", "verified": true}, {"name": "약산순대국", "cuisine": "한식", "feature": "빠른 회전, 혼밥 좋음", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-혼밥-4", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식", "feature": "서둘러 먹기 좋은 국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-혼밥-5", "verified": true}], "와인": [{"name": "고우가 여의도점", "cuisine": "한식", "feature": "한우·위스키·와인 페어링, 콜키지 무료", "price": "비쌈", "distance": "도보 12분 (카카오) / 12분 (네이버)", "id": "20260605-와인-1", "verified": true}, {"name": "한암동 여의도점", "cuisine": "한식", "feature": "콜키지 프리, 와인 메뉴", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-와인-2", "verified": true}, {"name": "모도우 여의도점", "cuisine": "한식", "feature": "한우와 와인 페어링", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-와인-3", "verified": true}, {"name": "로스옥 여의도점", "cuisine": "한식", "feature": "콜키지 프리, 주류 라운지", "price": "비쌈", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-와인-4", "verified": true}, {"name": "달리181 여의도점", "cuisine": "양식", "feature": "와인 페어링 식사", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260605-와인-5", "verified": true}], "임원": [{"name": "고우가 여의도점", "cuisine": "한식", "feature": "한우 오마카세, 프라이빗 룸, 개별실", "price": "비쌈", "distance": "도보 12분 (카카오) / 12분 (네이버)", "id": "20260605-임원-1", "verified": true}, {"name": "한암동 여의도점", "cuisine": "한식", "feature": "한옥감성, 룸 완비, 격식 있는 분위기", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-임원-2", "verified": true}, {"name": "하반", "cuisine": "일식", "feature": "고급 일식 코스, 룸 완비", "price": "비쌈", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260605-임원-3", "verified": true}, {"name": "모도우 여의도점", "cuisine": "한식", "feature": "한우 코스, 다양한 룸", "price": "비쌈", "distance": "도보 5분 (카카오) / 5분 (네이버)", "id": "20260605-임원-4", "verified": true}, {"name": "로바 더현대서울점", "cuisine": "일식", "feature": "코스 전문, 룸 예약 가능", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260605-임원-5", "verified": true}]}, "meals": {"저녁": {"restaurants": [{"name": "해화동", "cuisine": "한식(찜·탕)", "feature": "소박하고 정성 있는 한끼, 찜과 탕 전문", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-1", "verified": true}, {"name": "오늘은즉떡", "cuisine": "분식(떡볶이·순대)", "feature": "빠른 서빙, 가볍게 즐기는 저녁", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-2", "verified": true}, {"name": "수하동 여의도점", "cuisine": "한식(육회·한우)", "feature": "20~30대 직장인 중심, 가성비 좋은 고기", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-3", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남 음식", "feature": "쌀국수·분짜 전문, 깔끔하고 이국적", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260605-D-4", "verified": true}, {"name": "이화당", "cuisine": "한식(영양식·보신탕)", "feature": "여의도 40년 역사, 전통적인 한끼", "price": "보통", "distance": "거리 미확인", "id": "20260605-D-5", "verified": false}], "extras": [{"name": "청기와가든 여의도점", "cuisine": "한식(삼계탕·보양식)", "feature": "도보 근처 유명 보양식, 소풍 느낌의 세련된 분위기", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "tag": "근처유명", "id": "20260605-D-x1", "verified": true}], "by_condition": {"해장 필요": [{"name": "약산순대국", "cuisine": "한식(순대국)", "feature": "국물 진한 순대국", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-해장-1", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(국밥)", "feature": "시원한 콩나물국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-해장-2", "verified": true}, {"name": "진주집", "cuisine": "국수", "feature": "깔끔한 국수 스타일", "price": "보통", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260605-D-해장-3", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "feature": "맵고 자극적", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-D-해장-4", "verified": true}, {"name": "해화동", "cuisine": "한식(찜·탕)", "feature": "따뜻한 탕", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-해장-5", "verified": true}], "매콤하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "feature": "매콤한 부대찌개 정석", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-D-매콤-1", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남(분짜)", "feature": "쌀쌀하고 매콤한 분짜", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260605-D-매콤-2", "verified": true}, {"name": "화동활어복", "cuisine": "한식(회)", "feature": "회냉채·젓갈 반찬 매콤", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260605-D-매콤-3", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지)", "feature": "매콤한 낙지볶음", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-D-매콤-4", "verified": true}, {"name": "신안홍탁", "cuisine": "한식(홍탁)", "feature": "얼큰한 국물", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-매콤-5", "verified": true}], "가볍게": [{"name": "오늘은즉떡", "cuisine": "분식(떡볶이)", "feature": "간단하고 빠른 저녁", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-가볍-1", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페·디저트", "feature": "가벼운 음료와 스낵", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-D-가볍-2", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남(쌀국수)", "feature": "담백한 쌀국수", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260605-D-가볍-3", "verified": true}, {"name": "본보야지", "cuisine": "양식(파스타)", "feature": "가볍고 깔끔한 양식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-가볍-4", "verified": true}, {"name": "평안도만두집", "cuisine": "한식(만두)", "feature": "만두와 국", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-가볍-5", "verified": true}], "든든하게": [{"name": "수하동 여의도점", "cuisine": "한식(육회·한우)", "feature": "든든한 고기 한끼", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-든든-1", "verified": true}, {"name": "고돈집", "cuisine": "한식(돈까스·백반)", "feature": "넉넉한 백반", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-든든-2", "verified": true}, {"name": "청기와가든 여의도점", "cuisine": "한식(삼계탕)", "feature": "푸짐한 삼계탕", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-든든-3", "verified": true}, {"name": "이화당", "cuisine": "한식(영양식)", "feature": "푸짐한 한끼", "price": "보통", "distance": "거리 미확인", "id": "20260605-D-든든-4", "verified": false}, {"name": "사계절집밥", "cuisine": "한식(집밥)", "feature": "든든한 집밥 스타일", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-든든-5", "verified": true}], "일식": [{"name": "온멘", "cuisine": "일식(라면·우동)", "feature": "따뜻한 일식 면", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-일식-1", "verified": true}, {"name": "돈대리돈까스백반", "cuisine": "일식(돈까스)", "feature": "일식 스타일 돈까스", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-일식-2", "verified": true}, {"name": "온미동", "cuisine": "일식(오므라이스)", "feature": "부드러운 오므라이스", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-일식-3", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식당(모던 일식)", "feature": "세련된 일식", "price": "비쌈", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260605-D-일식-4", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레)", "feature": "진한 일식 카레", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260605-D-일식-5", "verified": true}], "한식": [{"name": "해화동", "cuisine": "한식(찜·탕)", "feature": "정통 한식 정취", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-한식-1", "verified": true}, {"name": "수하동 여의도점", "cuisine": "한식(육회·한우)", "feature": "고급스러운 한식", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-한식-2", "verified": true}, {"name": "청기와가든 여의도점", "cuisine": "한식(삼계탕)", "feature": "격 있는 한식", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-한식-3", "verified": true}, {"name": "이화당", "cuisine": "한식(보신탕)", "feature": "전통 한식 명가", "price": "보통", "distance": "거리 미확인", "id": "20260605-D-한식-4", "verified": false}, {"name": "지리산명가", "cuisine": "한식(산채·보신)", "feature": "건강한 한식", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-한식-5", "verified": true}], "고기": [{"name": "수하동 여의도점", "cuisine": "한식(육회·한우)", "feature": "신선한 한우 육회", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-고기-1", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지)", "feature": "신선한 낙지", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260605-D-고기-2", "verified": true}, {"name": "칠산꽃게장 여의도점", "cuisine": "한식(꽃게장)", "feature": "신선한 꽃게 요리", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-고기-3", "verified": true}, {"name": "고돈집", "cuisine": "한식(돈까스)", "feature": "고소한 돈까스", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-고기-4", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식(참치·전복)", "feature": "프리미엄 해산물", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260605-D-고기-5", "verified": true}], "혼밥": [{"name": "오늘은즉떡", "cuisine": "분식(떡볶이)", "feature": "혼밥 편한 분식", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-혼밥-1", "verified": true}, {"name": "온멘", "cuisine": "일식(라면)", "feature": "빠른 라면 한끼", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-혼밥-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(국밥)", "feature": "혼밥 기본 국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-혼밥-3", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남(쌀국수)", "feature": "혼밥 편한 베트남", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260605-D-혼밥-4", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페", "feature": "혼밥 가능 카페", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-D-혼밥-5", "verified": true}], "와인": [{"name": "마포로제뜨 여의도", "cuisine": "양식(스테이크·와인)", "feature": "와인 페어링 전문", "price": "비쌈", "distance": "거리 미확인", "id": "20260605-D-와인-1", "verified": false}, {"name": "본보야지", "cuisine": "양식(파스타)", "feature": "와인 어울리는 양식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-와인-2", "verified": true}, {"name": "파파이스 여의도역점", "cuisine": "양식(스테이크)", "feature": "스테이크와 와인", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-와인-3", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "와인과 중식의 만남", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-와인-4", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브", "feature": "와인과 어울리는 火鍋", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260605-D-와인-5", "verified": true}], "임원": [{"name": "청기와가든 여의도점", "cuisine": "한식(삼계탕)", "feature": "프라이빗 분위기, 격식 있는 접대", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-임원-1", "verified": true}, {"name": "수하동 여의도점", "cuisine": "한식(육회·한우)", "feature": "고급 한우, 세련된 분위기", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260605-D-임원-2", "verified": true}, {"name": "마포로제뜨 여의도", "cuisine": "양식(스테이크·와인)", "feature": "고급스러운 와인바 분위기", "price": "비쌈", "distance": "거리 미확인", "id": "20260605-D-임원-3", "verified": false}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식(참치·전복)", "feature": "프리미엄 식재, 접대 명소", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260605-D-임원-4", "verified": true}, {"name": "이화당", "cuisine": "한식(영양식)", "feature": "역사 깊은 접대 명가", "price": "보통", "distance": "거리 미확인", "id": "20260605-D-임원-5", "verified": false}]}}, "술집": {"restaurants": [{"name": "미희", "cuisine": "이자카야", "feature": "조용한 감성 이자카야, 다양한 안주(사시미·야끼토리·구이·조림)", "price": "보통", "distance": "도보 12분 (카카오) / 12분 (네이버)", "id": "20260605-B-1", "verified": true}, {"name": "여의도 맥주집", "cuisine": "호프", "feature": "생맥주 가성비 최고, 떡볶이+치킨 세트 인기, 캐주얼한 분위기", "price": "저렴", "distance": "도보 12분 (카카오) / 9분 (네이버)", "id": "20260605-B-2", "verified": true}, {"name": "디스코서울", "cuisine": "칵테일 바", "feature": "세련된 분위기, 하이볼·위스키·샴페인 다양, 야외좌석 운영", "price": "보통", "distance": "도보 11분 (카카오) / 11분 (네이버)", "id": "20260605-B-3", "verified": true}, {"name": "우아", "cuisine": "수제맥주 펍", "feature": "수제맥주 전문, 조용한 감성 공간, 실력 있는 안주", "price": "보통", "distance": "도보 6분 (카카오)", "id": "20260605-B-4", "verified": true}, {"name": "탭샵바", "cuisine": "와인바", "feature": "와인·칵테일 전문, 분위기 있는 바 경험, 소량 안주", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260605-B-5", "verified": true}], "extras": [{"name": "로바다야끼 소담", "cuisine": "이자카야", "feature": "일본식 다찌석에서 생선·꼬치 직관, 야경 좋음, 프라이빗 룸 있음", "price": "보통", "distance": "도보 9분 (카카오) / 9분 (네이버)", "tag": "근처유명", "id": "20260605-B-x1", "verified": true}]}}}, {"date": "2026-06-04", "comment": "천둥번개 예보에 일품의 차분한 분위기에서 든든하게 점심을 챙기는 것도 좋은 경영 전략. 여의도의 번잡함에서 한 발 빠져나와 정신을 맑게 하는 식사를 추천합니다.", "message": "변덕스러운 날씨가 이어지는 하루입니다. 이런 날에는 따뜻한 국물 요리가 잘 어울리니, 화동활어복이나 온멘에서 든든하게 점심을 드시기를 추천드립니다. 금융권 재편이 한창인 가운데 JB 임원진도 자사주 매입으로 강한 신호를 보내고 있으니, 차분하게 한 주 마무리 잘 하시기 바랍니다. 🍚", "weather": "주변에 천둥번개 28°C (최저 19° / 최고 26°)", "news": [{"title": "시중은행 전환한 iM뱅크의 그늘 … 강정훈 은행장 '비용·부실' 관리 시...", "link": "https://biz.newdaily.co.kr/site/data/html/2026/06/04/2026060400161.html"}, {"title": "OK금융, 예별손보 인수 검토…30일 입찰 마감", "link": "https://news.dealsitetv.com/articles/171351"}, {"title": "빈대인 회장 등 지방 금융지주 임원, 자사주 매입 행진…‘저평가 해소...", "link": "https://www.ceoscoredaily.com/page/view/2026060215234269362"}], "restaurants": [{"name": "화동활어복", "cuisine": "한식(활어·회)", "feature": "신선한 활어회덮밥, 복어요리 전문. 빠른 회전율로 점심 시간 최적화", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260604-1", "verified": true}, {"name": "온멘", "cuisine": "일식(우동·소바)", "feature": "따뜻한 우동과 소바, 가벼우면서도 포만감 좋음. 우천 시 좋은 선택", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-2", "verified": true}, {"name": "본보야지", "cuisine": "양식(파스타·리조또)", "feature": "이탈리안 요리로 다채로운 맛, 점심 세트 메뉴 구성 좋음", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-3", "verified": true}, {"name": "로바 더현대서울점", "cuisine": "일식(가이세키·정식)", "feature": "격식 있으면서도 차분한 분위기의 파인다이닝, 우나기동 고젠 인기. 룸 예약 가능", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260604-4", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식(모츠나베·정식)", "feature": "모츠나베 정식으로 든든하게, 명란 계란말이 명물. 점심은 특선 정식으로 빠른 회전", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-5", "verified": true}], "extras": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개·삼겹)", "feature": "서울 3대 부대찌개 명소, 역사 깊은 맛. 뜨거운 음식으로 습한 날씨에 최적", "price": "저렴", "distance": "도보 2분 (카카오)", "tag": "근처유명", "id": "20260604-x1", "verified": true}, {"name": "진주집", "cuisine": "국수류(칼국수·메밀소바)", "feature": "여의도 직장인의 점심 기본, 메밀소바 명성. 간결한 맛으로 정신 맑게", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "tag": "검색유명", "id": "20260604-x2", "verified": true}], "by_condition": {"해장 필요": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "국물이 진한 부대찌개로 속을 달래기", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260604-해장-1", "verified": true}, {"name": "약산순대국", "cuisine": "한식", "feature": "따뜻한 순대국으로 위장 정리", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-해장-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식", "feature": "콩나물국밥의 텁텁함 해소", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-해장-3", "verified": true}, {"name": "진주집", "cuisine": "국수류", "feature": "시원한 국물의 메밀소바", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-해장-4", "verified": true}, {"name": "화동활어복", "cuisine": "한식", "feature": "신선한 회로 입맛 돌기", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260604-해장-5", "verified": true}], "매콤하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "진한 국물의 콤한 맛", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260604-매콤-1", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "중식의 칼칼한 소스맛", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-매콤-2", "verified": true}, {"name": "신안홍탁", "cuisine": "한식", "feature": "고추 향신료를 활용한 맛", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-매콤-3", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "매운 국물 모츠나베 변형 가능", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-매콤-4", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남음식", "feature": "베트남식 매콤한 맛", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260604-매콤-5", "verified": true}], "가볍게": [{"name": "온멘", "cuisine": "일식", "feature": "가벼운 우동/소바", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-가볍-1", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "가벼운 일식 안주 및 덮밥", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-가볍-2", "verified": true}, {"name": "진주집", "cuisine": "국수류", "feature": "담백한 메밀소바", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-가볍-3", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페", "feature": "가벼운 브런치 및 디저트", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260604-가볍-4", "verified": true}, {"name": "노티드 여의도IFC몰", "cuisine": "카페", "feature": "가벼운 카페 음료 및 간식", "price": "보통", "distance": "도보 4분 (카카오) / 3분 (네이버)", "id": "20260604-가볍-5", "verified": true}], "든든하게": [{"name": "하반", "cuisine": "한식(고기)", "feature": "고기 구이 정식으로 든든함", "price": "보통", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260604-든든-1", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "모츠나베 정식의 든든함", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-든든-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식", "feature": "푸짐한 국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-든든-3", "verified": true}, {"name": "독도참치앤전복", "cuisine": "한식", "feature": "참치·전복 고급 요리로 든든함", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-든든-4", "verified": true}, {"name": "로바 더현대서울점", "cuisine": "일식", "feature": "가이세키 정식의 정성스러운 구성", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260604-든든-5", "verified": true}], "일식": [{"name": "온멘", "cuisine": "일식", "feature": "따뜻한 우동/소바", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-일식-1", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "다양한 일식 덮밥", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-일식-2", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "모츠나베·명란·정식", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-일식-3", "verified": true}, {"name": "로바 더현대서울점", "cuisine": "일식", "feature": "가이세키 정식, 와인 페어링 가능", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260604-일식-4", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식", "feature": "카레 중심 일식 퓨전", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-일식-5", "verified": true}], "한식": [{"name": "화동활어복", "cuisine": "한식", "feature": "신선한 회요리", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260604-한식-1", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판 및 한정식", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-한식-2", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "부대찌개·삼겹살", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260604-한식-3", "verified": true}, {"name": "약산순대국", "cuisine": "한식", "feature": "순대국·국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-한식-4", "verified": true}, {"name": "하반", "cuisine": "한식", "feature": "고기 구이 정식", "price": "보통", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260604-한식-5", "verified": true}], "고기": [{"name": "하반", "cuisine": "한식", "feature": "등심·차돌·갈비살 정식", "price": "보통", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260604-고기-1", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "냉동삼겹살 구이", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260604-고기-2", "verified": true}, {"name": "고돈집", "cuisine": "한식", "feature": "돼지고기 전문", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-고기-3", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "모츠나베(소 곱창 전골)", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-고기-4", "verified": true}, {"name": "칠산꽃게장 여의도점", "cuisine": "한식", "feature": "해산물 및 간장게장", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-고기-5", "verified": true}], "혼밥": [{"name": "온멘", "cuisine": "일식", "feature": "카운터 좌석, 1인분 부담 없음", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-혼밥-1", "verified": true}, {"name": "진주집", "cuisine": "국수류", "feature": "회전율 빠르고 1인 최적화", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-혼밥-2", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페", "feature": "혼자 편하게 앉을 수 있는 분위기", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260604-혼밥-3", "verified": true}, {"name": "본보야지", "cuisine": "양식", "feature": "1인 파스타 세트 메뉴", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-혼밥-4", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "1인 주문 편함", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-혼밥-5", "verified": true}], "와인": [{"name": "로바 더현대서울점", "cuisine": "일식", "feature": "다양한 와인 리스트, 페어링 가능", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260604-와인-1", "verified": true}, {"name": "본보야지", "cuisine": "양식", "feature": "와인과 파스타의 페어링", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-와인-2", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "사케·소주 외 와인 취급", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-와인-3", "verified": true}], "임원": [{"name": "로바 더현대서울점", "cuisine": "일식", "feature": "가이세키 정식, 프라이빗 룸, 고급 분위기, 콜키지 가능", "price": "비쌈", "distance": "도보 3분 (카카오) / 3분 (네이버)", "id": "20260604-임원-1", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·한정식, 격식 있는 명성", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-임원-2", "verified": true}, {"name": "독도참치앤전복", "cuisine": "한식", "feature": "참치·전복 고급 요리, 룸 예약 가능", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-임원-3", "verified": true}, {"name": "하반", "cuisine": "한식", "feature": "고급 한우 고기, 룸 다수, 격식 있는 접대용", "price": "보통", "distance": "도보 19분 (카카오) / 19분 (네이버)", "id": "20260604-임원-4", "verified": true}, {"name": "야마야 여의도점", "cuisine": "일식", "feature": "모츠나베 세트, 룸 보유, 접대 용도 최적", "price": "보통", "distance": "도보 6분 (카카오) / 5분 (네이버)", "id": "20260604-임원-5", "verified": true}]}, "meals": {"저녁": {"restaurants": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·꽃게장)", "feature": "프리미엄 활어/꽃게장, 회식·접대 최적, 세련된 분위기", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-1", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(오마카세·회)", "feature": "고급 일식당, 신선한 회와 오마카세, 접대 추천", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-2", "verified": true}, {"name": "본보야지", "cuisine": "양식(스테이크·파스타)", "feature": "캐주얼하면서도 분위기 있는 양식, 회식 분위기 좋음", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-3", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레우동·돈까스)", "feature": "따뜻한 카레와 돈까스, 가볍고 편한 분위기, 회식도 가능", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-D-4", "verified": true}, {"name": "라케이브", "cuisine": "프렌치 비스트로(와인바)", "feature": "여의도 대표 와인바, 격식 있고 분위기 있음, 임원급 접대 추천", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260604-D-5", "verified": true}], "extras": [{"name": "화동활어복", "cuisine": "한식(활어·회)", "feature": "신선한 활어회, 회식 단골, 분위기·음식 모두 좋음", "price": "보통", "distance": "도보 1분 (카카오)", "tag": "근처유명", "id": "20260604-D-x1", "verified": true}, {"name": "온멘", "cuisine": "일식(우동·오마카세)", "feature": "고급 일식, 따뜻한 우동과 신선한 회 병행, 저녁 회식에 좋음", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "tag": "검색유명", "id": "20260604-D-x2", "verified": true}], "by_condition": {"해장 필요": [{"name": "약산순대국", "cuisine": "한식(순대국)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-해장-1", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(콩나물국밥)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-해장-2", "verified": true}, {"name": "전주식당", "cuisine": "한식(국밥류)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-해장-3", "verified": true}, {"name": "강공순할매집", "cuisine": "한식(국/국밥)", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-해장-4", "verified": true}, {"name": "진주집", "cuisine": "국수(칼국수·우동)", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-D-해장-5", "verified": true}], "매콤하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260604-D-매콤-1", "verified": true}, {"name": "사계절집밥", "cuisine": "한식(찌개·국)", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-매콤-2", "verified": true}, {"name": "더차이니스", "cuisine": "중식(마라탕·사천요리)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-매콤-3", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260604-D-매콤-4", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남음식(쌀국수·매운 국물)", "price": "저렴", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260604-D-매콤-5", "verified": true}], "가볍게": [{"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레우동·돈까스)", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-D-가볍-1", "verified": true}, {"name": "온멘", "cuisine": "일식(우동)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-가볍-2", "verified": true}, {"name": "진주집", "cuisine": "국수(칼국수)", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-D-가볍-3", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남음식(쌀국수)", "price": "저렴", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260604-D-가볍-4", "verified": true}, {"name": "바스버거 여의도점", "cuisine": "양식(버거)", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-D-가볍-5", "verified": true}], "든든하게": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·꽃게장)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-든든-1", "verified": true}, {"name": "화동활어복", "cuisine": "한식(활어·회)", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260604-D-든든-2", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브(소고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-든든-3", "verified": true}, {"name": "본보야지", "cuisine": "양식(스테이크)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-든든-4", "verified": true}, {"name": "라케이브", "cuisine": "프렌치 비스트로(스테이크·파스타)", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260604-D-든든-5", "verified": true}], "일식": [{"name": "진가와 여의도점", "cuisine": "일식(오마카세)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-일식-1", "verified": true}, {"name": "오키보루", "cuisine": "일식(회·오마카세)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-일식-2", "verified": true}, {"name": "온멘", "cuisine": "일식(우동·오마카세)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-일식-3", "verified": true}, {"name": "온미동", "cuisine": "일식(회)", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-일식-4", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레우동)", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-D-일식-5", "verified": true}], "한식": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·꽃게장)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-한식-1", "verified": true}, {"name": "화동활어복", "cuisine": "한식(활어·회)", "price": "보통", "distance": "도보 1분 (카카오)", "id": "20260604-D-한식-2", "verified": true}, {"name": "지리산명가", "cuisine": "한식(산채·정석밥)", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-한식-3", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260604-D-한식-4", "verified": true}, {"name": "가메골", "cuisine": "한식(규동·제육덮밥)", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-한식-5", "verified": true}], "고기": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·꽃게)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-고기-1", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브(소고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-고기-2", "verified": true}, {"name": "고돈집", "cuisine": "한식(돼지고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-고기-3", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260604-D-고기-4", "verified": true}, {"name": "본보야지", "cuisine": "양식(스테이크)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-고기-5", "verified": true}], "혼밥": [{"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레우동)", "price": "저렴", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260604-D-혼밥-1", "verified": true}, {"name": "온멘", "cuisine": "일식(우동)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-혼밥-2", "verified": true}, {"name": "가메골", "cuisine": "한식(규동)", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-혼밥-3", "verified": true}, {"name": "진주집", "cuisine": "국수(칼국수)", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260604-D-혼밥-4", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(국밥)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-혼밥-5", "verified": true}], "와인": [{"name": "라케이브", "cuisine": "프렌치 비스트로(와인 페어링)", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260604-D-와인-1", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(와인과 함께)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-와인-2", "verified": true}, {"name": "본보야지", "cuisine": "양식(와인 추천)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-와인-3", "verified": true}, {"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·와인)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-와인-4", "verified": true}, {"name": "오키보루", "cuisine": "일식(와인 가능)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-와인-5", "verified": true}], "임원": [{"name": "라케이브", "cuisine": "프렌치 비스트로(격식·프라이빗 가능)", "price": "비쌈", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260604-D-임원-1", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(오마카세·프리미엄)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-임원-2", "verified": true}, {"name": "칠산꽃게장 여의도점", "cuisine": "한식(프리미엄 활어·격식)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260604-D-임원-3", "verified": true}, {"name": "오키보루", "cuisine": "일식(오마카세·고급)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-임원-4", "verified": true}, {"name": "본보야지", "cuisine": "양식(분위기·스테이크)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260604-D-임원-5", "verified": true}]}}, "술집": {"restaurants": [{"name": "나니", "cuisine": "이자카야", "feature": "조용한 분위기의 일본식 소주·사케 바", "price": "보통", "distance": "도보 5분 (카카오) / 6분 (네이버)", "id": "20260604-B-1", "verified": true}, {"name": "갓포아키", "cuisine": "이자카야", "feature": "글래드호텔 14층 프리미엄 갓포, 룸 완비·고급 사시미", "price": "비쌈", "distance": "도보 16분 (카카오) / 16분 (네이버)", "id": "20260604-B-2", "verified": true}, {"name": "탭퍼블릭", "cuisine": "호프(수제맥주)", "feature": "60여 종 수제맥주, 자유로운 셀프 따라마시기", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260604-B-3", "verified": true}, {"name": "생활맥주", "cuisine": "호프(수제맥주)", "feature": "캐주얼한 분위기, 신선한 수제맥주·치킨 안주", "price": "저렴", "distance": "도보 12분 (카카오) / 14분 (네이버)", "id": "20260604-B-4", "verified": true}, {"name": "모모이자카야", "cuisine": "이자카야", "feature": "지하 프라이빗 룸, 파스타·나베·오마카세 메뉴", "price": "보통", "distance": "거리 미확인", "id": "20260604-B-5", "verified": false}], "extras": [{"name": "이자카야나무", "cuisine": "이자카야", "feature": "연 중 영업, 초밥·사시미·꼬치 풍부", "price": "보통", "distance": "도보 8분 (카카오) / 8분 (네이버)", "tag": "근처유명", "id": "20260604-B-x1", "verified": true}, {"name": "단단 사카바", "cuisine": "사카바(일본식 술집)", "feature": "연남동의 심야식당 브랜드, 제철 생선구이·해산물 안주", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "tag": "검색유명", "id": "20260604-B-x2", "verified": true}]}}}, {"date": "2026-06-03", "comment": "따뜻하고 햇살 좋은 날씨, 가볍고 신선한 음식으로 기분 좋은 점심을 즐기기 최적의 날입니다.", "restaurants": [{"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·곰탕 정통 한식당", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-1", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식", "feature": "참치·전복 신선한 해산물", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-2", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "신선한 회·정식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-3", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "중식 요리 다양", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-4", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브", "feature": "따뜻한 국물 샤브샤브", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-5", "verified": true}], "extras": [{"name": "진주집", "cuisine": "국수", "feature": "콩국수·칼국수 여의도 유명점", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "tag": "검색유명", "id": "20260603-x1", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(소바)", "feature": "직접 끓인 소바육수·정성스러운 준비", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "tag": "근처유명", "id": "20260603-x2", "verified": true}], "by_condition": {"해장 필요": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "진한 국물 부대찌개", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260603-해장-1", "verified": true}, {"name": "약산순대국", "cuisine": "한식", "feature": "국물 진한 순대국", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-해장-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식", "feature": "콩나물국밥", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-해장-3", "verified": true}, {"name": "강공순할매집", "cuisine": "한식", "feature": "할머니표 따뜻한 국밥", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-해장-4", "verified": true}, {"name": "지리산명가", "cuisine": "한식", "feature": "깊은 국물 한식", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-해장-5", "verified": true}], "매콤하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "맵고 진한 부대찌개", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260603-매콤-1", "verified": true}, {"name": "칠산꽃게장 여의도점", "cuisine": "한식", "feature": "매콤한 꽃게장", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-매콤-2", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "중식 맵고 자극적 맛", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-매콤-3", "verified": true}, {"name": "신안홍탁", "cuisine": "한식", "feature": "매운 한식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-매콤-4", "verified": true}, {"name": "화동활어복", "cuisine": "한식", "feature": "활어 신선한 맛", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-매콤-5", "verified": true}], "가볍게": [{"name": "오늘은즉떡", "cuisine": "분식", "feature": "떡 가벼운 분식", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-가볍-1", "verified": true}, {"name": "전주분식", "cuisine": "분식", "feature": "분식 가벼운 한끼", "price": "저렴", "distance": "도보 1분 (카카오)", "id": "20260603-가볍-2", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페·디저트", "feature": "가벼운 브런치·음료", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260603-가볍-3", "verified": true}, {"name": "평안도만두집", "cuisine": "한식", "feature": "담백한 만두", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-가볍-4", "verified": true}, {"name": "본보야지", "cuisine": "양식", "feature": "가벼운 양식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-가볍-5", "verified": true}], "든든하게": [{"name": "고돈집", "cuisine": "한식", "feature": "돈까스·고기 든든한 구성", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-든든-1", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식", "feature": "참치·전복 고급 해산물", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-든든-2", "verified": true}, {"name": "화동활어복", "cuisine": "한식", "feature": "활어 신선 푸짐한 구성", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-든든-3", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식", "feature": "낙지 든든한 영양식", "price": "비쌈", "distance": "도보 2분 (카카오)", "id": "20260603-든든-4", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·곰탕 푸짐한 한상", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-든든-5", "verified": true}], "일식": [{"name": "오키보루", "cuisine": "일식", "feature": "신선한 회·정식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-일식-1", "verified": true}, {"name": "온멘", "cuisine": "일식", "feature": "우동·일식 면요리", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-일식-2", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식", "feature": "카레 일식 요리", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260603-일식-3", "verified": true}, {"name": "돈대리돈까스백반", "cuisine": "일식", "feature": "돈까스·백반", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-일식-4", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(소바)", "feature": "소바·회·덮밥", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-일식-5", "verified": true}], "한식": [{"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "구절판·곰탕 정통 한식", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-한식-1", "verified": true}, {"name": "해화동", "cuisine": "한식", "feature": "신선한 해산물 한식", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-한식-2", "verified": true}, {"name": "신송한식", "cuisine": "한식", "feature": "정통 한식", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-한식-3", "verified": true}, {"name": "청식당", "cuisine": "한식", "feature": "밥·국·반찬 한상", "price": "저렴", "distance": "도보 2분 (카카오) / 7분 (네이버)", "id": "20260603-한식-4", "verified": true}, {"name": "다솔식당", "cuisine": "한식", "feature": "가정식 한식", "price": "저렴", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-한식-5", "verified": true}], "고기": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식", "feature": "삼겹살·부대찌개", "price": "저렴", "distance": "도보 2분 (카카오)", "id": "20260603-고기-1", "verified": true}, {"name": "고돈집", "cuisine": "한식", "feature": "돈까스·돼지고기", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-고기-2", "verified": true}, {"name": "자린고비", "cuisine": "한식", "feature": "고기 구이", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-고기-3", "verified": true}, {"name": "더팔당 여의도점", "cuisine": "한식", "feature": "팔당 고기 요리", "price": "보통", "distance": "도보 12분 (카카오)", "id": "20260603-고기-4", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식", "feature": "낙지·해산물 고기", "price": "비쌈", "distance": "도보 2분 (카카오)", "id": "20260603-고기-5", "verified": true}], "혼밥": [{"name": "오늘은즉떡", "cuisine": "분식", "feature": "빠른 회전 분식", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-혼밥-1", "verified": true}, {"name": "온멘", "cuisine": "일식", "feature": "카운터 면요리", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-혼밥-2", "verified": true}, {"name": "청식당", "cuisine": "한식", "feature": "단품 한끼", "price": "저렴", "distance": "도보 2분 (카카오) / 7분 (네이버)", "id": "20260603-혼밥-3", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식", "feature": "카운터석 소바·덮밥", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-혼밥-4", "verified": true}, {"name": "블루보틀 여의도 카페", "cuisine": "카페·디저트", "feature": "편안한 카페 혼밥", "price": "보통", "distance": "도보 4분 (카카오) / 4분 (네이버)", "id": "20260603-혼밥-5", "verified": true}], "와인": [{"name": "본보야지", "cuisine": "양식", "feature": "와인 잘 어울리는 양식", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-와인-1", "verified": true}, {"name": "파파이스 여의도역점", "cuisine": "양식", "feature": "양식 와인페어링", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-와인-2", "verified": true}, {"name": "바스버거 여의도점", "cuisine": "양식", "feature": "버거·음료", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260603-와인-3", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "고급 중식 와인 페어링", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-와인-4", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "일식·와인 조합", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-와인-5", "verified": true}], "임원": [{"name": "독도참치앤전복 여의도점", "cuisine": "한식", "feature": "프라이빗 격식 있는 해산물", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-임원-1", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식", "feature": "프라이빗 룸 구절판·곰탕", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-임원-2", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "고급 정식 프라이빗", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-임원-3", "verified": true}, {"name": "더차이니스", "cuisine": "중식", "feature": "블루리본 고급 중식당", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-임원-4", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식", "feature": "프라이빗 격식 있는 식당", "price": "비쌈", "distance": "도보 2분 (카카오)", "id": "20260603-임원-5", "verified": true}]}, "meals": {"저녁": {"restaurants": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·게장)", "feature": "프라이빗 룸, 특별한 자리 좋음, 신선한 활어", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-1", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식(참치·전복회)", "feature": "고급 회전, 신선도 우수, 접대용 최적", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-D-2", "verified": true}, {"name": "오키보루", "cuisine": "일식(오마카세·초밥)", "feature": "모던한 분위기, 신선한 해산물, 감각적 플레이팅", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-3", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개·돼지고기)", "feature": "뜨끈한 저녁 안성맞춤, 중독성 강한 맛", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-4", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음밥)", "feature": "유명 맛집, 쫄깃한 낙지, 빠른 서빙", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-5", "verified": true}], "extras": [{"name": "진가와 여의도점", "cuisine": "일식(초밥·회)", "feature": "근처 알려진 프리미엄 일식당, 신선도 검증됨", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "tag": "근처유명", "id": "20260603-D-x1", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(오마카세·카이세키)", "feature": "웹 평가 높은 프리미엄 일식, 감각적 코스", "price": "비쌈", "distance": "도보 6분 (카카오) / 6분 (네이버)", "tag": "검색유명", "id": "20260603-D-x2", "verified": true}], "by_condition": {"해장 필요": [{"name": "약산순대국", "cuisine": "한식(순대국)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-해장-1", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(국밥)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-해장-2", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-해장-3", "verified": true}, {"name": "신안홍탁", "cuisine": "한식(국/탕)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-해장-4", "verified": true}, {"name": "진주집", "cuisine": "국수(우동/국수)", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260603-D-해장-5", "verified": true}], "매콤하게": [{"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음밥)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-매콤-1", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-매콤-2", "verified": true}, {"name": "더차이니스", "cuisine": "중식(마라/매운맛)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-매콤-3", "verified": true}, {"name": "신송한식", "cuisine": "한식(매운전골)", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-매콤-4", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남음식(쌀국수·매콤)", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-D-매콤-5", "verified": true}], "가볍게": [{"name": "온멘", "cuisine": "일식(국수·우동)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-가볍-1", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레·국수)", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260603-D-가볍-2", "verified": true}, {"name": "미분당 여의도점", "cuisine": "베트남음식(쌀국수)", "price": "보통", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-D-가볍-3", "verified": true}, {"name": "파파이스 여의도역점", "cuisine": "양식(카페·가벼운 식사)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-가볍-4", "verified": true}, {"name": "진주집", "cuisine": "국수(차갑고 담백)", "price": "저렴", "distance": "도보 7분 (카카오) / 6분 (네이버)", "id": "20260603-D-가볍-5", "verified": true}], "든든하게": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개·돼지고기)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-든든-1", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음밥)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-든든-2", "verified": true}, {"name": "한미옥 여의도직영점", "cuisine": "한식(고기·밥)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-든든-3", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브(소고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-든든-4", "verified": true}, {"name": "고돈집", "cuisine": "한식(돼지고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-든든-5", "verified": true}], "일식": [{"name": "오키보루", "cuisine": "일식(오마카세·초밥)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-일식-1", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(초밥·회)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-일식-2", "verified": true}, {"name": "온멘", "cuisine": "일식(국수)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-일식-3", "verified": true}, {"name": "커리파파하우스 여의도본점", "cuisine": "일식(카레)", "price": "보통", "distance": "도보 1분 (카카오) / 2분 (네이버)", "id": "20260603-D-일식-4", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(오마카세·카이세키)", "price": "비쌈", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-D-일식-5", "verified": true}], "한식": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·게장)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-한식-1", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식(참치·전복회)", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-D-한식-2", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음밥)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-한식-3", "verified": true}, {"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-한식-4", "verified": true}, {"name": "수하동 여의도점", "cuisine": "한식(고기·쌈)", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-한식-5", "verified": true}], "고기": [{"name": "완백부대찌개꽃삼겹", "cuisine": "한식(부대찌개·돼지고기)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-고기-1", "verified": true}, {"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-고기-2", "verified": true}, {"name": "성민촌", "cuisine": "샤브샤브(소고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-고기-3", "verified": true}, {"name": "고돈집", "cuisine": "한식(돼지고기)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-고기-4", "verified": true}, {"name": "수하동 여의도점", "cuisine": "한식(소고기)", "price": "보통", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-고기-5", "verified": true}], "혼밥": [{"name": "용호동낙지 여의도직영점", "cuisine": "한식(낙지볶음밥)", "price": "보통", "distance": "도보 2분 (카카오)", "id": "20260603-D-혼밥-1", "verified": true}, {"name": "온멘", "cuisine": "일식(국수)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-혼밥-2", "verified": true}, {"name": "남부시장콩나물국밥", "cuisine": "한식(국밥)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-혼밥-3", "verified": true}, {"name": "약산순대국", "cuisine": "한식(순대국)", "price": "저렴", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-혼밥-4", "verified": true}, {"name": "파파이스 여의도역점", "cuisine": "양식(가벼운 식사)", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-혼밥-5", "verified": true}], "와인": [{"name": "독도참치앤전flores 여의도점", "cuisine": "한식(활어·회)", "price": "비쌈", "distance": "거리 미확인", "id": "20260603-D-와인-1", "verified": false}, {"name": "오키보루", "cuisine": "일식(초밥)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-와인-2", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(초밥·회)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-와인-3", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(오마카세)", "price": "비쌈", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-D-와인-4", "verified": true}, {"name": "본보야지", "cuisine": "양식(와인 페어링)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-와인-5", "verified": true}], "임원": [{"name": "칠산꽃게장 여의도점", "cuisine": "한식(활어·게장)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-임원-1", "verified": true}, {"name": "독도참치앤전복 여의도점", "cuisine": "한식(참치·전복회)", "price": "비쌈", "distance": "도보 1분 (카카오)", "id": "20260603-D-임원-2", "verified": true}, {"name": "오키보루", "cuisine": "일식(오마카세)", "price": "비쌈", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-D-임원-3", "verified": true}, {"name": "진가와 여의도점", "cuisine": "일식(고급 초밥)", "price": "비쌈", "distance": "도보 2분 (카카오) / 2분 (네이버)", "id": "20260603-D-임원-4", "verified": true}, {"name": "소몽 여의도", "cuisine": "일식(카이세키·프라이빗)", "price": "비쌈", "distance": "도보 6분 (카카오) / 6분 (네이버)", "id": "20260603-D-임원-5", "verified": true}]}}, "술집": {"restaurants": [{"name": "히또비또", "cuisine": "이자카야", "feature": "스카이라운지 야경 이자카야, 프리미엄 사시미 및 꼬치구이, 프라이빗룸", "price": "비쌈", "distance": "도보 11분 (카카오) / 11분 (네이버)", "id": "20260603-B-1", "verified": true}, {"name": "로바다야끼소담", "cuisine": "이자카야", "feature": "즉석 꼬치구이, 조용한 분위기, 정갈한 일본식 안주", "price": "보통", "distance": "도보 9분 (카카오) / 9분 (네이버)", "id": "20260603-B-2", "verified": true}, {"name": "황금마차", "cuisine": "포차", "feature": "아재감성 소주 포차, 시그니처 오돌뼈짜장밥, 조개탕", "price": "저렴", "distance": "도보 7분 (카카오) / 7분 (네이버)", "id": "20260603-B-3", "verified": true}, {"name": "오키보루", "cuisine": "일식", "feature": "신선한 회와 초밥, 회사 인근 접근성 우수", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-B-4", "verified": true}, {"name": "독도참치앤전복", "cuisine": "한식", "feature": "신선한 참치 및 전복, 술 안주로 최적", "price": "보통", "distance": "도보 1분 (카카오) / 1분 (네이버)", "id": "20260603-B-5", "verified": true}], "extras": [{"name": "야마야", "cuisine": "이자카야", "feature": "여의도역 인기 이자카야, 룸 있음", "price": "비쌈", "distance": "도보 6분 (카카오) / 5분 (네이버)", "tag": "검색유명", "id": "20260603-B-x2", "verified": true}]}}}, {"date": "2026-06-02", "comment": "화창한 날씨지만 대기질이 나쁘니 시원하고 깔끔한 음식으로 점심을 즐기세요!", "restaurants": [{"name": "소몽", "cuisine": "일식(소바/덮밥)", "feature": "직접 끓인 육수의 정성 있는 소바, 고등어/연어 덮밥", "price": "보통", "distance": "도보 3분", "id": "20260602-1"}, {"name": "사천화가", "cuisine": "사천식 중식", "feature": "매콤한 마라탕면, 빠른 회전속도, 바 좌석", "price": "보통", "distance": "도보 2분", "id": "20260602-2"}, {"name": "구마산", "cuisine": "한식(추어탕)", "feature": "담백한 경상도식 국물, 소갈비 구이", "price": "보통", "distance": "도보 5분", "id": "20260602-3"}, {"name": "카츠아지", "cuisine": "일식(돈카츠)", "feature": "수제 돈카츠, 현지식 일본 카츠 정식", "price": "보통", "distance": "도보 7분", "id": "20260602-4"}, {"name": "정윤 키친", "cuisine": "아시안 가정식", "feature": "싱가포르 치킨라이스, 차슈 쌀국수", "price": "저렴", "distance": "도보 2분", "id": "20260602-5"}], "by_condition": {"해장 필요": [{"name": "구마산", "cuisine": "한식(추어탕)", "feature": "시원하고 개운한 추어탕 국물로 해장", "price": "보통", "distance": "도보 5분", "id": "20260602-해장-1"}, {"name": "희정식당", "cuisine": "한식(부대찌개)", "feature": "직접 담근 고추장의 진한 부대찌개", "price": "저렴", "distance": "도보 8분", "id": "20260602-해장-2"}, {"name": "신송한식", "cuisine": "한식(대구탕)", "feature": "감칠맛 뛰어나고 얼큰한 국물의 대구탕", "price": "보통", "distance": "도보 10분", "id": "20260602-해장-3"}, {"name": "선지해장국", "cuisine": "한식(국밥)", "feature": "구수하고 얼큰한 선지국", "price": "저렴", "distance": "도보 6분", "id": "20260602-해장-4"}, {"name": "장독대 김치찌개", "cuisine": "한식(김치찌개)", "feature": "24시간 운영, 깊은 맛의 김치찌개", "price": "저렴", "distance": "도보 7분", "id": "20260602-해장-5"}], "매콤하게": [{"name": "사천화가", "cuisine": "사천식 중식", "feature": "얼얼한 마라탕, 매콤 통새우완탕", "price": "보통", "distance": "도보 2분", "id": "20260602-매콤-1"}, {"name": "구마산", "cuisine": "한식(추어탕)", "feature": "산초가루를 곁들인 얼큰한 추어탕", "price": "보통", "distance": "도보 5분", "id": "20260602-매콤-2"}, {"name": "희정식당", "cuisine": "한식(부대찌개)", "feature": "다진 마늘 많이 들어간 얼큰한 국물", "price": "저렴", "distance": "도보 8분", "id": "20260602-매콤-3"}, {"name": "신송한식", "cuisine": "한식(대구탕)", "feature": "적당한 얼큼함의 대구탕", "price": "보통", "distance": "도보 10분", "id": "20260602-매콤-4"}, {"name": "아오리", "cuisine": "일식(라멘)", "feature": "매콤한 돼지사골 라멘, 마늘 양 조절 가능", "price": "보통", "distance": "도보 12분", "id": "20260602-매콤-5"}], "가볍게": [{"name": "정윤 키친", "cuisine": "아시안 가정식", "feature": "싱가포르 치킨라이스, 가볍고 상큼한 맛", "price": "저렴", "distance": "도보 2분", "id": "20260602-가볍-1"}, {"name": "소몽", "cuisine": "일식(소바)", "feature": "담백한 온/냉소바, 가볍고 정갈함", "price": "보통", "distance": "도보 3분", "id": "20260602-가볍-2"}, {"name": "타마", "cuisine": "일식(장어덮밥)", "feature": "정갈한 한상 구성의 장어정식", "price": "비쌈", "distance": "도보 5분", "id": "20260602-가볍-3"}, {"name": "정인면옥", "cuisine": "한식(평양냉면)", "feature": "담백한 냉면과 무 절임의 조화", "price": "보통", "distance": "도보 8분", "id": "20260602-가볍-4"}, {"name": "해담온", "cuisine": "일식(가츠)", "feature": "바삭한 튀김, 가볍고 깔끔한 정식 구성", "price": "보통", "distance": "도보 6분", "id": "20260602-가볍-5"}], "든든하게": [{"name": "카츠아지", "cuisine": "일식(돈카츠)", "feature": "푸짐한 수제 돈카츠, 정식 구성", "price": "보통", "distance": "도보 7분", "id": "20260602-든든-1"}, {"name": "희정식당", "cuisine": "한식(부대찌개)", "feature": "푸짐한 양의 부대찌개, 스테이크 추가 가능", "price": "저렴", "distance": "도보 8분", "id": "20260602-든든-2"}, {"name": "구마산", "cuisine": "한식(추어탕)", "feature": "내용물 푸짐한 추어탕으로 든든하게", "price": "보통", "distance": "도보 5분", "id": "20260602-든든-3"}, {"name": "해담온", "cuisine": "일식(가츠)", "feature": "밥+국+반찬 푸짐한 세트 정식", "price": "보통", "distance": "도보 6분", "id": "20260602-든든-4"}, {"name": "카레나이스", "cuisine": "일식(카레/돈카츠)", "feature": "기분 좋게 매운 카레와 돈카츠 조합", "price": "보통", "distance": "도보 9분", "id": "20260602-든든-5"}], "일식": [{"name": "로바", "cuisine": "일식(고젠/정식)", "feature": "신라호텔 스시조 셰프의 고급 일식 정식", "price": "비쌈", "distance": "도보 3분", "id": "20260602-일식-1"}, {"name": "타마", "cuisine": "일식(장어덮밥)", "feature": "최상의 장어를 직접 손질한 정갈한 정식", "price": "비쌈", "distance": "도보 5분", "id": "20260602-일식-2"}, {"name": "소몽", "cuisine": "일식(소바/덮밥)", "feature": "직접 끓인 육수의 정성 있는 소바", "price": "보통", "distance": "도보 3분", "id": "20260602-일식-3"}, {"name": "카츠아지", "cuisine": "일식(돈카츠)", "feature": "현지식 수제 돈카츠 정식", "price": "보통", "distance": "도보 7분", "id": "20260602-일식-4"}, {"name": "해담온", "cuisine": "일식(가츠)", "feature": "혼밥 최적화 설계의 정성 있는 가츠 정식", "price": "보통", "distance": "도보 6분", "id": "20260602-일식-5"}], "한식": [{"name": "구마산", "cuisine": "한식(추어탕)", "feature": "경상도 전통 추어탕의 깊은 맛", "price": "보통", "distance": "도보 5분", "id": "20260602-한식-1"}, {"name": "희정식당", "cuisine": "한식(부대찌개/스테이크)", "feature": "직접 담근 고추장의 진정성 있는 국물", "price": "저렴", "distance": "도보 8분", "id": "20260602-한식-2"}, {"name": "신송한식", "cuisine": "한식(대구탕/회)", "feature": "시원하고 깔끔한 대구탕", "price": "보통", "distance": "도보 10분", "id": "20260602-한식-3"}, {"name": "정인면옥", "cuisine": "한식(평양냉면)", "feature": "담백한 메밀면의 구수한 맛", "price": "보통", "distance": "도보 8분", "id": "20260602-한식-4"}, {"name": "장독대 김치찌개", "cuisine": "한식(김치찌개)", "feature": "24시간 운영, 합리적 가격의 한식", "price": "저렴", "distance": "도보 7분", "id": "20260602-한식-5"}], "고기": [{"name": "카츠아지", "cuisine": "일식(돈카츠)", "feature": "적절한 두께의 수제 돈카츠", "price": "보통", "distance": "도보 7분", "id": "20260602-고기-1"}, {"name": "해담온", "cuisine": "일식(가츠)", "feature": "바삭한 흑돼지카츠, 다양한 부위 선택", "price": "보통", "distance": "도보 6분", "id": "20260602-고기-2"}, {"name": "희정식당", "cuisine": "한식(스테이크/부대찌개)", "feature": "티본모듬스테이크와 부대찌개 조합", "price": "저렴", "distance": "도보 8분", "id": "20260602-고기-3"}, {"name": "신송한식", "cuisine": "한식(소갈비)", "feature": "석쇠에 구운 인기 소갈비", "price": "보통", "distance": "도보 10분", "id": "20260602-고기-4"}, {"name": "카레나이스", "cuisine": "일식(돈카츠/카레)", "feature": "호불호 없는 맛있는 카레와 돈카츠", "price": "보통", "distance": "도보 9분", "id": "20260602-고기-5"}], "혼밥": [{"name": "해담온", "cuisine": "일식(가츠)", "feature": "혼밥 최적화 바 테이블, 콘센트/칸막이 설치", "price": "보통", "distance": "도보 6분", "id": "20260602-혼밥-1"}, {"name": "사천화가", "cuisine": "사천식 중식", "feature": "바 좌석 구성, 빠른 회전속도", "price": "보통", "distance": "도보 2분", "id": "20260602-혼밥-2"}, {"name": "소몽", "cuisine": "일식(소바)", "feature": "혼밥족 환영, 아담한 카운터 좌석", "price": "보통", "distance": "도보 3분", "id": "20260602-혼밥-3"}, {"name": "정인면옥", "cuisine": "한식(평양냉면)", "feature": "점심 회전 빠른 노포 한식", "price": "보통", "distance": "도보 8분", "id": "20260602-혼밥-4"}, {"name": "신송한식", "cuisine": "한식(대구탕)", "feature": "직장인 단품 위주 메뉴, 빠른 식사 가능", "price": "보통", "distance": "도보 10분", "id": "20260602-혼밥-5"}], "와인": [{"name": "르블랑 여의도", "cuisine": "프렌치 비스트로", "feature": "프렌치 클래식과 와인 리스트가 풍부하며, 런치 코스에서 화이트/레드 와인 페어링 가능", "price": "비쌈", "distance": "도보 3분", "id": "20260602-와인-1"}, {"name": "오르", "cuisine": "이탈리안 와인바", "feature": "이탈리아 와인 전문점으로 파스타와 리소또가 뛰어나며 글라스 와인으로 점심 페어링 추천", "price": "보통", "distance": "도보 5분", "id": "20260602-와인-2"}, {"name": "더 갤러리 라운지", "cuisine": "모던 유러피안", "feature": "세련된 분위기에서 와인 리스트가 다양하고, 샐러드·스테이크 런치 세트와 잘 어울림", "price": "비쌈", "distance": "도보 4분", "id": "20260602-와인-3"}, {"name": "에스더 와인하우스", "cuisine": "와인바 & 이탈리안", "feature": "Natural Wine 중심의 큐레이션과 함께 간단한 이탈리안 요리로 점심 와인 페어링에 최적", "price": "보통", "distance": "도보 6분", "id": "20260602-와인-4"}, {"name": "로제떼", "cuisine": "프렌치 카페 & 와인", "feature": "가벼운 프렌치 메뉴(샐러드, 스프, 샌드위치)와 와인 글라스 조합이 점심으로 딱 좋음", "price": "보통", "distance": "도보 7분", "id": "20260602-와인-5"}], "임원": [{"name": "라임 라이트", "cuisine": "프렌치", "feature": "프라이빗 다이닝룸 완비, 셰프 추천 세트 코스로 고급스러운 점심 경험", "price": "비쌈", "distance": "도보 5분", "id": "20260602-임원-1"}, {"name": "더 스테이크하우스", "cuisine": "프리미엄 스테이크", "feature": "세미프라이빗 룸, 최고급 소고기와 와인 페어링, 임원 접대의 정석", "price": "비쌈", "distance": "도보 8분", "id": "20260602-임원-2"}, {"name": "아고라", "cuisine": "일식(오마카세)", "feature": "카운터 프라이빗 좌석, 신선한 시즈널 초밥, 격식 있는 점심 세트", "price": "비쌈", "distance": "도보 4분", "id": "20260602-임원-3"}, {"name": "신라 서울", "cuisine": "한식(프리미엄 불고기)", "feature": "프라이빗 테이블석, 프리미엄 한우 구이, 한국적 고급스러움", "price": "비쌈", "distance": "도보 6분", "id": "20260602-임원-4"}, {"name": "이탈리아 클럽", "cuisine": "이탈리안", "feature": "클래식하고 조용한 분위기, 프라이빗 룸, 임원층 단골 식당", "price": "보통", "distance": "도보 7분", "id": "20260602-임원-5"}]}, "meals": {"술집": {"restaurants": [{"name": "황금마차", "cuisine": "포차", "feature": "노포 아재감성, 오돌뼈짜장밥 시그니처", "price": "보통", "distance": "도보 5분", "id": "20260602-B-1"}, {"name": "히또비또", "cuisine": "이자카야", "feature": "야경 뷰, 프라이빗 룸, 신선한 사시미", "price": "비쌈", "distance": "도보 7분", "id": "20260602-B-2"}, {"name": "라케이브", "cuisine": "와인바", "feature": "분위기 있는 지하 아지트, 다양한 와인", "price": "비쌈", "distance": "도보 6분", "id": "20260602-B-3"}, {"name": "이자카야나무", "cuisine": "이자카야", "feature": "신선한 초밥·사시미, 늦게까지 영업", "price": "비쌈", "distance": "도보 4분", "id": "20260602-B-4"}, {"name": "탭퍼블릭", "cuisine": "호프/맥주", "feature": "수제맥주, 캐주얼한 분위기", "price": "보통", "distance": "도보 8분", "id": "20260602-B-5"}]}, "저녁": {"restaurants": [{"name": "더 플레이스", "cuisine": "프리미엄 스테이크/양식", "feature": "고급 분위기, 와인 페어링, 회식·데이트 최고", "price": "비쌈", "distance": "도보 12분", "id": "20260602-D-1"}, {"name": "미쓰코시 식당", "cuisine": "일본식 정식", "feature": "정갈한 프레젠테이션, 신선한 재료", "price": "보통", "distance": "도보 8분", "id": "20260602-D-2"}, {"name": "한우 명가", "cuisine": "한우 구이/한정식", "feature": "최고급 한우, 한국식 회식 분위기", "price": "비쌈", "distance": "도보 10분", "id": "20260602-D-3"}, {"name": "여의도 초밥 스시야마", "cuisine": "일본식 초밥", "feature": "신선함, 소규모 정원, 카운터 앉음", "price": "보통", "distance": "도보 7분", "id": "20260602-D-4"}, {"name": "콩심", "cuisine": "한정식", "feature": "전통 한식, 정성 있는 밑반찬, 소수정원", "price": "보통", "distance": "도보 9분", "id": "20260602-D-5"}], "by_condition": {"해장 필요": [{"name": "여의도 해장국", "cuisine": "국밥/국물", "feature": "뜨끈한 국물, 밤샘 영업", "price": "저렴", "distance": "도보 5분", "id": "20260602-D-해장-1"}, {"name": "진주국밥", "cuisine": "돼지국밥", "feature": "깊은 국물맛, 빠른 서빙", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-해장-2"}, {"name": "소고기국 전문점", "cuisine": "소고기국/우거지국", "feature": "깔끔한 소고기국물", "price": "저렴", "distance": "도보 8분", "id": "20260602-D-해장-3"}, {"name": "칼국수 할머니", "cuisine": "칼국수/수제비", "feature": "손으로 치는 칼국수, 깔끔", "price": "저렴", "distance": "도보 7분", "id": "20260602-D-해장-4"}, {"name": "여의도 매운탕", "cuisine": "생선매운탕", "feature": "시원한 국물, 회식용", "price": "보통", "distance": "도보 10분", "id": "20260602-D-해장-5"}], "매콤하게": [{"name": "마라탕 하우스", "cuisine": "중식/마라탕", "feature": "얼얼한 마라 맛, 맞춤형 매운맛", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-매콤-1"}, {"name": "여의도 낙지볶음", "cuisine": "낙지볶음", "feature": "매콤한 소스, 쫄깃한 식감", "price": "보통", "distance": "도보 8분", "id": "20260602-D-매콤-2"}, {"name": "쌀국수 베트남", "cuisine": "쌀국수/쌀국수 매운맛", "feature": "시원하고 매운 국물", "price": "저렴", "distance": "도보 9분", "id": "20260602-D-매콤-3"}, {"name": "제주 흑돼지 구이 (매콤)", "cuisine": "돼지고기 구이", "feature": "매콤한 양념, 쫄깃함", "price": "보통", "distance": "도보 11분", "id": "20260602-D-매콤-4"}, {"name": "중국당면 (마라)", "cuisine": "중식/마라당면", "feature": "매운맛 강함, 중독성 강함", "price": "저렴", "distance": "도보 7분", "id": "20260602-D-매콤-5"}], "가볍게": [{"name": "여의도 샐러드 카페", "cuisine": "웰빙 샐러드", "feature": "신선한 채소, 칼로리 낮음", "price": "보통", "distance": "도보 5분", "id": "20260602-D-가볍-1"}, {"name": "해산물 회 정식", "cuisine": "회/해산물", "feature": "신선한 생선, 가벼운 국물", "price": "보통", "distance": "도보 9분", "id": "20260602-D-가볍-2"}, {"name": "소바/우동 전문점", "cuisine": "일본식 소바/우동", "feature": "담백함, 정갈함", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-가볍-3"}, {"name": "그릭 요거트 플레이트", "cuisine": "그릭 요거트/치즈", "feature": "가볍고 건강함, 디저트 같음", "price": "보통", "distance": "도보 8분", "id": "20260602-D-가볍-4"}, {"name": "생선구이 소정식", "cuisine": "생선구이", "feature": "한두 마리, 담백함", "price": "보통", "distance": "도보 10분", "id": "20260602-D-가볍-5"}], "든든하게": [{"name": "한우 명가", "cuisine": "한우 구이", "feature": "최고급 한우, 푸짐한 세팅", "price": "비쌈", "distance": "도보 10분", "id": "20260602-D-든든-1"}, {"name": "돼지갈비 구이 전문점", "cuisine": "돼지갈비", "feature": "연한 식감, 양념의 깊이", "price": "보통", "distance": "도보 7분", "id": "20260602-D-든든-2"}, {"name": "곱창/막창 전문점", "cuisine": "곱창/막창", "feature": "쫄깃함, 매콤한 양념", "price": "보통", "distance": "도보 9분", "id": "20260602-D-든든-3"}, {"name": "닭다리 구이/찜", "cuisine": "닭다리 요리", "feature": "푸짐한 양, 중독성 있음", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-든든-4"}, {"name": "스키야키/우동 (푸짐)", "cuisine": "일본식 냄비/우동", "feature": "뜨거운 국물, 야채/고기 가득", "price": "보통", "distance": "도보 8분", "id": "20260602-D-든든-5"}], "일식": [{"name": "여의도 오마카세", "cuisine": "프리미엄 초밥", "feature": "셰프 추천, 신선함 최고", "price": "비쌈", "distance": "도보 11분", "id": "20260602-D-일식-1"}, {"name": "텐동/우동 전문점", "cuisine": "텐동/우동", "feature": "담백한 국물, 정성 있는 반죽", "price": "저렴", "distance": "도보 5분", "id": "20260602-D-일식-2"}, {"name": "야키니쿠 (일식 구이)", "cuisine": "일본식 소고기 구이", "feature": "정갈한 마리네이드, 고급 분위기", "price": "보통", "distance": "도보 9분", "id": "20260602-D-일식-3"}, {"name": "돈카츠 정식", "cuisine": "돈카츠", "feature": "바삭한 튀김, 일본식 정식", "price": "보통", "distance": "도보 6분", "id": "20260602-D-일식-4"}, {"name": "라멘 하우스", "cuisine": "라멘", "feature": "진한 육수, 쫄깃한 면", "price": "저렴", "distance": "도보 7분", "id": "20260602-D-일식-5"}], "한식": [{"name": "한우 한정식", "cuisine": "한우 한정식", "feature": "정성 있는 반찬, 고급스러움", "price": "비쌈", "distance": "도보 10분", "id": "20260602-D-한식-1"}, {"name": "비빔밥/돌솥밥", "cuisine": "비빔밥/돌솥밥", "feature": "빠른 서빙, 한 끼 충분", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-한식-2"}, {"name": "갈비탕/소고기국", "cuisine": "갈비탕", "feature": "깊은 국물맛, 정통", "price": "보통", "distance": "도보 8분", "id": "20260602-D-한식-3"}, {"name": "생선구이 정식", "cuisine": "생선구이", "feature": "담백함, 밑반찬 풍부", "price": "보통", "distance": "도보 9분", "id": "20260602-D-한식-4"}, {"name": "김밥/국밥 식당", "cuisine": "김밥/국밥", "feature": "빠르고 저렴, 가벼움", "price": "저렴", "distance": "도보 5분", "id": "20260602-D-한식-5"}], "고기": [{"name": "더 플레이스 (스테이크)", "cuisine": "프리미엄 스테이크", "feature": "고급 소고기, 와인 페어링", "price": "비쌈", "distance": "도보 12분", "id": "20260602-D-고기-1"}, {"name": "제주 흑돼지 구이", "cuisine": "제주 흑돼지", "feature": "육질 좋음, 신선함", "price": "보통", "distance": "도보 11분", "id": "20260602-D-고기-2"}, {"name": "우설/안심 구이 전문점", "cuisine": "소고기 희귀부위 구이", "feature": "최고급 부위, 부드러움", "price": "비쌈", "distance": "도보 10분", "id": "20260602-D-고기-3"}, {"name": "닭가슴살 구이/닭다리 조림", "cuisine": "닭 요리", "feature": "담백함, 건강식", "price": "저렴", "distance": "도보 7분", "id": "20260602-D-고기-4"}, {"name": "곱창 전문점", "cuisine": "곱창/막창", "feature": "쫄깃함, 양념의 깊이", "price": "보통", "distance": "도보 9분", "id": "20260602-D-고기-5"}], "혼밥": [{"name": "카운터 우동/소바", "cuisine": "우동/소바", "feature": "혼밥 편함, 빠른 서빙", "price": "저렴", "distance": "도보 6분", "id": "20260602-D-혼밥-1"}, {"name": "정식 한끼 (1인 정원)", "cuisine": "정식", "feature": "1인분 딱 맞음, 깔끔함", "price": "보통", "distance": "도보 8분", "id": "20260602-D-혼밥-2"}, {"name": "국밥/국수 (카운터)", "cuisine": "국밥/국수", "feature": "혼밥 최고, 빠름", "price": "저렴", "distance": "도보 5분", "id": "20260602-D-혼밥-3"}, {"name": "회전초밥", "cuisine": "초밥", "feature": "골라먹는 재미, 혼밥 편함", "price": "보통", "distance": "도보 9분", "id": "20260602-D-혼밥-4"}, {"name": "라멘/분식점", "cuisine": "라멘/분식", "feature": "카운터 앉음, 혼밥 표준", "price": "저렴", "distance": "도보 7분", "id": "20260602-D-혼밥-5"}], "와인": [{"name": "더 셀라 와인바", "cuisine": "와인바 & 이탈리안", "feature": "정선된 와인 리스트와 이탈리안 안티파스토, 파스타의 완벽한 페어링", "price": "보통", "distance": "도보 5분", "id": "20260602-D-와인-1"}, {"name": "포도나무", "cuisine": "와인바 & 유럽식", "feature": "소믈리에가 추천하는 내추럴 와인과 치즈, 샤르쿠테리 플래터", "price": "보통", "distance": "도보 7분", "id": "20260602-D-와인-2"}, {"name": "르블랑 여의도", "cuisine": "프렌치 & 와인", "feature": "프렌치 가정식 요리와 와인 페어링이 뛰어난 고급 레스토랑", "price": "비쌈", "distance": "도보 8분", "id": "20260602-D-와인-3"}, {"name": "오스테리아 뮤지코", "cuisine": "이탈리안 와인 바", "feature": "이탈리아 와인 셀렉션과 신선한 해산물 파스타, 리조또", "price": "보통", "distance": "도보 6분", "id": "20260602-D-와인-4"}, {"name": "비노 아르떼", "cuisine": "와인바 & 이탈리안 소울푸드", "feature": "캐주얼하면서도 품격 있는 와인 페어링과 프로슈토, 까르파초 추천", "price": "보통", "distance": "도보 10분", "id": "20260602-D-와인-5"}], "임원": [{"name": "라이브러리 (Library)", "cuisine": "프렌치", "feature": "프라이빗 룸 완비, 세련된 프렌치 다이닝으로 임원 접대에 최고의 선택", "price": "비쌈", "distance": "도보 3분", "id": "20260602-D-임원-1"}, {"name": "우와야 (Uwaya)", "cuisine": "일식/오마카세", "feature": "카운터와 프라이빗 룸, 신선한 프리미엄 초밥과 소주·와인 페어링으로 격식 있는 접대 분위기", "price": "비쌈", "distance": "도보 5분", "id": "20260602-D-임원-2"}, {"name": "더 그릴 하우스 (The Grill House)", "cuisine": "스테이크", "feature": "고급스러운 인테리어와 프라이빗 다이닝, 프리미엄 와규·스테이크로 비즈니스 접대에 안성맞춤", "price": "비쌈", "distance": "도보 2분", "id": "20260602-D-임원-3"}, {"name": "더 정원 (The Garden)", "cuisine": "한식 고급요리", "feature": "개별 프라이빗 룸, 계절 재료를 활용한 한식으로 격조 있으면서도 친근한 접대", "price": "보통", "distance": "도보 4분", "id": "20260602-D-임원-4"}, {"name": "카이젠 (Kaizen)", "cuisine": "일식/철판 구이", "feature": "셰프와의 대화가 가능한 카운터 석, 프리미엄 재료의 창작 일식으로 고급스러운 경험 제공", "price": "비쌈", "distance": "도보 6분", "id": "20260602-D-임원-5"}]}}}}, {"date": "2026-06-01", "comment": "쾌청한 초여름 날씨! 최고 30도로 더워지니 시원한 소바, 냉면 또는 가벼운 일식이 추천됩니다.", "restaurants": [{"id": "20260601-1", "name": "소몽", "cuisine": "일식 소바", "feature": "정성스럽게 끓인 소바육수, 평일 점심에도 웨이팅", "price": "보통", "distance": "여의나루역 도보 3분"}, {"id": "20260601-2", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크 숙성, 혼밥 가능, 우아한 룸 좌석", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-3", "name": "로바", "cuisine": "일식 정식/파스타", "feature": "고젠정식, 와인 페어링 가능, 조용한 분위기", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-4", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 육개장, 도미 솥밥, 룸이 많은 모임 장소", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-5", "name": "사천화가", "cuisine": "중식", "feature": "차슈마라탕, 통창이 밝은 분위기", "price": "보통", "distance": "더현대서울 6층"}], "by_condition": {"해장 필요": [{"id": "20260601-해장-1", "name": "사천화가", "cuisine": "중식", "feature": "매콤한 차슈마라탕면", "price": "보통", "distance": "더현대서울 6층"}, {"id": "20260601-해장-2", "name": "한암동", "cuisine": "한식", "feature": "시원한 한우 육개장", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-해장-3", "name": "소몽", "cuisine": "일식", "feature": "담백한 고등어 온소바", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-해장-4", "name": "호우섐", "cuisine": "홍콩식", "feature": "진한 국물 요리", "price": "보통", "distance": "여의나루역 근처"}, {"id": "20260601-해장-5", "name": "정윤키친", "cuisine": "한식", "feature": "따뜻한 국물 한식", "price": "저렴", "distance": "공작상가"}], "매콤하게": [{"id": "20260601-매콤-1", "name": "사천화가", "cuisine": "중식", "feature": "차슈마라탕, 맵기 조절 가능", "price": "보통", "distance": "더현대서울 6층"}, {"id": "20260601-매콤-2", "name": "하반", "cuisine": "한식 매콤", "feature": "매운 국물 요리", "price": "보통", "distance": "여의나루 일대"}, {"id": "20260601-매콤-3", "name": "야마야", "cuisine": "일식 이자카야", "feature": "매콤한 아시안 양념", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260601-매콤-4", "name": "고추장불고기", "cuisine": "한식 BBQ", "feature": "고추장 양념 삼겹살", "price": "저렴", "distance": "여의나루 근처"}, {"id": "20260601-매콤-5", "name": "산라미엔", "cuisine": "중식", "feature": "얼큰한 마라미엔", "price": "저렴", "distance": "국제금융센터"}], "가볍게": [{"id": "20260601-가볍-1", "name": "소몽", "cuisine": "일식 소바", "feature": "냉소바, 가벼운 식감", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-가볍-2", "name": "정윤키친", "cuisine": "아시안 가정식", "feature": "담백한 싱가포르 치킨라이스", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-가볍-3", "name": "리스카페", "cuisine": "브런치", "feature": "가벼운 베이글, 제철 샐러드", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260601-가볍-4", "name": "로바", "cuisine": "일식 정식", "feature": "신선한 스시, 우동", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-가볍-5", "name": "달리181", "cuisine": "양식", "feature": "신선한 해산물, 가벼운 파스타", "price": "보통", "distance": "여의나루 일대"}], "든든하게": [{"id": "20260601-든든-1", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 갈비살 수육, 푸짐한 구성", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-든든-2", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "튀김류, 든든한 정식", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-든든-3", "name": "하동관", "cuisine": "한식 곰탕", "feature": "깊은 맛의 곰탕, 푸짐한 밥", "price": "저렴", "distance": "여의도 일대"}, {"id": "20260601-든든-4", "name": "창고43", "cuisine": "한식 한우", "feature": "한우구이, 룸 많음", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-든든-5", "name": "야마야", "cuisine": "일식 이자카야", "feature": "푸짐한 일식 정식, 코스", "price": "비쌈", "distance": "여의도역 근처"}], "일식": [{"id": "20260601-일식-1", "name": "소몽", "cuisine": "일식 소바", "feature": "수제 소바, 정통성 있는 맛", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-일식-2", "name": "로바", "cuisine": "일식 오마카세", "feature": "스시·사시미·우동 고젠", "price": "비쌈", "distance": "공작상가 2층"}, {"id": "20260601-일식-3", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크 돈카츠", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-일식-4", "name": "야마야", "cuisine": "일식 이자카야", "feature": "다양한 일식 메뉴", "price": "보통", "distance": "여의도역 근처"}, {"id": "20260601-일식-5", "name": "이노찌", "cuisine": "일식 스시", "feature": "신선한 회, 프리미엄", "price": "비쌈", "distance": "여의도 일대"}], "한식": [{"id": "20260601-한식-1", "name": "한암동", "cuisine": "한식 한우", "feature": "1++ 한우, 정갈한 구성", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-한식-2", "name": "창고43", "cuisine": "한식 한우", "feature": "한우구이, 편안한 분위기", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-한식-3", "name": "하동관", "cuisine": "한식 곰탕", "feature": "전통 곰탕, 수육", "price": "저렴", "distance": "여의도 일대"}, {"id": "20260601-한식-4", "name": "정윤키친", "cuisine": "한식 가정식", "feature": "남녀노소 무난한 구성", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-한식-5", "name": "은호식당", "cuisine": "한식 곰탕", "feature": "80년 전통 꼬리곰탕", "price": "저렴", "distance": "여의도 일대"}], "고기": [{"id": "20260601-고기-1", "name": "한암동", "cuisine": "한식 한우", "feature": "한우 갈비살, 고급 육질", "price": "비쌈", "distance": "여의도역 3분"}, {"id": "20260601-고기-2", "name": "창고43", "cuisine": "한식 한우", "feature": "한우 본연의 맛, 최고 부위", "price": "비쌈", "distance": "여의도역 근처"}, {"id": "20260601-고기-3", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "미네랄 포크, 육즙살살", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-고기-4", "name": "하반", "cuisine": "한식 고기", "feature": "대형 좌석, 룸 편의", "price": "보통", "distance": "여의나루 일대"}, {"id": "20260601-고기-5", "name": "민소한우", "cuisine": "한식 한우", "feature": "새로운 한우 성지, 예약 필수", "price": "비쌈", "distance": "여의도 일대"}], "혼밥": [{"id": "20260601-혼밥-1", "name": "카츠아지", "cuisine": "일식 돈카츠", "feature": "혼밥 무난, 높은 층고", "price": "보통", "distance": "브라이튼 B1"}, {"id": "20260601-혼밥-2", "name": "소몽", "cuisine": "일식 소바", "feature": "혼밥 가능, 빠른 제공 속도", "price": "보통", "distance": "여의나루역 3분"}, {"id": "20260601-혼밥-3", "name": "정윤키친", "cuisine": "아시안 가정식", "feature": "1~2인석 구성, 단시간 식사", "price": "저렴", "distance": "공작상가 2층"}, {"id": "20260601-혼밥-4", "name": "리스카페", "cuisine": "브런치 베이글", "feature": "개인 좌석, 조용한 분위기", "price": "저렴", "distance": "여의나루역 근처"}, {"id": "20260601-혼밥-5", "name": "사천화가", "cuisine": "중식", "feature": "회전 빠름, 혼밥 편함", "price": "보통", "distance": "더현대서울 6층"}]}}, {"date": "2026-05-29", "restaurants": [{"id": "20260529-1", "name": "별미볶음점", "cuisine": "한식 - 직화볶음", "feature": "강렬한 불 맛 직화볶음 전문. 제육직화·오징어직화·낙지직화가 인기. 평일 런치만 운영하는 여의도 직장인 단골 맛집", "price": "저렴 (1만~1.2만원)", "distance": "도보 약 8분 (여의도역 인근)"}, {"id": "20260529-2", "name": "영원식당", "cuisine": "한식 - 수제비/칼국수", "feature": "쫀득한 수제비와 파전·감자전이 인기. 오징어볶음·낙지볶음도 함께 즐길 수 있는 정겨운 한식집. 금요일 마무리엔 따끈한 국물 한 그릇", "price": "저렴 (8천~1.2만원)", "distance": "도보 약 6분 (여의나루역 인근)"}, {"id": "20260529-3", "name": "카츠아지", "cuisine": "일식 - 돈카츠", "feature": "치즈카츠(2.1만)·로스+멘치카츠 정식(2.3만) 인기. 바삭한 일본식 수제 돈카츠와 수제 일본 카레(6천)도 별미", "price": "보통 (2.1만~2.3만원)", "distance": "도보 약 5분 (공작상가 인근)"}, {"id": "20260529-4", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "쌈채소 무한리필 쌈밥 전문. 제육오징어·부대전골이 대표 메뉴. 금요일 점심 든든하게 채워주는 집밥 스타일 맛집", "price": "보통 (1.2만~1.5만원)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260529-5", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문으로 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 여의나루 대표 웨이팅 명소", "price": "보통 (1.3만~1.8만원)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}]}, {"date": "2026-05-28", "restaurants": [{"id": "20260528-1", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문. 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 목요일 점심 웨이팅 대비 11시 전후 방문 추천", "price": "보통 (1.3만~1.8만원대)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}, {"id": "20260528-2", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표. 따뜻한 목요일엔 채소 듬뿍 쌈밥 한 상", "price": "보통 (1.2만~1.5만원대)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260528-3", "name": "희정식당", "cuisine": "한식 - 부대찌개", "feature": "20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 저렴하고 든든한 한 끼", "price": "저렴 (1인 약 1.3만원)", "distance": "도보 약 5분 (여의나루로 117, 공작상가 지하)"}, {"id": "20260528-4", "name": "소몽", "cuisine": "일식 - 소바/덮밥", "feature": "직접 끓인 육수로 만드는 정통 소바 전문. 고등어 온소바·새우장 냉소바 인기. 5월 말 날씨에 냉소바 한 그릇 딱", "price": "보통 (1만~1.6만원대)", "distance": "도보 약 5분 (여의나루로 113, 공작상가 2층)"}, {"id": "20260528-5", "name": "사천화가", "cuisine": "중식 - 마라탕면", "feature": "더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 목요일 오후는 대기 없이 여유롭게 식사 가능", "price": "보통 (1.7만~2.1만원)", "distance": "도보 약 10분 (더현대서울 6층)"}]}, {"date": "2026-05-27", "restaurants": [{"id": "20260527-1", "name": "오키보루", "cuisine": "일식 - 츠케멘/라멘", "feature": "뉴욕타임즈 선정 맛집. 자가제면 츠케멘 전문으로 농후한 돼지뼈 국물에 직접 뽑은 면을 찍어 먹는 스타일. 점심 웨이팅 명소", "price": "보통 (1.3만~1.8만원대)", "distance": "도보 약 3분 (여의나루로 77-1 1층)"}, {"id": "20260527-2", "name": "본토박이", "cuisine": "한식 - 쌈밥", "feature": "신선한 쌈채소 무한리필 쌈밥 전문. 매콤달콤 제육오징어와 시원한 부대전골이 대표 메뉴. 인근 직장인 줄 서는 집밥 맛집", "price": "보통 (1.2만~1.5만원대)", "distance": "도보 약 6분 (여의도동 백상빌딩 3층)"}, {"id": "20260527-3", "name": "희정식당", "cuisine": "한식 - 부대찌개", "feature": "20년 넘은 터줏대감 부대찌개 전문점. 직접 담근 고추장으로 끓인 특희정부대찌개가 시그니처. 직장인 단골 맛집", "price": "저렴 (1인 약 1.3만원)", "distance": "도보 약 5분 (여의나루로 117, 공작상가 지하)"}, {"id": "20260527-4", "name": "소몽", "cuisine": "일식 - 소바/덮밥", "feature": "직접 끓인 육수로 만드는 정통 소바 전문점. 고등어 온소바와 새우장 냉소바가 인기. 평일 점심 웨이팅 있을 정도로 꾸준한 인기", "price": "보통 (1만~1.6만원대)", "distance": "도보 약 5분 (여의나루로 113, 공작상가 2층)"}, {"id": "20260527-5", "name": "사천화가", "cuisine": "중식 - 마라탕면", "feature": "더현대서울 내 정통 중식당. 차슈마라탕면과 다양한 중식 덮밥. 1~2인석 구성으로 혼밥도 OK. 오픈 직후 or 13시 이후 방문 추천", "price": "보통 (1.7만~2.1만원)", "distance": "도보 약 10분 (더현대서울 6층)"}]}];
+
+// ── 인메모리 상태 ─────────────────────────────────────────────
+let commentsState = {}; // { restaurantId: [{id, reviewer_name, content, rating, created_at}] }
+
+// HISTORY_DATA에 없는 직접검색/주변검색 맛집의 상세정보 캐시 (이름 → 상세)
+// localStorage 영속화 → 새로고침/다른 탭에서도 상세 표시 유지
+let placeDetails = {};
+try { placeDetails = JSON.parse(localStorage.getItem('placeDetails') || '{}') || {}; } catch(e) { placeDetails = {}; }
+function cachePlace(r) {
+  if (!r || !r.name) return;
+  const prev = placeDetails[r.name] || {};
+  const merged = {
+    name: r.name,
+    cuisine: r.cuisine || prev.cuisine || '',
+    price: r.price || prev.price || '',
+    distance: r.distance || prev.distance || '',
+    address: r.address || prev.address || '',
+    feature: r.feature || prev.feature || '',
+    phone: r.phone || prev.phone || '',
+    lat: r.lat || prev.lat || 0,
+    lng: r.lng || prev.lng || 0,
+    verified: (r.verified !== undefined ? r.verified : prev.verified)
+  };
+  placeDetails[r.name] = merged;
+  try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+}
+function cachePlaces(arr) { (arr || []).forEach(cachePlace); }
+// 거리 표기 정규화: "도보 1분 (카카오) / 1분 (네이버)" → "도보 1분" (가장 가까운 값)
+function normDist(d) {
+  if (!d) return '';
+  const nums = String(d).match(/\d+/g);
+  if (!nums) return String(d);
+  const min = Math.min(...nums.map(Number));
+  return `도보 ${min}분`;
+}
+// AI가 생성한 디테일한 맛집 소개 캐시 (이름 → intro 문장)
+let placeIntros = {};
+try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
+let _introPending = {};   // 중복 호출 방지
+// 서버 공유 캐시(place_meta)에서 여러 맛집 소개·가격·거리를 한 번에 로드 (크레딧 절약)
+async function loadSharedMeta(names) {
+  const need = names.filter(n => !placeIntros[n] || !(placeDetails[n]||{}).price || !hasDualDist(n));
+  if (!need.length) return;
+  try {
+    const inList = need.map(n => `"${n.replace(/"/g,'')}"`).join(',');
+    const res = await fetch(`${SB_URL}/rest/v1/place_meta?name=in.(${encodeURIComponent(inList)})&select=name,intro,price,distance,verified`, { headers: SB_HEADERS });
+    if (!res.ok) return;
+    const rows = await res.json();
+    rows.forEach(r => {
+      if (r.intro) {
+        placeIntros[r.name] = r.intro;
+        if (!placeDetails[r.name]) placeDetails[r.name] = { name: r.name };
+        const pd = placeDetails[r.name];
+        if (r.price && !pd.price) pd.price = r.price;
+        if (r.distance && /카카오|네이버/.test(r.distance)) pd.distance = r.distance;
+        if (r.verified !== undefined && r.verified !== null) pd.verified = r.verified;
+      }
+    });
+    try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+  } catch(e) {}
+}
+// 양쪽(카카오+네이버) 거리가 이미 채워졌는지
+function hasDualDist(name) {
+  const d = (placeDetails[name] || {}).distance || '';
+  return /카카오/.test(d) && /네이버/.test(d);
+}
+async function fetchPlaceIntro(name) {
+  // 소개·가격·양쪽거리 모두 캐시됐으면 네트워크 호출 생략
+  if (placeIntros[name] && (placeDetails[name]||{}).price && hasDualDist(name)) return placeIntros[name];
+  if (_introPending[name]) return _introPending[name];
+  const d = placeDetails[name] || {};
+  _introPending[name] = (async () => {
+    try {
+      const res = await fetch(ANALYZE_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
+      });
+      const data = await res.json();
+      // 가격·거리(카카오+네이버) 보강 (일관성)
+      if (data && (data.price || data.distance)) {
+        if (!placeDetails[name]) placeDetails[name] = { name };
+        const pd = placeDetails[name];
+        if (data.price && !pd.price) pd.price = data.price;
+        // 양쪽 출처 거리가 있으면 단일 출처 거리보다 우선
+        if (data.distance && /카카오|네이버/.test(data.distance)) {
+          pd.distance = data.distance;
+          if (data.verified !== undefined) pd.verified = data.verified;
+        }
+        try { localStorage.setItem('placeDetails', JSON.stringify(placeDetails)); } catch(e) {}
+      }
+      if (data && data.intro) {
+        placeIntros[name] = data.intro;
+        try { localStorage.setItem('placeIntros', JSON.stringify(placeIntros)); } catch(e) {}
+        return data.intro;
+      }
+    } catch(e) {}
+    return '';
+  })();
+  return _introPending[name];
+}
+// 어떤 소스든 가장 풍부한 소개 반환 (AI 소개 > HISTORY feature)
+function bestIntro(name) {
+  if (placeIntros[name]) return placeIntros[name];
+  const base = (typeof findRestaurant === 'function' ? findRestaurant(name) : null) || {};
+  return base.feature || '';
+}
+// 이름으로 장소검색 백엔드(Kakao/Naver) 재조회 → 상세 채우기 (캐시에 없을 때)
+async function fetchPlaceDetail(name) {
+  if (placeDetails[name] && placeDetails[name].cuisine) return placeDetails[name];
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: name })
+    });
+    const data = await res.json();
+    const list = Array.isArray(data.places) ? data.places : [];
+    const hit = list.find(p => p.name === name) || list.find(p => p.name && p.name.includes(name)) || list[0];
+    if (hit) { cachePlace(hit); return placeDetails[name]; }
+  } catch(e) {}
+  return placeDetails[name] || null;
+}
+
+// ── Supabase API ──────────────────────────────────────────────
+// 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
+function init() {
+  renderHistory();
+  renderStats();
+  loadComments();
+  loadStock();
+  track('visit');
+  refreshHistoryForApp();   // 앱(번들)에서 최신 추천 갱신
+  // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
+  if (location.hash === '#admin') location.href = 'manage-jbax.html';
+}
+
+// 번들 앱(Capacitor/localhost)에서는 내장된 추천이 오래될 수 있어
+// GitHub raw(HTTPS)에서 최신 history.json을 받아 HISTORY_DATA를 갱신.
+async function refreshHistoryForApp() {
+  const isApp = !!(window.Capacitor) || location.protocol === 'capacitor:'
+             || location.protocol === 'file:' || location.hostname === 'localhost';
+  if (!isApp) return;   // 일반 웹은 배포 시점 데이터가 이미 최신
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/duelspost-droid/jblunch/master/history.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const recs = Array.isArray(data) ? data : (data.recommendations || []);
+    if (recs.length) {
+      HISTORY_DATA.splice(0, HISTORY_DATA.length, ...recs);
+      renderHistory(); renderStats();
+    }
+  } catch (e) {}
+}
+window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'manage-jbax.html'; });
+
+async function loadComments() {
+  setBadge('loading', '동기화 중…');
+  try {
+    const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&order=created_at.asc`, { headers: SB_HEADERS });
+    if (!r2.ok) throw new Error(r2.status);
+    const comments = await r2.json();
+    commentsState = {};
+    comments.forEach(c => {
+      if (!commentsState[c.restaurant_id]) commentsState[c.restaurant_id] = [];
+      commentsState[c.restaurant_id].push(c);
+    });
+    setBadge('ok', '☁️ 동기화됨');
+    renderCondGroup();   // 현재 선택 유지하며 리뷰 반영
+    renderStats();
+    backfillReviewedDetails();   // HISTORY에 없는 리뷰 맛집 상세 보강
+  } catch(e) {
+    setBadge('err', '⚠️ 오프라인');
+  }
+}
+
+// 리뷰는 있는데 상세정보가 없는 맛집(직접검색/주변검색)을 백엔드로 보강
+async function backfillReviewedDetails() {
+  const known = {};
+  allRestaurants().forEach(r => { if (r.name) known[r.name] = 1; });
+  // 서버 공유 캐시 일괄 로드 → 이미 생성된 맛집은 Claude 재호출 없이 즉시 표시
+  const reviewed = Object.keys(commentsState).filter(n => (commentsState[n]||[]).length && !known[n]);
+  await loadSharedMeta(reviewed);
+  renderStats();
+  const targets = Object.keys(commentsState).filter(n =>
+    (commentsState[n] || []).length && !known[n] && !(placeDetails[n] && placeDetails[n].cuisine));
+  for (const name of targets) {
+    await fetchPlaceDetail(name);
+    renderStats();
+    await new Promise(r => setTimeout(r, 400));   // 백엔드 과부하 방지
+  }
+  // 소개·가격·양쪽거리가 부족한 리뷰 맛집 → 보강 (HISTORY 맛집 제외)
+  const introTargets = Object.keys(commentsState).filter(n =>
+    (commentsState[n] || []).length && !known[n] &&
+    (!placeIntros[n] || !(placeDetails[n]||{}).price || !hasDualDist(n)));
+  for (const name of introTargets) {
+    await fetchPlaceIntro(name);
+    renderStats();
+    await new Promise(r => setTimeout(r, 1500));   // rate-limit 여유
+  }
+}
+
+async function insertComment(restaurantId, reviewerName, content, rating, meal) {
+  const body = {
+    restaurant_id: restaurantId,
+    reviewer_name: reviewerName,
+    content: content || null,
+    rating: rating || null,
+    meal: meal || null,
+    created_at: new Date().toISOString()
+  };
+  const res = await fetch(`${SB_URL}/rest/v1/comments`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0];
+}
+
+async function deleteComment(commentId) {
+  const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
+    method: 'DELETE',
+    headers: SB_HEADERS
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+async function updateComment(commentId, reviewerName, content, rating, meal) {
+  const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
+    method: 'PATCH',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+    body: JSON.stringify({
+      reviewer_name: reviewerName,
+      content: content || null,
+      rating: rating || null,
+      meal: meal || null
+    })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0];
+}
+
+function setBadge(type, text) {
+  const b = document.getElementById('sync-badge');
+  if (!b) return;   // 배지 제거됨 — 무시
+  b.className = 'sync-badge ' + type;
+  b.textContent = text;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── 이모지 ────────────────────────────────────────────────────
+function emo(c) {
+  if (!c) return '🍽️';
+  if (c.includes('일식')) return '🍜';
+  if (c.includes('한식')) return '🍲';
+  if (c.includes('중식')) return '🥢';
+  if (c.includes('버거')) return '🍔';
+  return '🍽️';
+}
+
+function avatarColor(name) {
+  const colors = ['#0a3d7a','#3182ce','#38a169','#805ad5','#d69e2e','#e53e3e','#319795'];
+  let h = 0;
+  for (let i=0; i<name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return colors[Math.abs(h) % colors.length];
+}
+
+function starsHtml(rating) {
+  if (!rating) return '';
+  return '⭐'.repeat(rating) + '<span style="opacity:0.3">☆</span>'.repeat(5 - rating);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── 카드 그룹 렌더 (공통) ────────────────────────────────────
+// bare=true: 날짜/날씨 헤더 없이 카드만 (홈 today-group용, 상단 배너와 중복 방지)
+// 추천 태그 → 배지 라벨
+const TAG_BADGE = {
+  '근처유명': '⭐ 10분내 유명',
+  '검색유명': '🔍 검색 인기',
+};
+
+function buildCard(r) {
+  const cms = commentsState[r.name] || [];
+  const reviewsHtml = cms.length
+    ? cms.map(c => {
+        const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+        const color = avatarColor(c.reviewer_name||'?');
+        return `<div class="review-item">
+          <div class="review-avatar" style="background:${color}">${initial}</div>
+          <div class="review-right">
+            <div class="review-header">
+              <span class="review-name">${escHtml(c.reviewer_name)}</span>
+              ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
+              ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+              <span class="review-date">${fmtDate(c.created_at)}</span>
+            </div>
+            ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+          </div>
+          <div class="review-actions">
+            <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
+            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
+  const cnt = cms.length;
+  const ratings = cms.map(c => c.rating).filter(Boolean);
+  const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
+  const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
+  const tagBadge = r.tag && TAG_BADGE[r.tag] ? `<span class="badge badge-tag">${TAG_BADGE[r.tag]}</span>` : '';
+  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
+    <div class="card-stripe"></div>
+    <div class="card-emoji">${emo(r.cuisine)}</div>
+    <div class="card-body">
+      <div class="card-top">
+        <span class="card-name">${r.name}</span>
+        <span class="badge badge-cuisine">${r.cuisine}</span>
+        ${tagBadge}
+        ${reviewBadge}
+      </div>
+      <div class="card-feature">${r.feature}</div>
+      <div class="card-meta">
+        <span>💰 ${r.price}</span>
+        <span>🚶 ${r.distance}</span>
+      </div>
+      <div class="reviews-block">${reviewsHtml}</div>
+    </div>
+    <div class="card-actions">
+      ${r.verified === false
+        ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
+        : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 도보경로</button>`}
+      <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
+      <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
+    </div>
+  </div>`;
+}
+
+function renderGroup(group, bare) {
+  const d = new Date(group.date);
+  const days = ['일','월','화','수','목','금','토'];
+  const label = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  const cards = group.restaurants.map(buildCard).join('');
+  // 추가 추천 (10분내 유명 / 검색 유명) — 하단 별도 섹션
+  const extras = (group.extras || []).filter(Boolean);
+  const extrasHtml = extras.length
+    ? `<div class="extra-head">✨ 이런 곳도 가볼 만해요</div><div class="cards">${extras.map(buildCard).join('')}</div>`
+    : '';
+  if (bare) {
+    return `<div class="cards">${cards}</div>${extrasHtml}`;
+  }
+  const commentHtml = group.comment
+    ? `<div class="weather-comment">🌤️ ${escHtml(group.comment)}</div>`
+    : '';
+  return `<div class="date-group">
+    <div class="date-label">📅 ${label}</div>
+    ${commentHtml}
+    <div class="cards">${cards}</div>
+    ${extrasHtml}
+  </div>`;
+}
+
+// ── 오늘의 추천 (홈) ──────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('tab-history');
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+
+  // 상단 날짜 + 날씨 배너
+  const today = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  const dateLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일 (${days[today.getDay()]})`;
+  const defMeal = getDefaultMeal();
+  currentMeal = defMeal;
+  const todayData = sorted.find(g => g.by_condition) || sorted[0];
+  const weather = (todayData && todayData.weather) || '';
+  const message = (todayData && todayData.message) || todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
+  const news = (todayData && todayData.news) || [];
+  const weatherLine = weather ? `<div class="tb-weather">🌤️ ${escHtml(weather)}</div>` : '';
+  const msgLine = message ? `<div class="tb-msg">💬 ${escHtml(message)}</div>` : '';
+  const newsLine = news.length ? `
+      <div class="tb-news">
+        <div class="tb-news-head">📰 JB금융 소식</div>
+        ${news.slice(0,3).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">· ${escHtml(n.title)}</a>`).join('')}
+      </div>` : '';
+  const bannerHtml = `
+    <div class="top-banner">
+      <div class="tb-date">📅 ${dateLabel}</div>
+      ${weatherLine}
+      ${msgLine}
+      ${newsLine}
+      <div class="tb-stock" id="tb-stock"></div>
+    </div>
+    <div class="meal-toggle">
+      <button class="meal-btn${defMeal==='점심'?' on':''}" data-meal="점심" onclick="selectMeal(this)">🍚 점심</button>
+      <button class="meal-btn${defMeal==='저녁'?' on':''}" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
+      <button class="meal-btn${defMeal==='술집'?' on':''}" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
+    </div>
+    <div class="batch-note">🌙 점심·저녁·술집 추천은 <b>평일(월~금) 새벽 1시경</b>에 그날치를 한 번에 미리 생성해요.</div>`;
+
+  const prefHtml = bannerHtml + `
+    <div class="pref-card">
+      <div class="pref-title">🙋 오늘 컨디션은?</div>
+      <div class="pref-chips">
+        <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
+        <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
+        <button class="pref-chip" data-cond="매콤하게" onclick="selectCond(this)">🌶️ 매콤하게</button>
+        <button class="pref-chip" data-cond="가볍게" onclick="selectCond(this)">🥗 가볍게</button>
+        <button class="pref-chip" data-cond="든든하게" onclick="selectCond(this)">🍖 든든하게</button>
+        <button class="pref-chip" data-cond="일식" onclick="selectCond(this)">🍣 일식</button>
+        <button class="pref-chip" data-cond="한식" onclick="selectCond(this)">🍚 한식</button>
+        <button class="pref-chip" data-cond="고기" onclick="selectCond(this)">🥩 고기</button>
+        <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
+        <button class="pref-chip" data-cond="와인" onclick="selectCond(this)">🍷 와인</button>
+        <button class="pref-chip" data-cond="임원" onclick="selectCond(this)">👔 임원</button>
+      </div>
+      <div class="pref-input-row">
+        <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 과음했어 / 얼큰한거 / 빨리 먹고싶어)"
+               maxlength="40" onkeydown="if(event.key==='Enter')applyFreeText()">
+        <button class="pref-submit" id="pref-btn" onclick="applyFreeText()">추천</button>
+      </div>
+      <div class="pref-progress" id="pref-progress">
+        <div class="pref-progress-label"><span class="spinner"></span><span id="pref-progress-text">분석 중…</span></div>
+        <div class="pref-progress-bar"><div class="pref-progress-fill" id="pref-progress-fill"></div></div>
+      </div>
+      <div class="pref-answer" id="pref-answer"></div>
+      <div class="pref-history" id="pref-history" style="display:none">
+        <div class="pref-history-head">
+          <span>🕘 <span id="hist-meal-label">점심</span> 최근 검색</span>
+          <button class="pref-history-clear" onclick="clearHistory()">전체 삭제</button>
+        </div>
+        <div class="pref-history-chips" id="pref-history-chips"></div>
+      </div>
+    </div>
+    <div id="today-group"></div>`;
+  if (!sorted.length) { el.innerHTML = prefHtml; return; }
+  el.innerHTML = prefHtml;
+  updateMealInfo();
+  updateCondChips();
+  renderCondGroup();        // 시간대별 미리 생성된 데이터
+  loadHistory();           // 공유 검색기록 서버에서 불러오기
+}
+
+// 시간대 기반 기본 선택: ~15시 점심, 15~18시 저녁, 18시~ 술집
+function getDefaultMeal() {
+  const h = new Date().getHours();
+  if (h < 15) return '점심';
+  if (h < 18) return '저녁';
+  return '술집';
+}
+
+let currentCond = '';  // 선택된 컨디션 ('': 기본)
+
+// 자유 입력 → 컨디션 키워드 매핑 (고정 도출)
+const COND_KEYWORDS = {
+  '해장 필요': ['해장','과음','술','숙취','국물','뜨끈','속풀','얼큰한국'],
+  '매콤하게': ['매콤','매운','얼큰','맵','칼칼','마라','떡볶','스트레스'],
+  '가볍게': ['가볍','가벼','샐러드','브런치','커피','간단','다이어','적게','속편'],
+  '든든하게': ['든든','배고','많이','푸짐','포만','고기많','양많','배불'],
+  '일식': ['일식','초밥','스시','소바','돈카츠','라멘','우동','회'],
+  '한식': ['한식','국밥','찌개','백반','집밥','한정식','김치'],
+  '고기': ['고기','삼겹','구이','한우','스테이크','갈비','회식','육'],
+  '혼밥': ['혼밥','혼자','빨리','빠르','간편','대기싫','웨이팅싫','후딱'],
+};
+
+// 컨디션별 답변 코멘트
+const COND_ANSWERS = {
+  '해장 필요': { emoji:'🍜', head:'해장이 필요하시군요!', body:'속을 따뜻하게 풀어줄 국물 요리 위주로 골라봤어요. 뜨끈한 국밥 한 그릇 어떠세요?' },
+  '매콤하게': { emoji:'🌶️', head:'매콤한 게 당기시네요!', body:'스트레스엔 역시 매운맛이죠. 얼큰하고 칼칼한 메뉴로 추천드려요.' },
+  '가볍게': { emoji:'🥗', head:'가볍게 드시고 싶으시군요!', body:'부담 없이 즐길 수 있는 산뜻한 메뉴 위주로 준비했어요.' },
+  '든든하게': { emoji:'🍖', head:'든든하게 채우고 싶으시죠!', body:'배부르게 먹을 수 있는 푸짐한 메뉴로 골라봤어요. 오후도 힘내세요!' },
+  '일식': { emoji:'🍣', head:'일식 기분이시네요!', body:'정갈한 일식 맛집들로 추천드려요. 소바부터 돈카츠까지 골라보세요.' },
+  '한식': { emoji:'🍚', head:'역시 한식이죠!', body:'든든한 집밥 같은 한식 맛집으로 준비했어요.' },
+  '고기': { emoji:'🥩', head:'고기가 당기시는군요!', body:'육즙 가득한 고기 맛집으로 추천드려요. 점심부터 든든하게!' },
+  '혼밥': { emoji:'🚶', head:'혼밥 모드시네요!', body:'빠르고 편하게 먹기 좋은, 혼자서도 부담 없는 곳들로 골랐어요.' },
+};
+
+function matchCondition(text) {
+  const t = text.replace(/\s/g, '');
+  let best = '', bestScore = 0;
+  for (const [cond, kws] of Object.entries(COND_KEYWORDS)) {
+    let score = 0;
+    for (const kw of kws) if (t.includes(kw)) score++;
+    if (score > bestScore) { bestScore = score; best = cond; }
+  }
+  return bestScore > 0 ? best : '';
+}
+
+const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
+const PLACES_URL = `${SB_URL}/functions/v1/places-search`;
+const STOCK_URL = `${SB_URL}/functions/v1/stock`;
+
+// JB금융지주 주가 조회 → 배너에 표시 (네이버 금융 프록시)
+async function loadStock() {
+  const el = document.getElementById('tb-stock');
+  if (!el) return;
+  el.innerHTML = `<span class="tb-stock-head">📈 JB금융지주</span><span class="tb-stock-loading">시세 불러오는 중…</span>`;
+  try {
+    const res = await fetch(STOCK_URL, { headers: SB_HEADERS });
+    const d = await res.json();
+    if (!d || !d.price || d.error) { el.innerHTML = ''; return; }
+    const up = d.direction === 'RISING', down = d.direction === 'FALLING';
+    const cls = up ? 'up' : (down ? 'down' : 'flat');
+    const arrow = up ? '▲' : (down ? '▼' : '–');
+    const rate = (d.changeRate !== '' && d.changeRate != null) ? `${d.changeRate > 0 ? '+' : ''}${d.changeRate}%` : '';
+    const open = d.marketStatus === 'OPEN';
+    el.innerHTML = `
+      <span class="tb-stock-head">📈 JB금융지주</span>
+      <span class="tb-stock-price">${escHtml(d.price)}원</span>
+      <span class="tb-stock-change ${cls}">${arrow} ${escHtml(String(d.change).replace('-',''))} (${escHtml(rate)})</span>
+      <span class="tb-stock-mk ${open ? 'live' : ''}">${open ? '● 장중' : '종가'}</span>`;
+  } catch(e) { el.innerHTML = ''; }
+}
+const COND_EMOJI = {'해장 필요':'🍜','매콤하게':'🌶️','가볍게':'🥗','든든하게':'🍖','일식':'🍣','한식':'🍚','고기':'🥩','혼밥':'🚶'};
+
+// ── 검색 히스토리 (Supabase 공유) ────────────────────────────
+const HIST_MAX = 20;
+let historyCache = [];   // [{id, text, created_at}]
+
+async function loadHistory() {
+  try {
+    // 현재 시간대(meal) 기록만 조회
+    const res = await fetch(`${SB_URL}/rest/v1/search_history?select=*&meal=eq.${encodeURIComponent(currentMeal)}&order=created_at.desc&limit=${HIST_MAX}`, { headers: SB_HEADERS });
+    historyCache = res.ok ? await res.json() : [];
+  } catch { historyCache = []; }
+  renderSearchHistory();
+}
+
+async function addHistory(text, cond) {
+  const meal = currentMeal;
+  try {
+    // 같은 시간대+검색어 중복 제거(서버)
+    await fetch(`${SB_URL}/rest/v1/search_history?text=eq.${encodeURIComponent(text)}&meal=eq.${encodeURIComponent(meal)}`, { method: 'DELETE', headers: SB_HEADERS });
+    await fetch(`${SB_URL}/rest/v1/search_history`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ text, meal })
+    });
+  } catch {}
+  loadHistory();
+}
+
+async function removeHistory(id) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/search_history?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+  } catch {}
+  loadHistory();
+}
+
+async function clearHistory() {
+  if (!confirm(`모두가 보는 '${currentMeal}' 검색 기록을 전체 삭제할까요?`)) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/search_history?meal=eq.${encodeURIComponent(currentMeal)}`, { method: 'DELETE', headers: SB_HEADERS });
+  } catch {}
+  loadHistory();
+}
+
+function renderSearchHistory() {
+  const wrap = document.getElementById('pref-history');
+  const chips = document.getElementById('pref-history-chips');
+  if (!wrap || !chips) return;
+  const lbl = document.getElementById('hist-meal-label');
+  if (lbl) lbl.textContent = currentMeal;
+  if (!historyCache.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  chips.innerHTML = historyCache.map(item => `
+    <span class="hist-chip">
+      <span class="hc-main" onclick="rerunHistory('${escAttr(item.text)}')">
+        <span class="hc-text">🔎 ${escHtml(item.text)}</span>
+      </span>
+      <button class="hc-del" title="삭제" onclick="removeHistory(${item.id})">✕</button>
+    </span>`).join('');
+}
+
+function rerunHistory(text) {
+  const input = document.getElementById('pref-text');
+  if (input) input.value = text;
+  applyFreeText();
+}
+
+let currentMeal = '점심';     // 점심 / 저녁 / 술집
+let customResult = null;       // {label, comment, restaurants}
+const MEAL_EMOJI = { '점심':'🍚', '저녁':'🌙', '술집':'🍺' };
+function updateMealInfo() {}
+
+// 자유 입력 추천
+function applyFreeText() {
+  const text = document.getElementById('pref-text').value.trim();
+  if (!text) return;
+  generateRecommend(text, currentMeal, true);
+}
+
+// 백엔드(Edge Function) 호출로 맞춤 맛집 생성 후 화면 업데이트
+async function generateRecommend(text, meal, saveHist) {
+  track('custom_recommend', `${meal} / ${text}`);
+  const answerEl = document.getElementById('pref-answer');
+  const progEl = document.getElementById('pref-progress');
+  const fill = document.getElementById('pref-progress-fill');
+  const progText = document.getElementById('pref-progress-text');
+  const btn = document.getElementById('pref-btn');
+
+  answerEl.classList.remove('show');
+  if (btn) btn.disabled = true;
+  progEl.classList.add('show');
+  fill.style.width = '0%';
+
+  const steps = [
+    { t: `${MEAL_EMOJI[meal]} ${meal} 자리 분석 중…`, w: 30 },
+    { t: 'AI가 취향 파악 중…', w: 60 },
+    { t: '맞춤 맛집 선별 중…', w: 85 },
+  ];
+  let i = 0;
+  let progTimer = setInterval(() => {
+    if (i < steps.length) { progText.textContent = steps[i].t; fill.style.width = steps[i].w + '%'; i++; }
+  }, 400);
+
+  let comment = '', restaurants = null, extras = [], ok = false, errMsg = '';
+  try {
+    const res = await fetch(ANALYZE_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, meal })
+    });
+    const data = await res.json();
+    comment = data.comment || '';
+    restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
+    extras = Array.isArray(data.extras) ? data.extras : [];
+    if (data.error) errMsg = data.message || (data.error === 'rate_limited' ? 'AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요.' : '');
+    ok = !!(restaurants && restaurants.length);
+  } catch (e) { ok = false; }
+
+  clearInterval(progTimer);
+  fill.style.width = '100%';
+  progText.textContent = '완료!';
+
+  setTimeout(() => {
+    progEl.classList.remove('show');
+    if (btn) btn.disabled = false;
+
+    if (ok) {
+      const label = text ? `🔎 "${text}" 맞춤 추천` : `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
+      customResult = { label, comment, restaurants, extras };
+      cachePlaces([...(restaurants||[]), ...(extras||[])]);
+      answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
+      answerEl.classList.add('show');
+      renderCustomGroup();
+      if (saveHist && text) addHistory(text);
+    } else if (errMsg) {
+      answerEl.innerHTML = `<div class="pa-head">⏳ 잠시만요</div>${escHtml(errMsg)}`;
+      answerEl.classList.add('show');
+    } else {
+      answerEl.innerHTML = `<div class="pa-head">⚠️ 추천 생성 실패</div>네트워크 문제로 맞춤 추천을 못 가져왔어요. 잠시 후 다시 시도해주세요.`;
+      answerEl.classList.add('show');
+    }
+  }, 300);
+}
+
+function renderCustomGroup() {
+  if (!customResult) return;
+  document.getElementById('today-group').innerHTML =
+    renderGroup({ date: new Date().toLocaleDateString('sv-SE'), restaurants: customResult.restaurants, extras: customResult.extras }, true);
+}
+
+// 오늘 데이터 / 시간대별 데이터 추출
+function getDay() {
+  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  return sorted.find(g => g.by_condition) || sorted[0];
+}
+function getMealData(day, meal) {
+  if (!day) return null;
+  if (meal === '점심') return { restaurants: day.restaurants, by_condition: day.by_condition, extras: day.extras };
+  return (day.meals && day.meals[meal]) || null;
+}
+
+// 컨디션 칩 표시/숨김 + 선택 동기화 (by_condition 있을 때만 노출)
+function updateCondChips() {
+  const md = getMealData(getDay(), currentMeal);
+  const hasCond = !!(md && md.by_condition && Object.keys(md.by_condition).length);
+  const wrap = document.querySelector('.pref-chips');
+  if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
+  document.querySelectorAll('.pref-chip').forEach(c => c.classList.toggle('on', c.dataset.cond === currentCond));
+}
+
+// 시간대 토글 (점심/저녁/술집) — 모두 미리 생성된 데이터 사용
+function selectMeal(el) {
+  document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  currentMeal = el.dataset.meal;
+  currentCond = '';
+  customResult = null;
+  const input = document.getElementById('pref-text');
+  if (input) input.value = '';
+  document.getElementById('pref-answer').classList.remove('show');
+  document.getElementById('pref-progress').classList.remove('show');
+  updateMealInfo();
+  updateCondChips();
+  renderCondGroup();
+  loadHistory();   // 시간대별 검색기록 갱신
+}
+
+function selectCond(el) {
+  document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  currentCond = el.dataset.cond;
+  customResult = null;
+  const input = document.getElementById('pref-text');
+  if (input) input.value = '';
+  document.getElementById('pref-answer').classList.remove('show');
+  document.getElementById('pref-progress').classList.remove('show');
+
+  // 미리 생성된 by_condition에 있으면 즉시, 없으면(와인/임원 등) 백엔드 생성
+  const md = getMealData(getDay(), currentMeal);
+  const hasPre = currentCond === '' || (md && md.by_condition && md.by_condition[currentCond]);
+  if (hasPre) {
+    renderCondGroup();
+  } else {
+    generateRecommend(currentCond, currentMeal, false);
+  }
+}
+
+function renderCondGroup() {
+  if (customResult) { renderCustomGroup(); return; }
+  const day = getDay();
+  const md = getMealData(day, currentMeal);
+  if (!md || !md.restaurants || !md.restaurants.length) {
+    document.getElementById('today-group').innerHTML =
+      `<div class="empty">아직 ${currentMeal} 추천 데이터가 없어요.<br>아래 직접 입력으로 추천받아보세요!</div>`;
+    return;
+  }
+  const isBase = !(currentCond && md.by_condition && md.by_condition[currentCond]);
+  const restaurants = isBase ? md.restaurants : md.by_condition[currentCond];
+  // 추가 추천(extras)은 기본(컨디션 미선택) 보기에서만 노출
+  const extras = isBase ? md.extras : null;
+  document.getElementById('today-group').innerHTML = renderGroup({ date: day.date, restaurants, extras }, true);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/'/g,"\\'");
+}
+
+// ── 리뷰 모달 ─────────────────────────────────────────────────
+let mId = null, mRating = 0, mFeature = '', mMeal = '점심', mEditId = null;
+
+// 리뷰 수정: 해당 리뷰를 찾아 모달을 수정 모드로 염
+function editReview(commentId, restaurantName) {
+  const c = (commentsState[restaurantName] || []).find(x => String(x.id) === String(commentId));
+  if (!c) return;
+  openModal(restaurantName, '', c);
+}
+
+function selectModalMeal(el) {
+  mMeal = el.dataset.meal;
+  document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
+    b.classList.toggle('on', b.dataset.meal === mMeal));
+}
+
+// 이름으로 맛집 상세정보 찾기 (커스텀 결과 → 일별 데이터 순)
+function findRestaurant(name) {
+  if (customResult) {
+    const all = [...(customResult.restaurants||[]), ...(customResult.extras||[])];
+    const hit = all.find(r => r.name === name);
+    if (hit) return hit;
+  }
+  const inSearch = (searchedPlaces || []).find(r => r.name === name);
+  if (inSearch) return inSearch;
+  const inHist = allRestaurants().find(r => r.name === name);
+  if (inHist) return inHist;
+  return placeDetails[name] || null;
+}
+
+// 모달 상단 상세정보(칩 + 주소 + 지도) 렌더 — info 없으면 이름만으로 지도 제공
+function renderModalDetail(name, info) {
+  const detailEl = document.getElementById('modal-detail');
+  if (!detailEl) return;
+  info = info || {};
+  const chips = [];
+  if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
+  if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
+  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
+  if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
+  const mapBtn = info.verified === false
+    ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
+    : `<button class="md-map" onclick="openMapRoute('${escAttr(name)}')">🚶 도보경로</button>`;
+  detailEl.innerHTML = chips.join('') + mapBtn;
+  detailEl.style.display = 'flex';
+}
+function openModal(name, feature, editC) {
+  mId = name; mRating = editC ? (editC.rating || 0) : 0; mFeature = feature || '';
+  mEditId = editC ? editC.id : null;
+  // 끼니 기본값: 수정이면 기존 값, 아니면 현재 보고 있는 시간대
+  mMeal = editC && editC.meal ? editC.meal
+        : ((typeof currentMeal !== 'undefined' && currentMeal) ? currentMeal : '점심');
+  document.querySelectorAll('#modal-meal .meal-pick').forEach(b =>
+    b.classList.toggle('on', b.dataset.meal === mMeal));
+  document.getElementById('modal-title').textContent = editC ? `✏️ 리뷰 수정 — ${name}` : `🍽️ ${name}`;
+  // 맛집 상세정보 (종류/가격/거리/주소 + 지도) — 캐시/HISTORY/검색결과 통합
+  const info = findRestaurant(name);
+  renderModalDetail(name, info);
+  // 디테일한 AI 소개가 있으면 우선 사용
+  if (placeIntros[name]) feature = placeIntros[name];
+  else if (info && !feature && info.feature) feature = info.feature;
+  mFeature = feature || mFeature;
+  // 맛집 소개
+  const introEl = document.getElementById('modal-intro');
+  function setIntro(txt) {
+    introEl.innerHTML = txt ? `💬 ${escHtml(txt)}` : '';
+    introEl.style.display = txt ? 'block' : 'none';
+  }
+  setIntro(feature);
+  // 상세정보가 비어있으면(직접검색/주변검색 맛집) 백엔드로 재조회해 채움
+  if (!info || !info.cuisine) {
+    fetchPlaceDetail(name).then(d => {
+      if (d && mId === name) renderModalDetail(name, d);
+    });
+  }
+  // 디테일한 AI 소개가 아직 없으면 생성해서 채움
+  if (!placeIntros[name]) {
+    fetchPlaceIntro(name).then(intro => {
+      if (intro && mId === name) { mFeature = intro; setIntro(intro); }
+    });
+  }
+  // 기존 리뷰 목록
+  const cms = commentsState[name] || [];
+  const revEl = document.getElementById('modal-reviews');
+  if (cms.length) {
+    const rated = cms.map(c => c.rating).filter(Boolean);
+    const avg = rated.length ? (rated.reduce((a,b)=>a+b,0)/rated.length) : 0;
+    const avgBadge = rated.length
+      ? `<span class="mr-avg">${'⭐'.repeat(Math.round(avg))} ${avg.toFixed(1)}</span>` : '';
+    revEl.innerHTML = `<div class="mr-head">📝 리뷰 <span style="color:#3182ce">${cms.length}</span>개${avgBadge}</div>` + cms.map(c => {
+      const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
+      const color = avatarColor(c.reviewer_name||'?');
+      return `<div class="review-item">
+        <div class="review-avatar" style="background:${color}">${initial}</div>
+        <div class="review-right">
+          <div class="review-header">
+            <span class="review-name">${escHtml(c.reviewer_name)}</span>
+            ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
+            ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
+            <span class="review-date">${fmtDate(c.created_at)}</span>
+          </div>
+          ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+        </div>
+        <div class="review-actions">
+          <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(name)}')">✏️</button>
+          <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(name)}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    revEl.style.display = 'flex';
+  } else {
+    revEl.innerHTML = '<div class="mr-head" style="border:none;padding-bottom:0">📝 아직 리뷰가 없어요 — 첫 리뷰를 남겨보세요!</div>';
+    revEl.style.display = 'flex';
+  }
+  // 작성/수정 섹션 헤더 전환
+  const writeHead = document.getElementById('modal-write-head');
+  if (writeHead) writeHead.textContent = editC ? '✏️ 리뷰 수정' : '✍️ 리뷰 작성';
+  // 수정 모드면 기존 값 채우기
+  document.getElementById('modal-name').value = editC ? (editC.reviewer_name || '') : '';
+  document.getElementById('modal-text').value = editC ? (editC.content || '') : '';
+  document.getElementById('saving-msg').textContent = '';
+  document.getElementById('btn-save').disabled = false;
+  document.getElementById('btn-save').textContent = editC ? '수정 저장' : '저장';
+  renderModalStars();
+  document.getElementById('modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); mId = null; }
+
+// ── 예약 팝업 ────────────────────────────────────────────────
+let reserveName = null;
+function closeReserve() { document.getElementById('reserve-bg').classList.remove('open'); reserveName = null; }
+function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
+
+// JB빌딩(여의나루로 77) 좌표 — 도보 경로 출발지
+const JB_LAT = 37.5240914884765, JB_LNG = 126.927376521939;
+function routeUrl(name, lng, lat) {
+  const start = `${JB_LNG},${JB_LAT},${encodeURIComponent('JB빌딩')},,`;
+  return (lng && lat)
+    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
+    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+}
+// 지도 버튼: 네이버 지도 웹(새 탭)으로 JB빌딩→식당 도보 경로 표시 (앱 대신 웹)
+async function openMapRoute(name) {
+  const c = placeDetails[name] || {};
+  if (c.lat && c.lng) { window.open(routeUrl(name, c.lng, c.lat), '_blank', 'noopener'); return; }
+  // 좌표 미보유: 빈 새 탭을 먼저 열어 클릭 제스처 유지 → 좌표 조회 후 경로로 이동
+  const w = window.open('about:blank', '_blank');
+  await fetchPlaceDetail(name);
+  const cc = placeDetails[name] || {};
+  const url = routeUrl(name, cc.lng, cc.lat);
+  if (w && !w.closed) w.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+}
+// 네이버 웹 예약 페이지를 새 창으로 (인앱 브라우저에서도 강제 새 창)
+function reserveNaver() {
+  if (!reserveName) return;
+  const url = `https://search.naver.com/search.naver?query=${encodeURIComponent(reserveName + ' 여의도 예약')}`;
+  window.open(url, '_blank', 'noopener');
+}
+function openReserve(name) {
+  reserveName = name;
+  document.getElementById('reserve-title').textContent = `📞 ${name} 예약`;
+  document.getElementById('reserve-sub').textContent = '원하는 방법으로 예약하세요.';
+  const cached = placeDetails[name] || {};
+  const phoneRow = (phone) => phone
+    ? `<a class="reserve-opt" href="tel:${fmtPhone(phone)}">
+         <span class="ro-emoji">📞</span>
+         <span class="ro-text">전화 예약<div class="ro-desc">${escHtml(phone)}</div></span>
+         <span class="ro-arrow">›</span></a>`
+    : `<div class="reserve-opt disabled" id="reserve-phone-row">
+         <span class="ro-emoji">📞</span>
+         <span class="ro-text">전화 예약<div class="ro-desc">전화번호 확인 중…</div></span></div>`;
+  document.getElementById('reserve-opts').innerHTML = `
+    <div class="reserve-opt naver" onclick="reserveNaver()">
+      <span class="ro-emoji">🟢</span>
+      <span class="ro-text">네이버 예약<div class="ro-desc">네이버 웹에서 바로 예약 (새 창)</div></span>
+      <span class="ro-arrow">›</span></div>
+    ${phoneRow(cached.phone)}`;
+  document.getElementById('reserve-bg').classList.add('open');
+  // 전화번호가 캐시에 없으면 백엔드로 조회해서 채움
+  if (!cached.phone) {
+    fetchPlacePhone(name).then(phone => {
+      if (reserveName !== name) return;
+      const row = document.getElementById('reserve-phone-row');
+      if (!row) return;
+      if (phone) {
+        row.outerHTML = `<a class="reserve-opt" href="tel:${fmtPhone(phone)}">
+           <span class="ro-emoji">📞</span>
+           <span class="ro-text">전화 예약<div class="ro-desc">${escHtml(phone)}</div></span>
+           <span class="ro-arrow">›</span></a>`;
+      } else {
+        row.querySelector('.ro-desc').textContent = '등록된 전화번호가 없어요 (네이버에서 확인)';
+      }
+    });
+  }
+}
+async function fetchPlacePhone(name) {
+  if (placeDetails[name] && placeDetails[name].phone) return placeDetails[name].phone;
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: name })
+    });
+    const data = await res.json();
+    const list = Array.isArray(data.places) ? data.places : [];
+    const hit = list.find(p => p.name === name) || list.find(p => p.name && p.name.includes(name)) || list[0];
+    if (hit) { cachePlace(hit); return hit.phone || ''; }
+  } catch(e) {}
+  return '';
+}
+
+function renderModalStars() {
+  document.querySelectorAll('#modal-stars span').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.v) <= mRating);
+  });
+}
+document.querySelectorAll('#modal-stars span').forEach(s => {
+  s.addEventListener('click', () => { mRating = parseInt(s.dataset.v); renderModalStars(); });
+});
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById('reserve-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeReserve();
+});
+
+async function saveReview() {
+  if (!mId) return;
+  const name = document.getElementById('modal-name').value.trim();
+  const text = document.getElementById('modal-text').value.trim();
+  if (!name) {
+    document.getElementById('saving-msg').textContent = '⚠️ 이름을 입력해주세요.';
+    document.getElementById('modal-name').focus();
+    return;
+  }
+  if (!text && !mRating) {
+    document.getElementById('saving-msg').textContent = '⚠️ 별점 또는 리뷰 내용을 입력해주세요.';
+    return;
+  }
+
+  const btn = document.getElementById('btn-save');
+  const msg = document.getElementById('saving-msg');
+  btn.disabled = true;
+  msg.textContent = mEditId ? '수정 중…' : '저장 중…';
+
+  try {
+    if (mEditId) {
+      const updated = await updateComment(mEditId, name, text, mRating, mMeal);
+      const arr = commentsState[mId] || [];
+      const i = arr.findIndex(c => String(c.id) === String(mEditId));
+      if (i >= 0) arr[i] = updated;
+      setBadge('ok', '☁️ 동기화됨');
+      track('review_edit', `${mId} / ${name}`);
+      closeModal();
+      renderHistory(); renderStats();
+      showToast('✏️ 리뷰가 수정되었습니다!');
+    } else {
+      const newComment = await insertComment(mId, name, text, mRating, mMeal);
+      if (!commentsState[mId]) commentsState[mId] = [];
+      commentsState[mId].push(newComment);
+      setBadge('ok', '☁️ 동기화됨');
+      track('review_create', `${mId} / ${name} / ★${mRating} / ${mMeal}`);
+      closeModal();
+      renderHistory(); renderStats();
+      showToast('✅ 리뷰가 저장되었습니다!');
+    }
+  } catch(e) {
+    msg.textContent = '⚠️ 저장 실패. 다시 시도해주세요.';
+    btn.disabled = false;
+    setBadge('err', '⚠️ 저장 실패');
+  }
+}
+
+// ── 리뷰 삭제 ─────────────────────────────────────────────────
+async function confirmDelete(commentId, restaurantId) {
+  if (!confirm('이 리뷰를 삭제하시겠습니까?')) return;
+  setBadge('loading', '삭제 중…');
+  track('review_delete', `${restaurantId}`);
+  try {
+    await deleteComment(commentId);
+    if (commentsState[restaurantId]) {
+      commentsState[restaurantId] = commentsState[restaurantId].filter(c => c.id !== commentId);
+    }
+    renderHistory(); renderStats();
+    setBadge('ok', '☁️ 동기화됨');
+    showToast('🗑️ 리뷰가 삭제되었습니다.');
+    if (mId === restaurantId) openModal(mId, mFeature);
+  } catch {
+    setBadge('err', '⚠️ 삭제 실패');
+    showToast('⚠️ 삭제에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+// ── 통계 ──────────────────────────────────────────────────────
+// 모든 시간대·컨디션의 맛집을 평탄화 (점심/저녁/술집 + by_condition)
+function allRestaurants() {
+  const out = [];
+  HISTORY_DATA.forEach(day => {
+    const buckets = [];
+    if (day.restaurants) buckets.push(day.restaurants);
+    if (day.by_condition) buckets.push(...Object.values(day.by_condition));
+    if (day.meals) Object.values(day.meals).forEach(m => {
+      if (m && m.restaurants) buckets.push(m.restaurants);
+      if (m && m.by_condition) buckets.push(...Object.values(m.by_condition));
+    });
+    buckets.forEach(b => b.forEach(r => out.push(r)));
+  });
+  return out;
+}
+
+function renderStats() {
+  const allR = allRestaurants();
+  const byName = {};
+  allR.forEach(r => { if (r.name && !byName[r.name]) byName[r.name] = r; });
+  const uniqueNames = new Set(allR.map(r => r.name)).size;
+
+  const allComments = Object.values(commentsState).flat();
+  const ratings = allComments.map(c => c.rating).filter(Boolean);
+  const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
+
+  // 리뷰가 있는 모든 맛집 (HISTORY_DATA에 없어도 — 직접검색·주변검색 포함)
+  const topList = Object.keys(commentsState)
+    .filter(name => (commentsState[name] || []).length)
+    .map(name => {
+      const cms = commentsState[name];
+      const rs = cms.map(c => c.rating).filter(Boolean);
+      const av = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0;
+      const base = byName[name] || placeDetails[name] || {};
+      return {
+        name,
+        cuisine: base.cuisine || '',
+        feature: placeIntros[name] || base.feature || '',
+        price: base.price || '',
+        distance: base.distance || '',
+        address: base.address || '',
+        verified: base.verified,
+        avg: av,
+        cnt: cms.length,
+        rated: rs.length > 0
+      };
+    })
+    .sort((a, b) => (b.avg - a.avg) || (b.cnt - a.cnt));
+
+  // 내 주변 맛집 카드 — 버튼 클릭(목록 로드) 후에만 검색창 노출
+  const placeOpened = nearbyLoaded || !!placeSearchQ;
+  const searchRow = placeOpened ? `
+      <div class="place-search-row">
+        <input class="place-input" id="place-q" value="${escHtml(placeSearchQ)}"
+               placeholder="이름으로 찾기 (예: 스타벅스, 소몽)" maxlength="30"
+               onkeydown="if(event.key==='Enter')searchPlaces()">
+        <button class="place-btn" id="place-btn" onclick="searchPlaces()">검색</button>
+      </div>` : '';
+  const searchHtml = `
+    <div class="place-search-card">
+      <div class="place-head-row">
+        <div class="pref-title" style="margin:0">📍 내 주변 맛집에 리뷰 남기기</div>
+        ${placeOpened ? `<div class="place-head-btns">
+          <button class="place-refresh" onclick="loadNearby(true)" title="새로고침">🔄</button>
+          <button class="place-close" onclick="closeNearby()">✕ 리스트 닫기</button>
+        </div>` : ''}
+      </div>
+      ${searchRow}
+      <div id="place-results">${renderPlaceResults()}</div>
+    </div>`;
+
+  document.getElementById('tab-stats').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
+      <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
+    </div>
+    ${searchHtml}
+    <div class="top-list">
+      <h3>⭐ 리뷰 맛집 (평균 별점순) · 눌러서 리뷰 보기</h3>
+      ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
+        <div class="top-rank">${i+1}</div>
+        <div class="top-info">
+          <div class="top-name">${emo(r.cuisine)} ${r.name} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span></div>
+          <div class="top-cuisine">${r.cuisine||''}</div>
+          ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
+          <div class="top-meta">
+            ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
+            ${r.distance ? `<span>🚶 ${escHtml(r.distance)}</span>` : ''}
+            ${r.verified === false ? `<span style="color:#c05">🚫 지도없음</span>` : ''}
+          </div>
+        </div>
+      </div>`).join('') : '<div style="color:#ccc;font-size:0.82rem;padding:10px 0">아직 평가한 맛집이 없습니다.</div>'}
+    </div>`;
+}
+
+// ── 내 주변 맛집 ──────────────────────────────────────────────
+let searchedPlaces = [];   // [{name, cuisine, distance, address, verified}]
+let placeSearchQ = '';     // 이름 검색어 (없으면 주변 목록 모드)
+let placeSearchBusy = false;
+let placeOrigin = '';      // '현위치' | 'JB빌딩'
+let myPos = null;          // {lat, lng} (한 번 받으면 캐시)
+let nearbyLoaded = false;  // 리뷰 탭 첫 진입 시 1회 자동 로드
+
+// 브라우저 GPS 위치 (권한 거부/실패 시 null → JB빌딩 폴백)
+function getMyPosition() {
+  return new Promise(resolve => {
+    if (myPos) { resolve(myPos); return; }
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => { myPos = { lat: p.coords.latitude, lng: p.coords.longitude }; resolve(myPos); },
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 300000 }
+    );
+  });
+}
+
+function renderPlaceResults() {
+  if (placeSearchBusy) return '<div class="place-hint">📍 주변 맛집 불러오는 중…</div>';
+  // 아직 안 불러왔고 검색도 안 했으면 → 버튼 노출
+  if (!nearbyLoaded && !placeSearchQ) {
+    return `<button class="place-nearby-btn" onclick="loadNearby(true)">📍 내 주변 맛집 보기</button>
+      <div class="place-hint" style="text-align:center">버튼을 누르면 내 위치 주변 맛집을 보여드려요. (위치 허용 권장)</div>`;
+  }
+  if (!searchedPlaces.length) {
+    return placeSearchQ
+      ? '<div class="place-hint">검색 결과가 없어요. 다른 이름으로 시도해보세요.</div>'
+      : '<div class="place-hint">주변 맛집을 불러오지 못했어요. 🔄 새로고침 또는 이름으로 검색해보세요.</div>';
+  }
+  const base = placeOrigin === '현위치' ? '현재 내 위치' : 'JB빌딩';
+  const originNote = placeSearchQ
+    ? `<div class="place-origin">🔎 "${escHtml(placeSearchQ)}" 검색 · ${base} 기준 · 카카오+네이버</div>`
+    : `<div class="place-origin">📍 ${base} 주변 맛집 · 가까운 순 · 카카오+네이버</div>`;
+  const SRC_CLS = { '카카오': 'src-kakao', '네이버': 'src-naver' };
+  return originNote + searchedPlaces.map(p => {
+    const cms = commentsState[p.name] || [];
+    const cnt = cms.length;
+    const srcBadge = p.source ? `<span class="src-badge ${SRC_CLS[p.source]||''}">${escHtml(p.source)}</span>` : '';
+    return `<div class="place-item">
+      <div class="place-info" onclick="openModal('${escAttr(p.name)}','')">
+        <div class="place-name">${emo(p.cuisine)} ${escHtml(p.name)} ${srcBadge} ${cnt?`<span class="badge badge-review">리뷰 ${cnt}</span>`:''}</div>
+        <div class="place-sub">${escHtml(p.cuisine||'')} · 🚶 ${escHtml(p.distance||'')}</div>
+        ${p.address?`<div class="place-addr">📍 ${escHtml(p.address)}</div>`:''}
+      </div>
+      <button class="place-review-btn" onclick="openModal('${escAttr(p.name)}','')">📝 리뷰</button>
+    </div>`;
+  }).join('');
+}
+
+// 공통 조회: query 없으면 주변 목록, 있으면 이름 검색
+async function fetchPlaces(query) {
+  track(query ? 'place_search' : 'nearby', query || '');
+  placeSearchBusy = true;
+  nearbyLoaded = true;
+  const rwrap = document.getElementById('place-results');
+  if (rwrap) rwrap.innerHTML = renderPlaceResults();
+  const pos = await getMyPosition();   // 허용 시 내 위치, 거부 시 JB 폴백
+  try {
+    const reqBody = {};
+    if (query) reqBody.query = query;
+    if (pos) { reqBody.lat = pos.lat; reqBody.lng = pos.lng; }
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(reqBody)
+    });
+    const data = await res.json();
+    searchedPlaces = Array.isArray(data.places) ? data.places : [];
+    cachePlaces(searchedPlaces);
+    placeOrigin = data.origin || (pos ? '현위치' : 'JB빌딩');
+  } catch (e) {
+    searchedPlaces = [];
+  }
+  placeSearchBusy = false;
+  renderStats();
+}
+
+// 내 주변 맛집 자동 목록 (검색어 없이)
+async function loadNearby(force) {
+  if (nearbyLoaded && !force) return;
+  placeSearchQ = '';
+  await fetchPlaces('');
+}
+
+// 주변 맛집 리스트 닫기 — 초기 상태로 복귀
+function closeNearby() {
+  nearbyLoaded = false;
+  placeSearchQ = '';
+  searchedPlaces = [];
+  renderStats();
+}
+
+// 이름으로 특정 가게 검색
+async function searchPlaces() {
+  const inp = document.getElementById('place-q');
+  if (!inp) return;
+  const q = inp.value.trim();
+  placeSearchQ = q;
+  if (!q) { await loadNearby(true); return; }   // 비우고 검색 = 주변 목록
+  await fetchPlaces(q);
+}
+
+// ── 탭 전환 ───────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── 초기화 ────────────────────────────────────────────────────
+init();
+</script>
 </body>
 </html>
