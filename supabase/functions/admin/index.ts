@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       const cur = (body.currentPassword || body.password || "").toString();
       if (!await verifyPassword(cur)) return json({ error: "현재 비밀번호가 올바르지 않습니다." }, 401);
       const np = (body.newPassword || "").toString();
-      if (np.length < 8) return json({ error: "새 비밀번호는 8자 이상이어야 합니다." }, 400);
+      if (np.length < 6) return json({ error: "새 비밀번호는 6자 이상이어야 합니다." }, 400);
       await setPassword(np);
       await deleteAllSessions();            // 비번 변경 시 모든 세션 무효화
       await logAdmin("admin_pw_change", ip, "", ua);

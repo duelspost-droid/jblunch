@@ -209,7 +209,7 @@
       <h2>🔑 비밀번호 변경</h2>
       <label>현재 비밀번호</label>
       <input type="password" id="cpw" placeholder="현재 비밀번호" autocomplete="current-password">
-      <label>새 비밀번호 (8자 이상)</label>
+      <label>새 비밀번호 (6자 이상)</label>
       <input type="password" id="np1" placeholder="새 비밀번호" autocomplete="new-password">
       <label>새 비밀번호 확인</label>
       <input type="password" id="np2" placeholder="다시 입력" autocomplete="new-password" onkeydown="if(event.key==='Enter')changePw()">
@@ -450,7 +450,7 @@ async function changePw(){
   const np2 = document.getElementById('np2').value;
   const msg = document.getElementById('pw-msg');
   if(!cpw){ msg.className='msg err'; msg.textContent='현재 비밀번호를 입력하세요.'; return; }
-  if(np1.length < 8){ msg.className='msg err'; msg.textContent='새 비밀번호는 8자 이상이어야 합니다.'; return; }
+  if(np1.length < 6){ msg.className='msg err'; msg.textContent='새 비밀번호는 6자 이상이어야 합니다.'; return; }
   if(np1 !== np2){ msg.className='msg err'; msg.textContent='새 비밀번호가 일치하지 않습니다.'; return; }
   msg.className='msg'; msg.textContent='변경 중…';
   const { ok, data } = await adminCall({ action:'change_password', token: curToken, currentPassword: cpw, newPassword: np1 });
