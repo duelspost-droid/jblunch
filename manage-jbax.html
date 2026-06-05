@@ -41,7 +41,7 @@
   .logs { max-height: 60vh; overflow: auto; border: 1px solid #eee; border-radius: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
   th { position: sticky; top: 0; background: #0a3d7a; color: #fff; padding: 8px; text-align: left; font-weight: 600; }
-  td { padding: 7px 8px; border-bottom: 1px solid #f3f3f3; color: #444; vertical-align: top; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f3f3f3; color: #444; vertical-align: top; }
   .t-time { white-space: nowrap; color: #999; }
   .t-ip { white-space: nowrap; font-family: monospace; color: #2b6cb0; }
   .t-act { white-space: nowrap; font-weight: 600; }
@@ -101,20 +101,21 @@
     /* 테이블 → 카드형 변환 */
     table, thead, tbody, tr, td { display: block; width: 100%; }
     thead { display: none; }
-    table { font-size: 0.82rem; }
+    table { font-size: 0.8rem; }
     tbody tr {
-      background: #fff; border: 1px solid #eef1f5; border-radius: 11px;
-      padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(20,40,80,0.04);
+      background: #fff; border: 1px solid #eef1f5; border-radius: 10px;
+      padding: 7px 11px; margin-bottom: 7px; box-shadow: 0 1px 2px rgba(20,40,80,0.04);
     }
     tbody td {
       display: flex; justify-content: space-between; gap: 12px;
-      padding: 4px 0; border: none; white-space: normal; text-align: right;
+      padding: 1.5px 0; border: none; white-space: normal; text-align: right;
     }
     tbody td::before {
       content: attr(data-label); color: #9aa6b5; font-weight: 700;
-      font-size: 0.72rem; flex-shrink: 0; text-align: left;
+      font-size: 0.7rem; flex-shrink: 0; text-align: left;
     }
     .t-detail { word-break: break-all; }
+    .t-detail.t-empty { display: none; }   /* 빈 상세 줄 숨김 → 카드 높이 축소 */
     tbody td[colspan] { justify-content: center; }
     tbody td[colspan]::before { content: ''; }
   }
@@ -343,7 +344,7 @@ function renderLogPage(){
     return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
     <td class="t-env" data-label="기기·브라우저" title="${esc(l.user_agent||'')}">${e.emoji} ${esc(e.os)} · ${esc(e.browser)}</td>
-    <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail" data-label="상세">${esc(l.detail)}</td></tr>`;
+    <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail${l.detail?'':' t-empty'}" data-label="상세">${esc(l.detail)}</td></tr>`;
   }).join('');
   const empty = logQuery ? `'${esc(logQuery)}' 검색 결과 없음` : '기록 없음';
   document.getElementById('logs').innerHTML =
