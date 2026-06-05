@@ -143,7 +143,24 @@ Deno.serve(async (req) => {
       return json({ ok: true, token: sess.token, expiresAt: sess.expires_at, ...data });
     }
 
-    // ── 그 외: 토큰 인증 (레거시 비번도 허용, 단 잠금 적용) ──
+    // ── 비밀번호 변경: '현재 비번'으로 직접 인증 (토큰 만료/무효화와 무관) ──
+    if (action === "change_password") {
+      if (await isLocked(ip)) return json({ error: `시도가 많아 잠시 잠겼습니다. ${LOCK_WINDOW_MIN}분 후 다시 시도하세요.` }, 429);
+      const cur = (body.currentPassword || body.password || "").toString();
+      if (!await verifyPassword(cur)) {
+        await logAdmin("admin_fail", ip, "pw_change", ua);
+        return json({ error: "현재 비밀번호가 올바르지 않습니다." }, 401);
+      }
+      const np = (body.newPassword || "").toString();
+      if (np.length < 6) return json({ error: "새 비밀번호는 6자 이상이어야 합니다." }, 400);
+      await setPassword(np);
+      await deleteAllSessions();            // 비번 변경 시 모든 세션 무효화
+      await logAdmin("admin_pw_change", ip, "", ua);
+      const sess = await createSession(ip);  // 현재 기기는 새 토큰 발급
+      return json({ ok: true, changed: true, token: sess.token, expiresAt: sess.expires_at });
+    }
+
+    // ── 그 외(로그/로그아웃): 토큰 인증 (레거시 비번도 허용, 단 잠금 적용) ──
     const token = (body.token || "").toString();
     let authed = await validSession(token);
     if (!authed && body.password) {
@@ -155,19 +172,6 @@ Deno.serve(async (req) => {
 
     // ── 로그아웃 ──
     if (action === "logout") { await deleteSession(token); return json({ ok: true }); }
-
-    // ── 비밀번호 변경: 현재 비번 재확인 필수 ──
-    if (action === "change_password") {
-      const cur = (body.currentPassword || body.password || "").toString();
-      if (!await verifyPassword(cur)) return json({ error: "현재 비밀번호가 올바르지 않습니다." }, 401);
-      const np = (body.newPassword || "").toString();
-      if (np.length < 6) return json({ error: "새 비밀번호는 6자 이상이어야 합니다." }, 400);
-      await setPassword(np);
-      await deleteAllSessions();            // 비번 변경 시 모든 세션 무효화
-      await logAdmin("admin_pw_change", ip, "", ua);
-      const sess = await createSession(ip);  // 현재 기기는 새 토큰 발급
-      return json({ ok: true, changed: true, token: sess.token, expiresAt: sess.expires_at });
-    }
 
     // ── 로그/통계 조회 (기본, 기간·액션 필터) ──
     return json({ ok: true, ...(await dashboard(body)) });
