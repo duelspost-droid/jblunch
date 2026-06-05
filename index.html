@@ -504,6 +504,14 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .top-banner .tb-news-item:hover { color: #0a3d7a; text-decoration: underline; }
+  .top-banner .tb-stale { font-size: 0.72rem; font-weight: 600; color: #b7791f; background: #fff4d6; padding: 1px 7px; border-radius: 10px; }
+  .nearby-cta {
+    display: block; width: 100%; margin: 6px 0 4px; padding: 12px;
+    background: #fff; border: 1.5px dashed #b9c6d6; border-radius: 12px;
+    color: #0a3d7a; font-size: 0.86rem; font-weight: 700; cursor: pointer;
+    transition: all 0.13s; font-family: inherit;
+  }
+  .nearby-cta:hover { background: #f0f5fb; border-color: #0a3d7a; }
   .top-banner .tb-stock {
     display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
     margin-top: 10px; padding-top: 9px; border-top: 1px dashed #e2e8f0;
@@ -550,7 +558,14 @@
     margin-bottom: 14px;
   }
   .pref-title { font-size: 0.82rem; font-weight: 700; color: #333; margin-bottom: 10px; }
-  .pref-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+  .pref-chips {
+    display: flex; flex-wrap: nowrap; gap: 7px; margin-bottom: 10px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px; scrollbar-width: thin;
+  }
+  .pref-chips::-webkit-scrollbar { height: 4px; }
+  .pref-chips::-webkit-scrollbar-thumb { background: #d8e2ee; border-radius: 4px; }
+  .pref-chip { flex-shrink: 0; }
   .pref-chip {
     padding: 5px 12px; border-radius: 20px;
     border: 1.5px solid #e2e8f0; background: #fff;
@@ -1123,30 +1138,17 @@ const TAG_BADGE = {
   '검색유명': '🔍 검색 인기',
 };
 
+// 거리 간결화: "도보 1분 (카카오) / 1분 (네이버)" → "도보 1분" (다르면 "도보 5~6분")
+function shortDistance(d) {
+  const s = String(d || '');
+  const nums = (s.match(/(\d+)\s*분/g) || []).map(x => parseInt(x));
+  if (!nums.length) return s || '거리 미확인';
+  const mn = Math.min(...nums), mx = Math.max(...nums);
+  return mn === mx ? `도보 ${mn}분` : `도보 ${mn}~${mx}분`;
+}
+
 function buildCard(r) {
   const cms = commentsState[r.name] || [];
-  const reviewsHtml = cms.length
-    ? cms.map(c => {
-        const initial = (c.reviewer_name||'?').charAt(0).toUpperCase();
-        const color = avatarColor(c.reviewer_name||'?');
-        return `<div class="review-item">
-          <div class="review-avatar" style="background:${color}">${initial}</div>
-          <div class="review-right">
-            <div class="review-header">
-              <span class="review-name">${escHtml(c.reviewer_name)}</span>
-              ${c.meal ? `<span class="review-meal">${escHtml(c.meal)}</span>` : ''}
-              ${c.rating ? `<span class="review-stars">${starsHtml(c.rating)}</span>` : ''}
-              <span class="review-date">${fmtDate(c.created_at)}</span>
-            </div>
-            ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
-          </div>
-          <div class="review-actions">
-            <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
-            <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
-          </div>
-        </div>`;
-      }).join('')
-    : '<div class="no-reviews">아직 리뷰가 없습니다.</div>';
   const cnt = cms.length;
   const ratings = cms.map(c => c.rating).filter(Boolean);
   const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
@@ -1165,9 +1167,8 @@ function buildCard(r) {
       <div class="card-feature">${r.feature}</div>
       <div class="card-meta">
         <span>💰 ${r.price}</span>
-        <span>🚶 ${r.distance}</span>
+        <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
       </div>
-      <div class="reviews-block">${reviewsHtml}</div>
     </div>
     <div class="card-actions">
       ${r.verified === false
@@ -1211,10 +1212,15 @@ function renderHistory() {
   // 상단 날짜 + 날씨 배너
   const today = new Date();
   const days = ['일','월','화','수','목','금','토'];
-  const dateLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일 (${days[today.getDay()]})`;
   const defMeal = getDefaultMeal();
   currentMeal = defMeal;
   const todayData = sorted.find(g => g.by_condition) || sorted[0];
+  // 날짜는 '추천 데이터의 실제 생성일' 기준 (주말·미생성일 날짜 어긋남 방지)
+  const recDate = (todayData && todayData.date) ? new Date(todayData.date + 'T00:00:00') : today;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const isStale = !!(todayData && todayData.date && todayData.date !== todayStr);
+  const dateLabel = `${recDate.getFullYear()}년 ${recDate.getMonth()+1}월 ${recDate.getDate()}일 (${days[recDate.getDay()]})`
+    + (isStale ? ' <span class="tb-stale">· 최근 추천</span>' : '');
   const weather = (todayData && todayData.weather) || '';
   const message = (todayData && todayData.message) || todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
   const news = (todayData && todayData.news) || [];
@@ -1274,13 +1280,21 @@ function renderHistory() {
         <div class="pref-history-chips" id="pref-history-chips"></div>
       </div>
     </div>
-    <div id="today-group"></div>`;
+    <div id="today-group"></div>
+    <button class="nearby-cta" onclick="goNearby()">📍 이 근처 다른 맛집 찾아서 리뷰하기 →</button>`;
   if (!sorted.length) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
   updateMealInfo();
   updateCondChips();
   renderCondGroup();        // 시간대별 미리 생성된 데이터
   loadHistory();           // 공유 검색기록 서버에서 불러오기
+}
+
+// 리뷰 탭으로 이동 + 내 주변 맛집 목록 로드
+function goNearby() {
+  const reviewTab = document.querySelectorAll('.tab')[1];
+  if (reviewTab) showTab('stats', reviewTab);
+  setTimeout(() => { try { loadNearby(true); } catch (e) {} }, 60);
 }
 
 // 시간대 기반 기본 선택: ~15시 점심, 15~18시 저녁, 18시~ 술집
