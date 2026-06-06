@@ -223,6 +223,7 @@ async function geoLookup(ips: string[]): Promise<Record<string, Geo>> {
     try {
       const resp = await fetch("http://ip-api.com/batch?fields=status,country,countryCode,regionName,city,isp,mobile,proxy,query", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(chunk),
+        signal: AbortSignal.timeout(4000),   // 느린 조회로 필터 응답이 지연되지 않게
       });
       if (!resp.ok) continue;
       const arr = await resp.json();

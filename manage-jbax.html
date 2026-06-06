@@ -38,7 +38,7 @@
   .stats { background: #f4f7fb; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.9rem; color: #1e3a5f; }
   .stats b { color: #0a3d7a; }
   .stats .act { font-size: 0.74rem; color: #888; margin-top: 5px; }
-  .logs { max-height: 60vh; overflow: auto; border: 1px solid #eee; border-radius: 10px; }
+  .logs { max-height: 430px; overflow: auto; border: 1px solid #eee; border-radius: 10px; }  /* ≈10행 + 헤더, 내부 스크롤 */
   table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
   th { position: sticky; top: 0; background: #0a3d7a; color: #fff; padding: 8px; text-align: left; font-weight: 600; }
   td { padding: 5px 8px; border-bottom: 1px solid #f3f3f3; color: #444; vertical-align: top; }
@@ -106,7 +106,7 @@
     input[type=password], input[type=text] { font-size: 16px; }
     .btn { padding: 11px 16px; }
     .row { gap: 8px; }
-    .logs { max-height: none; border: none; overflow: visible; }
+    .logs { max-height: 65vh; overflow: auto; border: 1px solid #eee; }  /* 모바일도 내부 스크롤(스크롤 안 스크롤 허용) */
     /* 테이블 → 카드형 변환 */
     table, thead, tbody, tr, td { display: block; width: 100%; }
     thead { display: none; }
