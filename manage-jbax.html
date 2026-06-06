@@ -248,13 +248,18 @@ function setPeriod(p){
   if (p !== 'range') applyFilter();   // 기간 모드는 날짜 입력 후 적용
 }
 // 필터 → 서버 재조회
+let _filterSeq = 0;
 async function applyFilter(){
   if (!curToken) return;
   logFilter.action = document.getElementById('action-sel').value || '';
   logFilter.from = document.getElementById('from-date').value || '';
   logFilter.to = document.getElementById('to-date').value || '';
   if (logFilter.period === 'range' && (!logFilter.from || !logFilter.to)) return;  // 양쪽 날짜 필요
+  const seq = ++_filterSeq;                 // 늦게 도착한 이전 응답 무시
+  const logsEl = document.getElementById('logs');
+  if (logsEl) logsEl.innerHTML = '<div style="padding:18px;text-align:center;color:#0a3d7a">⏳ 불러오는 중…</div>';
   const { ok, data } = await adminCall({ action:'logs', token: curToken, limit: 1000, ...logFilter });
+  if (seq !== _filterSeq) return;            // 더 최근 클릭이 있으면 폐기
   if (ok) render(data); else logout();
 }
 
