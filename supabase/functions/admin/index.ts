@@ -254,8 +254,9 @@ async function dashboard(opts: Record<string, unknown> = {}) {
   if (fromUTC) url += `&created_at=gte.${encodeURIComponent(fromUTC)}`;
   if (toUTC) url += `&created_at=lt.${encodeURIComponent(toUTC)}`;
 
-  const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact", Range: `0-${limit - 1}` } });
-  const logs = r.ok ? await r.json() : [];
+  const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact" } });
+  let logs: any[] = r.ok ? await r.json().catch(() => []) : [];
+  if (!Array.isArray(logs)) logs = [];
   const cr = r.headers.get("content-range") || "";   // "0-N/total"
   const totalMatch = Number((cr.split("/")[1] || "")) || logs.length;
 
