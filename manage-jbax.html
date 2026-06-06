@@ -308,16 +308,14 @@ function refreshLogView(){
   const list = getFilteredLogs();
   const pLabel = { day:'오늘', month:'이번 달', range:'기간', all:'전체' }[logFilter.period] || '전체';
   const aLabel = logFilter.action ? ` · 액션: ${esc(logFilter.action)}` : '';
-  const ipSet = new Set(), actCount = {}, regCount = {};
+  const ipSet = new Set(), regCount = {};
   list.forEach(l=>{
     if(l.ip) ipSet.add(l.ip);
-    actCount[l.action] = (actCount[l.action]||0)+1;
     if(l.geo){ const lab=[l.geo.country,l.geo.region].filter(Boolean).join(' ')||l.geo.country||'기타'; regCount[lab]=(regCount[lab]||0)+1; }
   });
-  const acts = Object.entries(actCount).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
-  const regions = Object.entries(regCount).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
+  const regions = Object.entries(regCount).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
   document.getElementById('stats').innerHTML =
-    `<div>📅 ${pLabel}${aLabel} — <b>${list.length}</b>건 (전체 ${allLogs.length}) · 고유 IP <b>${ipSet.size}</b></div><div class="act">${acts}</div>`+
+    `<div>📅 ${pLabel}${aLabel} — <b>${list.length}</b>건 · 고유 IP <b>${ipSet.size}</b></div>`+
     (regions?`<div class="act">📍 ${regions}</div>`:'');
   renderLogPage();
 }
