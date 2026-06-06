@@ -444,35 +444,73 @@ function renderChart(daily){
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${bars}</svg>`;
 }
 
-// 로그 한 페이지(10개) 렌더 + 페이지 이동 컨트롤
-function renderLogPage(){
-  const list = getFilteredLogs();
-  const page = list.slice(logPage*PAGE_SIZE, (logPage+1)*PAGE_SIZE);
-  const rows = page.map(l=>{
-    const e = parseUA(l.user_agent);
-    const gl = geoLabel(l.geo);
-    return `
+// 한 화면에서 10개씩 무한 스크롤로 누적 표시
+let logShown = 0;          // 현재까지 화면에 그린 행 수
+let _logScrollBound = false;
+function rowHtml(l){
+  const e = parseUA(l.user_agent);
+  const gl = geoLabel(l.geo);
+  return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
     <td class="t-geo${l.geo?'':' t-empty'}" data-label="지역" title="${esc(geoTitle(l.geo))}">${gl||'-'}</td>
     <td class="t-env" data-label="기기·브라우저" title="${esc(l.user_agent||'')}">${e.emoji} ${esc(e.os)} · ${esc(e.browser)}</td>
     <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail${l.detail?'':' t-empty'}" data-label="상세">${esc(l.detail)}</td></tr>`;
-  }).join('');
-  const empty = logQuery ? `'${esc(logQuery)}' 검색 결과 없음` : '기록 없음';
+}
+// 필터 변경/검색 시: 표 초기화 후 첫 10개 렌더
+function renderLogPage(){
+  const list = getFilteredLogs();
   document.getElementById('logs').innerHTML =
     `<table><thead><tr><th>시간</th><th>IP</th><th>지역</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
-     <tbody>${rows||`<tr><td colspan="6" style="padding:14px;color:#aaa">${empty}</td></tr>`}</tbody></table>`;
-  const totalPages = Math.max(1, Math.ceil(list.length/PAGE_SIZE));
-  const countLabel = logQuery ? `검색 ${list.length}건 / 전체 ${allLogs.length}` : `총 ${allLogs.length}건`;
-  document.getElementById('pager').innerHTML = list.length ? `
-    <button onclick="gotoPage(${logPage-1})" ${logPage<=0?'disabled':''}>← 이전</button>
-    <span class="pinfo">${logPage+1} / ${totalPages} 페이지 · ${countLabel}</span>
-    <button onclick="gotoPage(${logPage+1})" ${logPage>=totalPages-1?'disabled':''}>다음 →</button>` : '';
+     <tbody id="log-tbody"></tbody></table>`;
+  logShown = 0;
+  if(!list.length){
+    const empty = logQuery ? `'${esc(logQuery)}' 검색 결과 없음` : '기록 없음';
+    document.getElementById('log-tbody').innerHTML = `<tr><td colspan="6" style="padding:14px;color:#aaa">${empty}</td></tr>`;
+  } else {
+    appendLogRows();
+  }
+  document.getElementById('logs').scrollTop = 0;
+  bindLogScroll();
+  updateLogFooter(list);
 }
-function gotoPage(p){
-  const totalPages = Math.max(1, Math.ceil(getFilteredLogs().length/PAGE_SIZE));
-  logPage = Math.max(0, Math.min(p, totalPages-1));
-  renderLogPage();
-  document.getElementById('logs').scrollIntoView({ behavior:'smooth', block:'nearest' });
+// 다음 10개 행을 tbody에 누적
+function appendLogRows(){
+  const list = getFilteredLogs();
+  const tb = document.getElementById('log-tbody');
+  if(!tb || logShown >= list.length) return;
+  const next = list.slice(logShown, logShown + PAGE_SIZE);
+  tb.insertAdjacentHTML('beforeend', next.map(rowHtml).join(''));
+  logShown += next.length;
+  updateLogFooter(list);
+  // PC: 컨테이너가 아직 스크롤 불가하면 채워질 때까지 더 로드
+  const el = document.getElementById('logs');
+  if(el && getComputedStyle(el).overflowY !== 'visible' && el.scrollHeight <= el.clientHeight && logShown < list.length){
+    appendLogRows();
+  }
+}
+function updateLogFooter(list){
+  const total = (list||getFilteredLogs());
+  const countLabel = logQuery ? `검색 ${total.length}건 / 전체 ${allLogs.length}` : `총 ${allLogs.length}건`;
+  const more = logShown < total.length ? ` · 아래로 스크롤하면 더 보기 (${logShown}/${total.length})` : (total.length?' · 끝':'');
+  document.getElementById('pager').innerHTML = total.length ? `<span class="pinfo">${countLabel}${more}</span>` : '';
+}
+// 스크롤이 하단 근처면 다음 10개 로드 (PC=컨테이너 스크롤 / 모바일=페이지 스크롤)
+function nearBottom(){
+  const el = document.getElementById('logs');
+  if(!el) return false;
+  if(getComputedStyle(el).overflowY === 'visible'){       // 모바일: 페이지가 스크롤
+    return el.getBoundingClientRect().bottom <= window.innerHeight + 200;
+  }
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - 60;
+}
+function bindLogScroll(){
+  if(_logScrollBound) return;
+  const el = document.getElementById('logs');
+  if(!el) return;
+  const onScroll = ()=>{ if(nearBottom()) appendLogRows(); };
+  el.addEventListener('scroll', onScroll);
+  window.addEventListener('scroll', onScroll);
+  _logScrollBound = true;
 }
 
 async function changePw(){
