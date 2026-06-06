@@ -196,6 +196,53 @@ function kstRange(period: string, from?: string, to?: string): { fromUTC?: strin
   return {}; // all
 }
 
+// ── IP → 접속 지역 조회 (ip_geo 캐시 + ip-api 배치) ──────────────
+type Geo = { ip: string; country?: string; country_code?: string; region?: string; city?: string; isp?: string; mobile?: boolean; proxy?: boolean };
+function isPublicIP(ip: string): boolean {
+  if (!ip || ip === "unknown") return false;
+  if (ip === "127.0.0.1" || ip === "::1") return false;
+  if (/^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return false;
+  if (/^(fc|fd)/i.test(ip)) return false; // ULA IPv6
+  return true;
+}
+async function geoLookup(ips: string[]): Promise<Record<string, Geo>> {
+  const map: Record<string, Geo> = {};
+  const targets = [...new Set(ips.filter(isPublicIP))];
+  if (!targets.length) return map;
+  // 1) 캐시 조회 (30일 이내)
+  const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
+  try {
+    const inList = targets.map((x) => `"${x}"`).join(",");
+    const cr = await fetch(`${SB_URL}/rest/v1/ip_geo?select=*&ip=in.(${encodeURIComponent(inList)})&updated_at=gte.${encodeURIComponent(fresh)}`, { headers: SH });
+    if (cr.ok) for (const row of await cr.json()) map[row.ip] = row;
+  } catch (_e) { /* 캐시 실패 무시 */ }
+  // 2) 미캐시 IP → ip-api 배치(최대 100개/요청)
+  const miss = targets.filter((ip) => !map[ip]);
+  for (let i = 0; i < miss.length; i += 100) {
+    const chunk = miss.slice(i, i + 100);
+    try {
+      const resp = await fetch("http://ip-api.com/batch?fields=status,country,countryCode,regionName,city,isp,mobile,proxy,query", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(chunk),
+      });
+      if (!resp.ok) continue;
+      const arr = await resp.json();
+      const rows: Geo[] = [];
+      for (const r of arr) {
+        if (r.status !== "success") continue;
+        const g: Geo = { ip: r.query, country: r.country, country_code: r.countryCode, region: r.regionName, city: r.city, isp: r.isp, mobile: !!r.mobile, proxy: !!r.proxy };
+        map[r.query] = g; rows.push(g);
+      }
+      if (rows.length) {
+        await fetch(`${SB_URL}/rest/v1/ip_geo`, {
+          method: "POST", headers: { ...SH, Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify(rows.map((g) => ({ ...g, updated_at: new Date().toISOString() }))),
+        }).catch(() => {});
+      }
+    } catch (_e) { /* 배치 실패 무시 */ }
+  }
+  return map;
+}
+
 // ── 대시보드 데이터 (기간·액션 필터) ──────────────────────────
 async function dashboard(opts: Record<string, unknown> = {}) {
   const limit = Math.min(Number(opts.limit) || 300, 1000);
@@ -218,8 +265,20 @@ async function dashboard(opts: Record<string, unknown> = {}) {
     if (l.ip) ipSet.add(l.ip);
     actionCount[l.action] = (actionCount[l.action] || 0) + 1;
   }
+  // IP → 지역 조회 후 각 로그에 geo 부착 + 지역별 집계
+  const geoMap = await geoLookup([...ipSet]);
+  const regionCount: Record<string, number> = {};
+  for (const l of logs) {
+    const g = l.ip ? geoMap[l.ip] : undefined;
+    if (g) {
+      l.geo = g;
+      const label = [g.country, g.region].filter(Boolean).join(" ") || g.country || "기타";
+      regionCount[label] = (regionCount[label] || 0) + 1;
+    }
+  }
+  const regions = Object.entries(regionCount).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ region: k, count: v }));
   const visits = await visitorStats();
-  return { logs, logCount: totalMatch, stats: { total: logs.length, matched: totalMatch, uniqueIPs: ipSet.size, actions: actionCount }, visits };
+  return { logs, logCount: totalMatch, stats: { total: logs.length, matched: totalMatch, uniqueIPs: ipSet.size, actions: actionCount, regions }, visits };
 }
 
 // PostgREST count(content-range 헤더)로 visit 수 집계

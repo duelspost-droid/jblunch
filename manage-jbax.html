@@ -45,6 +45,7 @@
   .t-time { white-space: nowrap; color: #999; }
   .t-ip { white-space: nowrap; font-family: monospace; color: #2b6cb0; }
   .t-act { white-space: nowrap; font-weight: 600; }
+  .t-geo { white-space: nowrap; color: #2f855a; font-size: 0.74rem; cursor: help; }
   .t-env { white-space: nowrap; color: #555; font-size: 0.74rem; }
   .t-detail { color: #666; word-break: break-all; }
   .hidden { display: none; }
@@ -263,7 +264,7 @@ function getFilteredLogs(){
   if(!q) return allLogs;
   return allLogs.filter(l=>{
     const e = parseUA(l.user_agent);
-    const hay = [l.ip, l.action, l.detail, e.os, e.browser, l.user_agent, fmt(l.created_at)]
+    const hay = [l.ip, l.action, l.detail, e.os, e.browser, l.user_agent, geoSearchStr(l.geo), fmt(l.created_at)]
       .map(x=>String(x||'').toLowerCase()).join(' ');
     return hay.includes(q);
   });
@@ -308,6 +309,27 @@ function parseUA(ua){
   return { os, browser, emoji };
 }
 function fmt(iso){ if(!iso) return ''; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+// 국가코드 → 국기 이모지
+function flag(cc){ if(!cc||cc.length!==2) return '🌐'; return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)); }
+// geo 객체 → 짧은 지역 라벨
+function geoLabel(g){
+  if(!g) return '';
+  const parts = [g.city, g.region].filter(Boolean);
+  const place = [...new Set(parts)].join(' ') || g.country || '';
+  return `${flag(g.country_code)} ${esc(place||'알수없음')}`;
+}
+// geo 객체 → 상세(hover) 텍스트
+function geoTitle(g){
+  if(!g) return '사설/로컬 IP — 지역 조회 불가';
+  const t = [
+    [g.country, g.region, g.city].filter(Boolean).join(' › '),
+    g.isp ? `ISP: ${g.isp}` : '',
+    g.mobile ? '📶 모바일망' : '', g.proxy ? '🛡️ VPN/프록시 의심' : ''
+  ].filter(Boolean).join('\n');
+  return t;
+}
+function geoSearchStr(g){ return g ? [g.country,g.region,g.city,g.isp].filter(Boolean).join(' ') : ''; }
 
 async function adminCall(payload){
   const res = await fetch(ADMIN_URL, {
@@ -377,8 +399,10 @@ function render(data){
   const acts = Object.entries(s.actions||{}).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
   const pLabel = { day:'오늘', month:'이번 달', range:'기간', all:'전체' }[logFilter.period] || '전체';
   const aLabel = logFilter.action ? ` · 액션: ${esc(logFilter.action)}` : '';
+  const regions = (s.regions||[]).slice(0,6).map(r=>`${esc(r.region)} ${r.count}`).join(' · ');
   document.getElementById('stats').innerHTML =
-    `<div>📅 ${pLabel}${aLabel} — <b>${(s.matched??s.total)||0}</b>건 (불러옴 ${s.total||0}) · 고유 IP <b>${s.uniqueIPs||0}</b></div><div class="act">${acts}</div>`;
+    `<div>📅 ${pLabel}${aLabel} — <b>${(s.matched??s.total)||0}</b>건 (불러옴 ${s.total||0}) · 고유 IP <b>${s.uniqueIPs||0}</b></div><div class="act">${acts}</div>`+
+    (regions?`<div class="act">📍 ${regions}</div>`:'');
   // 방문자 통계 (일/월/연/전체)
   const v = data.visits || {};
   const u = v.unique || {};
@@ -422,14 +446,17 @@ function renderLogPage(){
   const rows = page.map(l=>{
     const e = parseUA(l.user_agent);
     return `
+    const gl = geoLabel(l.geo);
+    return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
+    <td class="t-geo${l.geo?'':' t-empty'}" data-label="지역" title="${esc(geoTitle(l.geo))}">${gl||'-'}</td>
     <td class="t-env" data-label="기기·브라우저" title="${esc(l.user_agent||'')}">${e.emoji} ${esc(e.os)} · ${esc(e.browser)}</td>
     <td class="t-act" data-label="액션">${esc(l.action)}</td><td class="t-detail${l.detail?'':' t-empty'}" data-label="상세">${esc(l.detail)}</td></tr>`;
   }).join('');
   const empty = logQuery ? `'${esc(logQuery)}' 검색 결과 없음` : '기록 없음';
   document.getElementById('logs').innerHTML =
-    `<table><thead><tr><th>시간</th><th>IP</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
-     <tbody>${rows||`<tr><td colspan="5" style="padding:14px;color:#aaa">${empty}</td></tr>`}</tbody></table>`;
+    `<table><thead><tr><th>시간</th><th>IP</th><th>지역</th><th>기기·브라우저</th><th>액션</th><th>상세</th></tr></thead>
+     <tbody>${rows||`<tr><td colspan="6" style="padding:14px;color:#aaa">${empty}</td></tr>`}</tbody></table>`;
   const totalPages = Math.max(1, Math.ceil(list.length/PAGE_SIZE));
   const countLabel = logQuery ? `검색 ${list.length}건 / 전체 ${allLogs.length}` : `총 ${allLogs.length}건`;
   document.getElementById('pager').innerHTML = list.length ? `
