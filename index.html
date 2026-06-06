@@ -706,6 +706,16 @@
   <div id="tab-stats" class="section"></div>
 </div>
 
+<!-- 도보경로 지도 오버레이 (앱 안 띄우고 페이지 안에서 바로 표시) -->
+<div id="route-bg" style="display:none;position:fixed;inset:0;z-index:9000;background:#fff;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:#0a3d7a;color:#fff;flex:0 0 auto">
+    <button onclick="closeRoute()" aria-label="닫기" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1">←</button>
+    <strong id="route-title" style="font-size:1rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🚶 도보경로</strong>
+    <a id="route-ext" href="#" target="_blank" rel="noopener" style="color:#ffd54a;font-size:.8rem;text-decoration:none;white-space:nowrap">새 탭 ↗</a>
+  </div>
+  <iframe id="route-frame" title="도보경로" style="flex:1 1 auto;width:100%;border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
 <!-- 예약 팝업 -->
 <div class="modal-bg" id="reserve-bg">
   <div class="modal reserve-modal">
@@ -830,10 +840,17 @@ function normDist(d) {
 // AI가 생성한 디테일한 맛집 소개 캐시 (이름 → intro 문장)
 // 면책·사과성 소개(또는 과도하게 긴 응답)는 유효한 소개로 보지 않음
 function isBadIntro(t) {
-  return !t || /죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다|도와드(릴|리)/.test(t) || t.length > 280;
+  return !t || /죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다|도와드(릴|리)/.test(t) || t.length > 400;
 }
+// 소개 형식이 바뀌면(예: 더 길게) 이 버전을 올려 기존 캐시를 1회 무효화
+const INTRO_CACHE_VER = '2';
 let placeIntros = {};
 try { placeIntros = JSON.parse(localStorage.getItem('placeIntros') || '{}') || {}; } catch(e) { placeIntros = {}; }
+// 캐시 버전 불일치 → 통째로 비워 새 형식(긴 소개)으로 재요청
+if (localStorage.getItem('introCacheVer') !== INTRO_CACHE_VER) {
+  placeIntros = {};
+  try { localStorage.setItem('placeIntros', '{}'); localStorage.setItem('introCacheVer', INTRO_CACHE_VER); } catch(e) {}
+}
 // 캐시에 남은 사과문 제거 (이전 버전에서 저장된 것)
 try {
   let changed = false;
@@ -1775,23 +1792,38 @@ function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
 
 // JB빌딩(여의나루로 77) 좌표 — 도보 경로 출발지
 const JB_LAT = 37.5240914884765, JB_LNG = 126.927376521939;
-function routeUrl(name, lng, lat) {
-  const start = `${JB_LNG},${JB_LAT},${encodeURIComponent('JB빌딩')},,`;
-  return (lng && lat)
-    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
-    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+// 구글지도 키리스 임베드(output=embed): iframe 안에서 렌더 → 외부 앱 호출 없음
+function routeEmbedUrl(name, lng, lat) {
+  const saddr = `${JB_LAT},${JB_LNG}`;
+  const daddr = (lng && lat) ? `${lat},${lng}(${name})` : `${name} 여의도`;
+  return `https://maps.google.com/maps?saddr=${encodeURIComponent(saddr)}&daddr=${encodeURIComponent(daddr)}&dirflg=w&hl=ko&output=embed`;
 }
-// 지도 버튼: 네이버 지도 웹(새 탭)으로 JB빌딩→식당 도보 경로 표시 (앱 대신 웹)
+// 새 탭용(임베드가 막힐 때 대비) — 역시 웹
+function routeWebUrl(name, lng, lat) {
+  const o = `${JB_LAT},${JB_LNG}`;
+  const d = (lng && lat) ? `${lat},${lng}` : `${name} 여의도`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=walking&hl=ko`;
+}
+function closeRoute() {
+  const bg = document.getElementById('route-bg');
+  document.getElementById('route-frame').src = 'about:blank';
+  bg.style.display = 'none';
+}
+function showRoute(name, lng, lat) {
+  document.getElementById('route-title').textContent = `🚶 JB빌딩 → ${name}`;
+  document.getElementById('route-frame').src = routeEmbedUrl(name, lng, lat);
+  document.getElementById('route-ext').href = routeWebUrl(name, lng, lat);
+  document.getElementById('route-bg').style.display = 'flex';
+}
+// 지도 버튼: 페이지 안 iframe으로 도보 경로 표시 (앱 안 띄움)
 async function openMapRoute(name) {
   const c = placeDetails[name] || {};
-  if (c.lat && c.lng) { window.open(routeUrl(name, c.lng, c.lat), '_blank', 'noopener'); return; }
-  // 좌표 미보유: 빈 새 탭을 먼저 열어 클릭 제스처 유지 → 좌표 조회 후 경로로 이동
-  const w = window.open('about:blank', '_blank');
+  if (c.lat && c.lng) { showRoute(name, c.lng, c.lat); return; }
+  // 좌표 미보유: 먼저 검색 임베드로 띄운 뒤 좌표 조회되면 경로로 갱신
+  showRoute(name, null, null);
   await fetchPlaceDetail(name);
   const cc = placeDetails[name] || {};
-  const url = routeUrl(name, cc.lng, cc.lat);
-  if (w && !w.closed) w.location.href = url;
-  else window.open(url, '_blank', 'noopener');
+  if (cc.lat && cc.lng) showRoute(name, cc.lng, cc.lat);
 }
 // 네이버 플레이스(예약·메뉴·전화가 있는 실제 가게 페이지)로 이동
 function reserveNaver() {

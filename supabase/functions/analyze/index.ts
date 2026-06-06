@@ -223,20 +223,21 @@ Deno.serve(async (req) => {
       }
       const hintCuisine = (body.cuisine || "").toString().trim();
       const hintAddr = (body.address || "").toString().trim();
-      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당의 짧은 소개글을 써줘.
+      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당의 소개글을 써줘.
 식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : ""}
 규칙:
 - 이 가게를 정확히 몰라도 절대 사과하거나 "정보가 부족/잘 모르겠다"고 쓰지 마. 그런 면책 문구 금지.
   이름과 종류에서 자연스럽게 연상되는 소개를 그럴듯하게 작성해.
-- intro: 정중한 존댓말("~합니다/~예요/~좋아요" 체) 1~2문장. 종류·이름으로 떠오르는 대표 메뉴·맛·분위기,
-  어떤 자리(점심/회식/접대 등)에 어울리는지. 구체적 수상·연혁 같은 확인 불가한 허위는 만들지 말되,
-  무난하고 일반적인 소개는 OK. 가격·평점·전화번호는 쓰지 마.
+- intro: 정중한 존댓말("~합니다/~예요/~좋아요" 체)로 풍부하게 3~4문장(약 120~200자).
+  ① 대표 메뉴·맛의 특징, ② 분위기·인테리어·좌석, ③ 어떤 자리(점심/회식/접대/혼밥 등)에 어울리는지,
+  ④ 추천 포인트(이런 분께 좋아요) 순으로 자연스럽게 풀어써. 단조롭지 않게 구체적으로.
+  구체적 수상·연혁 같은 확인 불가한 허위는 만들지 말되, 무난하고 일반적인 소개는 OK. 가격·평점·전화번호는 쓰지 마.
 - price: 종류·이름으로 합리적으로 추정 → "저렴"/"보통"/"비쌈" 중 하나.
 - 반드시 JSON만 출력(다른 말·사과 없이): {"intro":"...","price":"보통"}`;
       const dResp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 300, messages: [{ role: "user", content: dPrompt }] }),
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 600, messages: [{ role: "user", content: dPrompt }] }),
       });
       if (!dResp.ok) {
         const err = await dResp.text();
