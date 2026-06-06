@@ -793,6 +793,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
+- feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 예: "국물 요리 명가 · 깊고 깔끔한 국맛, 든든한 점심". 긴 문장 설명 X, 짧은 구절 나열
 
 ```json
 {{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}],"by_condition":{{{cond_json}}}}}
@@ -804,6 +805,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 2곳(둘 다 반드시 도보 10분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
+- feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 긴 문장 설명 X, 짧은 구절 나열
 
 ```json
 {{"comment":"{meal} 추천 한마디","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}]}}
