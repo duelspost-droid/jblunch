@@ -450,7 +450,6 @@ function renderLogPage(){
   const page = list.slice(logPage*PAGE_SIZE, (logPage+1)*PAGE_SIZE);
   const rows = page.map(l=>{
     const e = parseUA(l.user_agent);
-    return `
     const gl = geoLabel(l.geo);
     return `
     <tr><td class="t-time" data-label="시간">${fmt(l.created_at)}</td><td class="t-ip" data-label="IP">${esc(l.ip)}</td>
