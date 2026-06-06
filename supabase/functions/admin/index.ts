@@ -247,13 +247,8 @@ async function geoLookup(ips: string[]): Promise<Record<string, Geo>> {
 // ── 대시보드 데이터 (기간·액션 필터) ──────────────────────────
 async function dashboard(opts: Record<string, unknown> = {}) {
   const limit = Math.min(Number(opts.limit) || 300, 1000);
-  const action = (opts.action || "").toString();
-  const { fromUTC, toUTC } = kstRange((opts.period || "").toString(), opts.from as string, opts.to as string);
-
-  let url = `${SB_URL}/rest/v1/access_logs?select=*&order=created_at.desc&limit=${limit}`;
-  if (action) url += `&action=eq.${encodeURIComponent(action)}`;
-  if (fromUTC) url += `&created_at=gte.${encodeURIComponent(fromUTC)}`;
-  if (toUTC) url += `&created_at=lt.${encodeURIComponent(toUTC)}`;
+  // 필터(기간·액션·검색)는 클라이언트에서 처리 → 서버는 최근 로그만 반환
+  const url = `${SB_URL}/rest/v1/access_logs?select=*&order=created_at.desc&limit=${limit}`;
 
   const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact" } });
   let logs: any[] = r.ok ? await r.json().catch(() => []) : [];

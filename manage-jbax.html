@@ -399,7 +399,7 @@ async function login(){
   const msg = document.getElementById('login-msg');
   if(!pw){ msg.className='msg err'; msg.textContent='비밀번호를 입력하세요.'; return; }
   msg.className='msg'; msg.textContent='확인 중…';
-  const { ok, data } = await adminCall({ action:'login', password: pw, limit: 1000, ...logFilter });
+  const { ok, data } = await adminCall({ action:'login', password: pw, limit: 1000 });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'로그인 실패'); return; }
   curToken = data.token || '';
   try { localStorage.setItem(SESSION_KEY, curToken); } catch(e) {}  // 비번 대신 토큰 저장
@@ -413,7 +413,7 @@ async function restoreSession(){
   let token = '';
   try { token = localStorage.getItem(SESSION_KEY) || ''; } catch(e) {}
   if(!token){ showLoginCard(); return; }
-  const { ok, data } = await adminCall({ action:'logs', token, limit: 1000, ...logFilter });
+  const { ok, data } = await adminCall({ action:'logs', token, limit: 1000 });
   if(ok){ curToken = token; showPanel(); render(data); }
   else { try { localStorage.removeItem(SESSION_KEY); } catch(e) {} showLoginCard(); }
 }
@@ -429,7 +429,7 @@ async function logout(){
 
 async function loadLogs(){
   if(!curToken) return;
-  const { ok, data } = await adminCall({ action:'logs', token: curToken, limit: 1000, ...logFilter });
+  const { ok, data } = await adminCall({ action:'logs', token: curToken, limit: 1000 });
   if(ok) render(data);
   else { logout(); }
 }
