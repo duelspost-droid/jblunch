@@ -313,7 +313,8 @@ function parseUA(ua){
   else if(/Linux/i.test(ua)){ os='Linux'; emoji='💻'; }
   return { os, browser, emoji };
 }
-function fmt(iso){ if(!iso) return ''; const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+// 항상 KST(한국 시간) 기준으로 표시 — 기기 시간대와 무관하게 일관
+function fmt(iso){ if(!iso) return ''; const d=new Date(new Date(iso).getTime()+9*3600000); const p=n=>String(n).padStart(2,'0'); return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 
 // 국가코드 → 국기 이모지
 function flag(cc){ if(!cc||cc.length!==2) return '🌐'; return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)); }
