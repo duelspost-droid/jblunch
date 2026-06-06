@@ -1,7 +1,7 @@
 # JB×AX 맛집 트래커 — 작업 로그 & 핸드오프 가이드
 
 > 다른 PC에서 이어서 작업하기 위한 문서. 프로젝트 구조 + 이번 세션 작업 내역 + 배포 방법.
-> 최종 업데이트: 2026-06-04
+> 최종 업데이트: 2026-06-06
 
 ---
 
@@ -81,8 +81,13 @@ JB_LNG = 126.927376521939
 | `supabase/functions/places-search/index.ts` | 내 주변/이름 맛집 검색 Edge Function |
 | `supabase/functions/track/index.ts` | 접속/작업 로그 기록(IP) Edge Function |
 | `supabase/functions/admin/index.ts` | 관리자 로그 조회 + 비번 변경 Edge Function |
-| `.github/workflows/daily-lunch.yml` | 매일 8:30 자동 실행 워크플로우 |
-| `app/` | Capacitor Android 앱 (server.url로 라이브 사이트 로드) |
+| `supabase/functions/stock/index.ts` | 주가/지수 조회 Edge Function |
+| `.github/workflows/daily-lunch.yml` | 매일 자동 실행 워크플로우 |
+| `app/` | Capacitor Android 앱 (**번들 모드**: webDir=www, server.url 없음) |
+| `app/release.ps1` | 앱 원클릭 릴리스(버전↑·빌드·GitHub Release·version.json) |
+| `app-download.html` | APK 다운로드 안내 페이지 (version.json 읽어 최신 링크) |
+| `version.json` | 앱 최신 버전·APK URL·릴리스 노트 (자체 업데이트용) |
+| `manage-jbax.html` | 관리자 페이지 |
 | `CLAUDE.md` | 프로젝트 요약 |
 
 ---
@@ -102,6 +107,8 @@ JB_LNG = 126.927376521939
 | `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS — service role 전용) |
 | `admin_config` | id, password_hash(PBKDF2), salt, iterations, updated_at (RLS — service role 전용) |
 | `admin_sessions` | token, ip, created_at, expires_at (RLS — service role 전용) |
+| `ip_geo` | ip(PK), country, country_code, region, city, isp, mobile, proxy, updated_at (IP→지역 30일 캐시) |
+| `place_meta` | name(PK), intro, price, distance, verified (AI 맛집 소개 서버 캐시) |
 
 ### Edge Function 배포
 ```bash
@@ -125,29 +132,38 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 
 - **접속**: **별도 페이지** https://duelspost-droid.github.io/jblunch/manage-jbax.html
   (`index.html`에서 `#admin` 접근 시 리다이렉트. `noindex` 메타로 검색 비노출)
-- **초기 비밀번호**: `jbax-admin-2026` → 로그인 후 "🔑 비밀번호 변경"에서 변경(**변경 권장**, CLI 불필요).
+- **현재 비밀번호**: `021600` (2026-06-06 재설정) → 로그인 후 "🔑 비밀번호 변경"에서 변경 권장.
 
 ### 보안 (PBKDF2 + 토큰 + 잠금 + 감사) — 강화됨
 - **비번 해시**: `admin_config`에 **PBKDF2(솔트+12만회)** 저장. 레거시 SHA-256은 로그인 성공 시 자동 마이그레이션.
-- **세션 토큰**: 로그인 시 랜덤 토큰(8h) 발급 → 클라이언트는 **비번 대신 토큰**을 sessionStorage에 저장
-  (XSS 시 비번 유출 방지). 비번 변경 시 **모든 세션 무효화** + 새 토큰 발급.
+- **세션 토큰**: 로그인 시 랜덤 토큰(8h) 발급 → 클라이언트는 **비번 대신 토큰**을 **localStorage**에 저장
+  (XSS 시 비번 유출 방지, 새로고침에도 유지). 비번 변경 시 **모든 세션 무효화** + 새 토큰 발급.
 - **무차별 대입 잠금**: IP당 15분 내 5회 실패 → 429 차단.
 - **감사 로그**: `admin_login` / `admin_fail` / `admin_pw_change` 기록. 타이밍 안전 비교.
-- **비번 변경**: 현재 비번 재확인 필수, **8자 이상**.
+- **비번 변경**: 현재 비번 재확인 필수, **6자 이상**.
+- ⚠️ **로그인 호출 주의**: `adminCall({action:'login', ...})`에 `...logFilter`를 펼치면 `action:''`이
+  덮어써 로그인 분기를 안 타 **토큰 미발급** → 새로고침 로그아웃. 라우팅 action을 필터로 덮지 말 것.
 
 ### Edge Functions
 - **`track`**: 클라이언트 호출 시 서버가 요청 헤더에서 **IP·UA**를 읽어 `access_logs`에 service role로 저장.
   기록 시점: visit / review_create·edit·delete / nearby·place_search / custom_recommend.
 - **`admin`** 액션:
-  - `login {password}` → 토큰 발급 + 대시보드(로그·통계·방문통계) 반환
-  - `logs {token, period, from, to, action, limit}` → **기간·액션 필터** 조회 (matched 총건수 포함)
+  - `login {password, limit}` → 토큰 발급 + 대시보드(최근 로그·방문통계) 반환
+  - `logs {token, limit}` → 최근 로그 반환 (**기간·액션·검색 필터는 클라이언트에서 처리**)
   - `change_password {token, currentPassword, newPassword}` / `logout {token}`
-- **기간 필터(KST)**: `period` = day(오늘) / month(이번달) / range(from~to) / all(전체). `action`으로 액션별 조회.
+- **IP 지역(지오로케이션)**: dashboard가 로그 IP를 **ip-api 배치**로 국가·지역·도시·ISP 조회,
+  `ip_geo`에 30일 캐시. 각 로그에 `geo` 부착(타임아웃 4초).
+
+### 로그 화면(manage-jbax.html) — 클라이언트 필터
+- **필터 전부 클라이언트 처리**: 로그인 시 최근 1000건을 받아두고, 일/월/기간/전체·액션·검색을
+  **서버 왕복 없이 즉시** 필터(KST 경계 계산). 기본 기간 = **일(오늘)**.
+- **무한 스크롤**: 한 화면에서 10개씩, 아래로 스크롤 시 다음 10개 누적(내부 스크롤, ≈430px/모바일 65vh).
+- **시간 표시 KST 고정**(기기 시간대 무관). **지역 컬럼**(국기+도시, hover로 ISP/모바일/VPN).
+- 상단 요약은 건수·고유 IP·지역요약만(액션별 개수 나열 제거).
 
 ### 보안/RLS
-- `access_logs` / `admin_config` / `admin_sessions` 모두 RLS로 anon 차단, service role(Edge Function)만 접근.
-- 프론트: `manage-jbax.html`(독립, 토큰 인증·기간/액션 필터·페이지네이션·UA 파싱·방문 그래프), `index.html`의 `track()`.
-- 테이블: `admin_config(id, password_hash, salt, iterations, updated_at)`, `admin_sessions(token, ip, created_at, expires_at)`.
+- `access_logs` / `admin_config` / `admin_sessions` / `ip_geo` 모두 RLS로 anon 차단, service role(Edge Function)만 접근.
+- 프론트: `manage-jbax.html`(독립, 토큰 인증·클라이언트 필터·무한스크롤·UA 파싱·방문 그래프·IP 지역), `index.html`의 `track()`.
 
 ---
 
@@ -207,6 +223,35 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 ### 앱
 - [x] Capacitor Android 프로젝트(`app/`) — server.url로 라이브 로드
       (빌드는 Android Studio 필요. iOS는 macOS 필요)
+
+---
+
+## 7-1. 이번 세션(2026-06-05~06) 작업 내역
+
+### 맛집 소개/카드
+- [x] 리뷰 모달 AI 소개(analyze describe): 모르는 가게 **사과문 방지**(프롬프트+거부 regex+JSON 안전파싱),
+      서버 `place_meta`·브라우저 `placeIntros`(localStorage) 캐시. 면책성 소개는 `isBadIntro()`로 무시·재요청.
+- [x] 리뷰 소개를 **3~4문장(120~200자)**으로 확장(`INTRO_CACHE_VER`로 기존 캐시 1회 무효화).
+- [x] 카드 한 줄 feature는 **요약형 2줄**(긴 문장 X, 키워드 나열)로 유지. CSS `line-clamp:2`.
+- [x] 도보경로: 외부 앱(네이버 유니버설 링크) 대신 **페이지 내 구글지도 임베드**(`output=embed`, 전체화면 iframe).
+
+### 관리자 페이지 (대규모 개편)
+- [x] **IP 기반 접속 지역** 표시(ip-api+`ip_geo` 캐시), 지역 컬럼·요약·검색.
+- [x] 로그 필터 **클라이언트 처리**로 전환 → 일/월/기간/전체 클릭 즉시 반영. 기본 기간 = **일**.
+- [x] **무한 스크롤**(10개씩, 내부 스크롤), 시간 표시 **KST 고정**.
+- [x] 세션 저장 **sessionStorage→localStorage** + **로그인 토큰 미발급 버그 수정**(새로고침 로그아웃 해결).
+- [x] 비번 재설정(`021600`), 비번 최소 **6자**.
+- [x] 디자인 정리(카드/헤더/툴바/줄무늬/고스트 버튼), 액션별 개수 나열 제거.
+
+### 앱/인프라
+- [x] 앱 **번들 모드**(SSL 없이 동작) + 런타임에 GitHub raw에서 history.json 로드.
+- [x] **버전별 APK 릴리스**(`release.ps1`) + `version.json` 기반 **자체 업데이트 배너**.
+- [x] 커스텀 **JB×AX 아이콘**(@capacitor/assets), **매일 8:30 푸시 알림**(local-notifications).
+- [x] `app-download.html` 다운로드 안내 페이지.
+
+### 진행 중
+- [ ] **커스텀 도메인 `lunch.jbax.co.kr` SSL** — Let's Encrypt 발급 대기(state=new).
+      도메인 토글 시 백오프 리셋되므로 **건드리지 말고 대기**(1시간마다 자동 점검). DNS는 정상.
 
 ---
 

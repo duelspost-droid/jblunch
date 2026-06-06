@@ -6,8 +6,13 @@
 
 ## 사이트 & 저장소
 - **사이트**: https://duelspost-droid.github.io/jblunch/
+- **커스텀 도메인**: http://lunch.jbax.co.kr/ (SSL 발급 대기 중 — state=new, 도메인 토글 금지)
+- **관리자**: https://duelspost-droid.github.io/jblunch/manage-jbax.html (비번 `021600`, 로그인 후 변경 권장)
+- **앱 다운로드**: /app-download.html (Android APK, 자체 업데이트)
 - **저장소**: https://github.com/duelspost-droid/jblunch
 - **Actions**: https://github.com/duelspost-droid/jblunch/actions
+
+> 상세 핸드오프·배포·관리자/앱 구조는 **WORKLOG.md** 참고.
 
 ## 아키텍처
 ```
@@ -65,9 +70,13 @@ gl.main()
 - **URL**: https://nrdapzgtibbusvoaceuh.supabase.co
 - **테이블**:
   - `reviews` — 방문 체크 (id, visited)
-  - `comments` — 리뷰 (restaurant_id, reviewer_name, content, rating)
+  - `comments` — 리뷰 (restaurant_id, reviewer_name, content, rating, meal)
   - `daily_preference` — 오늘 컨디션 (date, preference)
+  - `access_logs` / `admin_config` / `admin_sessions` — 접속로그·관리자(RLS, service role 전용)
+  - `ip_geo` — IP→지역 30일 캐시 / `place_meta` — AI 맛집 소개 캐시
+- **Edge Functions**: analyze, places-search, track, admin, stock
 - anon key는 index.html에 하드코딩 (공개용 키)
+- 배포: `SUPABASE_ACCESS_TOKEN="sbp_..." npx --yes supabase@latest functions deploy <함수> --project-ref nrdapzgtibbusvoaceuh`
 
 ## 새 PC 세팅
 ```bash
