@@ -183,10 +183,10 @@
       <div class="toolbar">
         <div class="log-filter">
           <div class="seg" id="period-seg">
-            <button data-period="day" onclick="setPeriod('day')">일</button>
+            <button data-period="day" class="on" onclick="setPeriod('day')">일</button>
             <button data-period="month" onclick="setPeriod('month')">월</button>
             <button data-period="range" onclick="setPeriod('range')">기간</button>
-            <button data-period="all" class="on" onclick="setPeriod('all')">전체</button>
+            <button data-period="all" onclick="setPeriod('all')">전체</button>
           </div>
           <div class="range-inputs" id="range-inputs" style="display:none">
             <input type="date" id="from-date" onchange="onFilterChange()">
@@ -250,7 +250,7 @@ let allLogs = [];      // 서버에서 받은(필터 적용) 로그
 let logPage = 0;       // 현재 페이지 (0-base)
 let logQuery = '';     // 추가 텍스트 검색
 const PAGE_SIZE = 10;  // 한 페이지 로그 수
-let logFilter = { period: 'all', action: '', from: '', to: '' };  // 기간·액션 필터
+let logFilter = { period: 'day', action: '', from: '', to: '' };  // 기간·액션 필터(기본: 일)
 
 // 기간 버튼: 서버 왕복 없이 클라이언트에서 즉시 필터
 function setPeriod(p){
