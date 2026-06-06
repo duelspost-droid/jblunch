@@ -223,7 +223,7 @@
 <!-- 새로고침 깜빡임 방지: 세션 있으면 페인트 전에 동기적으로 로그인 화면 숨김 -->
 <script>
   try {
-    if (sessionStorage.getItem('jbadm')) {
+    if (localStorage.getItem('jbadm')) {
       document.getElementById('login-card').classList.add('hidden');
       document.getElementById('loading-card').classList.remove('hidden');
     }
@@ -402,7 +402,7 @@ async function login(){
   const { ok, data } = await adminCall({ action:'login', password: pw, limit: 1000, ...logFilter });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'로그인 실패'); return; }
   curToken = data.token || '';
-  try { sessionStorage.setItem(SESSION_KEY, curToken); } catch(e) {}  // 비번 대신 토큰 저장
+  try { localStorage.setItem(SESSION_KEY, curToken); } catch(e) {}  // 비번 대신 토큰 저장
   document.getElementById('pw').value = '';
   showPanel();
   render(data);
@@ -411,17 +411,17 @@ async function login(){
 // 새로고침 시 저장된 토큰으로 자동 재로그인
 async function restoreSession(){
   let token = '';
-  try { token = sessionStorage.getItem(SESSION_KEY) || ''; } catch(e) {}
+  try { token = localStorage.getItem(SESSION_KEY) || ''; } catch(e) {}
   if(!token){ showLoginCard(); return; }
   const { ok, data } = await adminCall({ action:'logs', token, limit: 1000, ...logFilter });
   if(ok){ curToken = token; showPanel(); render(data); }
-  else { try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} showLoginCard(); }
+  else { try { localStorage.removeItem(SESSION_KEY); } catch(e) {} showLoginCard(); }
 }
 
 async function logout(){
   try { if(curToken) await adminCall({ action:'logout', token: curToken }); } catch(e) {}
   curToken = '';
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
   showLoginCard();
   document.getElementById('pw').value = '';
   const m = document.getElementById('login-msg'); if(m){ m.className='msg'; m.textContent=''; }
@@ -552,7 +552,7 @@ async function changePw(){
   const { ok, data } = await adminCall({ action:'change_password', token: curToken, currentPassword: cpw, newPassword: np1 });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'변경 실패'); return; }
   curToken = data.token || curToken;   // 비번 변경 시 새 토큰 발급(기존 세션 무효화)
-  try { sessionStorage.setItem(SESSION_KEY, curToken); } catch(e) {}
+  try { localStorage.setItem(SESSION_KEY, curToken); } catch(e) {}
   document.getElementById('cpw').value=''; document.getElementById('np1').value=''; document.getElementById('np2').value='';
   msg.className='msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다. (다른 기기는 재로그인 필요)';
 }
