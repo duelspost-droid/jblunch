@@ -179,11 +179,11 @@
           <button data-period="all" class="on" onclick="setPeriod('all')">전체</button>
         </div>
         <div class="range-inputs" id="range-inputs" style="display:none">
-          <input type="date" id="from-date" onchange="applyFilter()">
+          <input type="date" id="from-date" onchange="onFilterChange()">
           <span>~</span>
-          <input type="date" id="to-date" onchange="applyFilter()">
+          <input type="date" id="to-date" onchange="onFilterChange()">
         </div>
-        <select id="action-sel" onchange="applyFilter()">
+        <select id="action-sel" onchange="onFilterChange()">
           <option value="">전체 액션</option>
           <option value="visit">방문(visit)</option>
           <option value="custom_recommend">맞춤추천(custom_recommend)</option>
@@ -241,51 +241,85 @@ let logQuery = '';     // 추가 텍스트 검색
 const PAGE_SIZE = 10;  // 한 페이지 로그 수
 let logFilter = { period: 'all', action: '', from: '', to: '' };  // 기간·액션 필터
 
+// 기간 버튼: 서버 왕복 없이 클라이언트에서 즉시 필터
 function setPeriod(p){
   logFilter.period = p;
   document.querySelectorAll('#period-seg button').forEach(b => b.classList.toggle('on', b.dataset.period === p));
   document.getElementById('range-inputs').style.display = (p === 'range') ? 'inline-flex' : 'none';
-  if (p !== 'range') applyFilter();   // 기간 모드는 날짜 입력 후 적용
+  onFilterChange();
 }
-// 필터 → 서버 재조회
-let _filterSeq = 0;
-async function applyFilter(){
-  if (!curToken) return;
+function readFilterInputs(){
   logFilter.action = document.getElementById('action-sel').value || '';
   logFilter.from = document.getElementById('from-date').value || '';
   logFilter.to = document.getElementById('to-date').value || '';
-  if (logFilter.period === 'range' && (!logFilter.from || !logFilter.to)) return;  // 양쪽 날짜 필요
-  const seq = ++_filterSeq;                 // 늦게 도착한 이전 응답 무시
-  const logsEl = document.getElementById('logs');
-  if (logsEl) logsEl.innerHTML = '<div style="padding:18px;text-align:center;color:#0a3d7a">⏳ 불러오는 중…</div>';
-  const { ok, data } = await adminCall({ action:'logs', token: curToken, limit: 1000, ...logFilter });
-  if (seq !== _filterSeq) return;            // 더 최근 클릭이 있으면 폐기
-  if (ok) render(data); else logout();
 }
+function onFilterChange(){
+  readFilterInputs();
+  if (logFilter.period === 'range' && (!logFilter.from || !logFilter.to)) return;  // 기간모드는 날짜 둘 다 필요
+  refreshLogView();
+}
+// 서버 재조회(수동 새로고침용) — 필터는 클라이언트에서 처리
+async function applyFilter(){ onFilterChange(); }
 
-// 검색어로 로그 필터 (IP·액션·상세·기기/브라우저·원본 UA 통합)
+// KST 기준 경계(ms)
+function kstStartMs(period){
+  const k = new Date(Date.now() + 9*3600000);
+  const y=k.getUTCFullYear(), m=k.getUTCMonth(), d=k.getUTCDate();
+  if(period==='day')   return Date.UTC(y,m,d) - 9*3600000;
+  if(period==='month') return Date.UTC(y,m,1) - 9*3600000;
+  return null;
+}
+function kstDayStartMs(ds){ const [a,b,c]=ds.split('-').map(Number); return Date.UTC(a,b-1,c) - 9*3600000; }
+
+// 기간·액션·기간범위·검색어를 모두 클라이언트에서 적용
 function getFilteredLogs(){
+  let list = allLogs;
+  const p = logFilter.period;
+  if(p==='day' || p==='month'){
+    const s = kstStartMs(p);
+    list = list.filter(l => new Date(l.created_at).getTime() >= s);
+  } else if(p==='range' && logFilter.from && logFilter.to){
+    const f = kstDayStartMs(logFilter.from), t = kstDayStartMs(logFilter.to) + 86400000;
+    list = list.filter(l => { const x = new Date(l.created_at).getTime(); return x>=f && x<t; });
+  }
+  if(logFilter.action) list = list.filter(l => l.action === logFilter.action);
   const q = logQuery.trim().toLowerCase();
-  if(!q) return allLogs;
-  return allLogs.filter(l=>{
+  if(q) list = list.filter(l=>{
     const e = parseUA(l.user_agent);
     const hay = [l.ip, l.action, l.detail, e.os, e.browser, l.user_agent, geoSearchStr(l.geo), fmt(l.created_at)]
       .map(x=>String(x||'').toLowerCase()).join(' ');
     return hay.includes(q);
   });
+  return list;
+}
+// 필터 결과로 통계 + 로그 목록 갱신
+function refreshLogView(){
+  const list = getFilteredLogs();
+  const pLabel = { day:'오늘', month:'이번 달', range:'기간', all:'전체' }[logFilter.period] || '전체';
+  const aLabel = logFilter.action ? ` · 액션: ${esc(logFilter.action)}` : '';
+  const ipSet = new Set(), actCount = {}, regCount = {};
+  list.forEach(l=>{
+    if(l.ip) ipSet.add(l.ip);
+    actCount[l.action] = (actCount[l.action]||0)+1;
+    if(l.geo){ const lab=[l.geo.country,l.geo.region].filter(Boolean).join(' ')||l.geo.country||'기타'; regCount[lab]=(regCount[lab]||0)+1; }
+  });
+  const acts = Object.entries(actCount).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
+  const regions = Object.entries(regCount).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
+  document.getElementById('stats').innerHTML =
+    `<div>📅 ${pLabel}${aLabel} — <b>${list.length}</b>건 (전체 ${allLogs.length}) · 고유 IP <b>${ipSet.size}</b></div><div class="act">${acts}</div>`+
+    (regions?`<div class="act">📍 ${regions}</div>`:'');
+  renderLogPage();
 }
 function applyLogSearch(){
   logQuery = document.getElementById('logq').value || '';
   document.getElementById('logq-clear').style.display = logQuery ? '' : 'none';
-  logPage = 0;
-  renderLogPage();
+  refreshLogView();
 }
 function clearLogSearch(){
   logQuery = '';
   const inp = document.getElementById('logq'); if(inp) inp.value = '';
   document.getElementById('logq-clear').style.display = 'none';
-  logPage = 0;
-  renderLogPage();
+  refreshLogView();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -401,14 +435,8 @@ async function loadLogs(){
 }
 
 function render(data){
-  const s = data.stats || {};
-  const acts = Object.entries(s.actions||{}).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');
-  const pLabel = { day:'오늘', month:'이번 달', range:'기간', all:'전체' }[logFilter.period] || '전체';
-  const aLabel = logFilter.action ? ` · 액션: ${esc(logFilter.action)}` : '';
-  const regions = (s.regions||[]).slice(0,6).map(r=>`${esc(r.region)} ${r.count}`).join(' · ');
-  document.getElementById('stats').innerHTML =
-    `<div>📅 ${pLabel}${aLabel} — <b>${(s.matched??s.total)||0}</b>건 (불러옴 ${s.total||0}) · 고유 IP <b>${s.uniqueIPs||0}</b></div><div class="act">${acts}</div>`+
-    (regions?`<div class="act">📍 ${regions}</div>`:'');
+  // 로그 원본 저장 → 필터는 클라이언트에서 처리
+  allLogs = data.logs || [];
   // 방문자 통계 (일/월/연/전체)
   const v = data.visits || {};
   const u = v.unique || {};
@@ -421,10 +449,8 @@ function render(data){
     box('오늘', v.day, u.day) + box('이번 달', v.month, u.month) +
     box('올해', v.year, u.year) + box('전체', v.total, u.total);
   renderChart(v.daily || []);
-  // 로그 페이지네이션 (10개씩)
-  allLogs = data.logs || [];
-  logPage = 0;
-  renderLogPage();
+  // 통계 + 로그 목록(현재 필터 기준)
+  refreshLogView();
 }
 
 // 방문 추이 막대그래프 (의존성 없는 인라인 SVG)
