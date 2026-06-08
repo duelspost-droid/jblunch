@@ -346,17 +346,35 @@ def _clean_news_text(s):
             .replace("&lt;", "<").replace("&gt;", ">").replace("&apos;", "'").strip())
 
 
-def fetch_jb_news(naver_id, naver_secret, count=3):
+def _news_window_dates(today=None):
+    """KST 기준 오늘/어제 날짜 문자열 세트. 최신 뉴스는 이 범위만 허용."""
+    today = today or get_today_kst()
+    d = datetime.strptime(today, "%Y-%m-%d").date()
+    y = d - timedelta(days=1)
+    return today, y.strftime("%Y-%m-%d")
+
+
+def _parse_news_pub_dt(pub_date):
+    """Naver pubDate → KST datetime. 실패 시 None."""
+    try:
+        return email.utils.parsedate_to_datetime(pub_date or "").astimezone(timezone(timedelta(hours=9)))
+    except Exception:
+        return None
+
+
+def fetch_jb_news(naver_id, naver_secret, count=3, today=None):
     """네이버 뉴스를 여러 키워드로 폭넓게 검색 → JB 관련만 추려
-    AX·AI·디지털·혁신·외국인 주제 우선 + 최신순. → [{title, link, date}]."""
+    KST 오늘 우선, 없으면 어제까지. AX·AI·디지털·혁신·외국인 주제 가점. → [{title, link}]."""
     if not (naver_id and naver_secret):
         return []
+    today_s, yesterday_s = _news_window_dates(today)
+    allowed_dates = {today_s, yesterday_s}
     headers = {"X-Naver-Client-Id": naver_id, "X-Naver-Client-Secret": naver_secret}
     collected = {}   # link → {title, link, score, ts}
     for query in JB_NEWS_QUERIES:
         try:
             q = urllib.parse.quote(query)
-            url = f"https://openapi.naver.com/v1/search/news.json?query={q}&display=10&sort=date"
+            url = f"https://openapi.naver.com/v1/search/news.json?query={q}&display=20&sort=date"
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=6) as r:
                 items = json.loads(r.read()).get("items", [])
@@ -372,53 +390,65 @@ def fetch_jb_news(naver_id, naver_secret, count=3):
             if not any(k in text for k in JB_RELATED):
                 continue   # JB 무관 기사 제외
             # 발행시각
-            ts = 0
-            try:
-                ts = email.utils.parsedate_to_datetime(it.get("pubDate", "")).timestamp()
-            except Exception:
-                pass
+            pub_dt = _parse_news_pub_dt(it.get("pubDate", ""))
+            if not pub_dt:
+                continue
+            pub_day = pub_dt.strftime("%Y-%m-%d")
+            if pub_day not in allowed_dates:
+                continue
+            ts = pub_dt.timestamp()
+            day_rank = 1 if pub_day == today_s else 0
             score = sum(1 for k in JB_FOCUS_KEYWORDS if k in text)
             prev = collected.get(link)
-            if prev and prev["score"] >= score:
+            rank = (day_rank, score, ts)
+            if prev and prev["rank"] >= rank:
                 continue
-            collected[link] = {"title": title, "link": link, "date": it.get("pubDate", ""), "score": score, "ts": ts}
+            collected[link] = {
+                "title": title, "link": link, "date": it.get("pubDate", ""),
+                "score": score, "ts": ts, "rank": rank, "pub_day": pub_day
+            }
 
-    # 주제 적합도(가점) → 최신순 정렬. 포커스 기사 우선, 부족하면 일반으로 채움
+    # 당일 기사 우선 → 주제 적합도(가점) → 최신순. 어제 기사는 당일 기사 부족분만 채움.
     items_all = list(collected.values())
-    focus = [x for x in items_all if x["score"] > 0]
-    others = [x for x in items_all if x["score"] == 0]
-    focus.sort(key=lambda x: (x["score"], x["ts"]), reverse=True)
-    others.sort(key=lambda x: x["ts"], reverse=True)
-    picked = (focus + others)[:count]
+    focus_count = sum(1 for x in items_all if x["score"] > 0)
+    items_all.sort(key=lambda x: x["rank"], reverse=True)
+    picked = items_all[:count]
     news = [{"title": x["title"], "link": x["link"]} for x in picked]
-    print(f"📰 JB금융 뉴스 {len(news)}건 (포커스 {len(focus)}건 중)")
+    today_count = sum(1 for x in picked if x.get("pub_day") == today_s)
+    print(f"📰 JB금융 뉴스 {len(news)}건 ({today_s} {today_count}건, {yesterday_s}까지 / 포커스 {focus_count}건 중)")
     return news
 
 
-def fetch_jb_news_web(client, count=3):
+def fetch_jb_news_web(client, count=3, today=None):
     """Claude 웹검색으로 JB금융 AX/AI/디지털/혁신/외국인 최신 소식 → [{title, link}]."""
-    prompt = """웹 검색으로 'JB금융그룹'(JB금융지주, 전북은행, 광주은행, JB우리캐피탈) 관련
+    today_s, yesterday_s = _news_window_dates(today)
+    prompt = f"""웹 검색으로 'JB금융그룹'(JB금융지주, 전북은행, 광주은행, JB우리캐피탈) 관련
 가장 최근 뉴스를 찾아줘. 특히 다음 주제를 최우선으로 골라줘:
 - AX(인공지능 전환), AI/인공지능/생성형AI
 - 디지털 전환(DX)·디지털 혁신·핀테크·플랫폼
 - 경영 혁신·신사업
 - 외국인(고객·투자자·주주·인재) 관련
 
-최신순으로 실제 기사 4건을 아래 JSON으로만 출력(제목은 실제 기사 제목, link는 원문 URL):
+반드시 KST 기준 {today_s} 당일 발행 기사부터 고르고, 부족할 때만 {yesterday_s} 발행 기사로 채워줘.
+{yesterday_s}보다 오래된 기사는 절대 포함하지 마.
+
+최신순으로 실제 기사 4건을 아래 JSON으로만 출력(제목은 실제 기사 제목, link는 원문 URL, date는 발행일 YYYY-MM-DD):
 ```json
-{"news":[{"title":"...","link":"https://..."}]}
+{{"news":[{{"title":"...","link":"https://...","date":"{today_s}"}}]}}
 ```"""
     try:
         text = call_claude(client, prompt, use_web=True)
         data = extract_json(text) if text else None
         items = (data or {}).get("news", []) if isinstance(data, dict) else []
         out = []
+        allowed_dates = {today_s, yesterday_s}
         for it in items[:count]:
             t = (it.get("title") or "").strip()
             l = (it.get("link") or it.get("url") or "").strip()
-            if t:
+            d = str(it.get("date") or it.get("published") or "")[:10]
+            if t and d in allowed_dates:
                 out.append({"title": t, "link": l})
-        print(f"📰 (웹검색) JB 소식 {len(out)}건")
+        print(f"📰 (웹검색) JB 소식 {len(out)}건 ({today_s}/{yesterday_s} 발행분)")
         return out
     except Exception as e:
         print(f"⚠️  웹검색 뉴스 실패 (무시): {e}")
@@ -879,7 +909,7 @@ def main():
     # 날씨 + JB금융 뉴스 먼저 수집 → 추천 분위기에 반영
     print("\n🌤️  날씨/뉴스 수집 중...")
     weather = fetch_weather()
-    news = fetch_jb_news(naver_id, naver_secret)
+    news = fetch_jb_news(naver_id, naver_secret, today=today)
     stock = fetch_jb_stock()
     headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
     mood_ctx = ""
@@ -909,7 +939,7 @@ def main():
 
     # JB 소식 보강: 웹검색(AX/AI/디지털/혁신/외국인) + 네이버 병합 (식사 생성 후 → rate limit 여유)
     time.sleep(40)
-    news_web = fetch_jb_news_web(client)
+    news_web = fetch_jb_news_web(client, today=today)
     news = merge_news(news_web, news, count=3)
     print(f"📰 최종 JB 소식 {len(news)}건")
 
