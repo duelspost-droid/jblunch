@@ -573,6 +573,7 @@
     margin-bottom: 14px;
   }
   .pref-title { font-size: 0.82rem; font-weight: 700; color: #333; margin-bottom: 10px; }
+  .pref-hint { font-size: 0.66rem; font-weight: 600; color: #9aa6b5; margin-left: 4px; }
   .pref-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
   .pref-chip {
     padding: 5px 12px; border-radius: 20px;
@@ -1319,7 +1320,7 @@ function renderHistory() {
 
   const prefHtml = bannerHtml + `
     <div class="pref-card">
-      <div class="pref-title">🙋 오늘 컨디션은?</div>
+      <div class="pref-title">🙋 오늘 컨디션은? <span class="pref-hint">여러 개 선택 가능 · 기본=해당없음</span></div>
       <div class="pref-chips">
         <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
         <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
@@ -1376,7 +1377,8 @@ function getDefaultMeal() {
   return '술집';
 }
 
-let currentCond = '';  // 선택된 컨디션 ('': 기본)
+let currentCond = '';   // 단일 컨디션(렌더 호환용, '': 기본)
+let currentConds = [];  // 다중 선택된 컨디션 배열 (빈 배열 = 기본=해당사항 없음)
 
 // 자유 입력 → 컨디션 키워드 매핑 (고정 도출)
 const COND_KEYWORDS = {
@@ -1514,6 +1516,7 @@ function updateMealInfo() {}
 function applyFreeText() {
   const text = document.getElementById('pref-text').value.trim();
   if (!text) return;
+  currentConds = []; syncCondChips();   // 직접입력 시 컨디션 칩 해제
   generateRecommend(text, currentMeal, true);
 }
 
@@ -1605,7 +1608,7 @@ function updateCondChips() {
   const hasCond = !!(md && md.by_condition && Object.keys(md.by_condition).length);
   const wrap = document.querySelector('.pref-chips');
   if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
-  document.querySelectorAll('.pref-chip').forEach(c => c.classList.toggle('on', c.dataset.cond === currentCond));
+  syncCondChips();
 }
 
 // 시간대 토글 (점심/저녁/술집) — 모두 미리 생성된 데이터 사용
@@ -1614,6 +1617,7 @@ function selectMeal(el) {
   el.classList.add('on');
   currentMeal = el.dataset.meal;
   currentCond = '';
+  currentConds = [];   // 끼니 바꾸면 컨디션 초기화(끼니별 사전생성 데이터가 다름)
   customResult = null;
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
@@ -1625,23 +1629,49 @@ function selectMeal(el) {
   loadHistory();   // 시간대별 검색기록 갱신
 }
 
+// 컨디션 칩 다중선택: 기본(='')은 모두 해제, 그 외는 토글
 function selectCond(el) {
-  document.querySelectorAll('.pref-chip').forEach(c => c.classList.remove('on'));
-  el.classList.add('on');
-  currentCond = el.dataset.cond;
+  const cond = el.dataset.cond;
   customResult = null;
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
   document.getElementById('pref-answer').classList.remove('show');
   document.getElementById('pref-progress').classList.remove('show');
 
-  // 미리 생성된 by_condition에 있으면 즉시, 없으면(와인/임원 등) 백엔드 생성
-  const md = getMealData(getDay(), currentMeal);
-  const hasPre = currentCond === '' || (md && md.by_condition && md.by_condition[currentCond]);
-  if (hasPre) {
-    renderCondGroup();
+  if (cond === '') {
+    currentConds = [];                       // 기본 = 해당사항 없음 (전부 해제)
   } else {
-    generateRecommend(currentCond, currentMeal, false);
+    const i = currentConds.indexOf(cond);
+    if (i >= 0) currentConds.splice(i, 1);   // 이미 켜져 있으면 끔
+    else currentConds.push(cond);            // 아니면 추가
+  }
+  syncCondChips();
+  applyConds();
+}
+
+// 칩 on/off 표시 갱신 (기본은 선택 0개일 때만 on)
+function syncCondChips() {
+  document.querySelectorAll('.pref-chip').forEach(c => {
+    const cc = c.dataset.cond;
+    c.classList.toggle('on', cc === '' ? currentConds.length === 0 : currentConds.includes(cc));
+  });
+}
+
+// 선택 상태에 따라 추천 갱신: 0개=기본, 1개=미리생성(없으면 백엔드), 2개↑=조합 백엔드
+function applyConds() {
+  const md = getMealData(getDay(), currentMeal);
+  if (currentConds.length === 0) {
+    currentCond = '';
+    renderCondGroup();
+  } else if (currentConds.length === 1) {
+    const c = currentConds[0];
+    currentCond = c;
+    if (md && md.by_condition && md.by_condition[c]) renderCondGroup();
+    else generateRecommend(c, currentMeal, false);
+  } else {
+    // 여러 컨디션 조합 → 백엔드로 맞춤 추천
+    currentCond = '';
+    generateRecommend(currentConds.join(', '), currentMeal, false);
   }
 }
 
