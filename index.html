@@ -1833,7 +1833,9 @@ function openModal(name, feature, editC) {
   document.getElementById('btn-save').textContent = editC ? '수정 저장' : '저장';
   renderModalStars();
   document.getElementById('modal-bg').classList.add('open');
-  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+  // 작성창으로 자동 포커스/스크롤하지 않고, 모달 최상단(소개·리뷰)부터 보여줌
+  const modalEl = document.querySelector('#modal-bg .modal');
+  if (modalEl) modalEl.scrollTop = 0;
 }
 function closeModal() { document.getElementById('modal-bg').classList.remove('open'); mId = null; }
 
