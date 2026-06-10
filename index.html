@@ -965,6 +965,7 @@ function init() {
   checkAppUpdate();          // 앱: 새 버전 확인
   // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
   if (location.hash === '#admin') location.href = 'manage-jbax.html';
+  else openFromHash();   // 공유 링크(#r=맛집명)로 들어오면 리뷰 모달 오픈
 }
 
 // ── 앱 자동 업데이트 ──────────────────────────────────────────
@@ -1039,7 +1040,10 @@ async function refreshHistoryForApp() {
     }
   } catch (e) {}
 }
-window.addEventListener('hashchange', () => { if (location.hash === '#admin') location.href = 'manage-jbax.html'; });
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#admin') location.href = 'manage-jbax.html';
+  else openFromHash();
+});
 
 async function loadComments() {
   setBadge('loading', '동기화 중…');
@@ -1055,6 +1059,8 @@ async function loadComments() {
     setBadge('ok', '☁️ 동기화됨');
     renderCondGroup();   // 현재 선택 유지하며 리뷰 반영
     renderStats();
+    // 공유 링크로 연 모달이 떠 있으면 리뷰 로드 후 갱신
+    if (mId && document.getElementById('modal-bg').classList.contains('open')) openModal(mId, '');
     backfillReviewedDetails();   // HISTORY에 없는 리뷰 맛집 상세 보강
   } catch(e) {
     setBadge('err', '⚠️ 오프라인');
@@ -1845,10 +1851,20 @@ async function openMapRoute(name) {
   if (w && !w.closed) w.location.href = url;
   else window.open(url, '_blank', 'noopener');
 }
-// 공유하기: 네이버 지도 링크를 네이티브 공유(카톡 등) → 폴백 복사
+// 공유하기: 우리 사이트의 해당 맛집 리뷰로 바로 연결되는 링크 + 리뷰 요약
 async function openShare(name) {
-  const url = `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
-  const text = `${name} — 여의도 JB빌딩 근처 맛집 추천 🍽️`;
+  const url = `${location.origin}${location.pathname}#r=${encodeURIComponent(name)}`;
+  // 리뷰 요약(평점·개수) + 소개 한 줄
+  const cms = commentsState[name] || [];
+  const rs = cms.map(c => c.rating).filter(Boolean);
+  const avg = rs.length ? (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1) : null;
+  const info = (typeof findRestaurant === 'function' ? findRestaurant(name) : null) || {};
+  const intro = (placeIntros[name] || info.feature || '').slice(0, 60);
+  let text = `🍽️ ${name}`;
+  if (avg) text += `  ⭐${avg} · 리뷰 ${cms.length}개`;
+  else if (cms.length) text += `  리뷰 ${cms.length}개`;
+  if (intro) text += `\n${intro}`;
+  text += `\n\nJB×AX 맛집 트래커에서 리뷰 보기 👇`;
   if (navigator.share) {
     try { await navigator.share({ title: name, text, url }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }  // 사용자가 취소
@@ -1856,10 +1872,18 @@ async function openShare(name) {
   // 폴백: 클립보드 복사
   try {
     await navigator.clipboard.writeText(`${text}\n${url}`);
-    showToast('🔗 네이버 링크가 복사되었어요!');
+    showToast('🔗 리뷰 링크가 복사되었어요!');
     return;
   } catch (e) {}
-  window.prompt('아래 네이버 링크를 복사하세요', url);
+  window.prompt('아래 리뷰 링크를 복사하세요', url);
+}
+// 공유 링크(#r=맛집명)로 들어오면 해당 맛집 리뷰 모달 자동 오픈
+function openFromHash() {
+  const m = (location.hash || '').match(/^#r=(.+)$/);
+  if (!m) return;
+  let name = '';
+  try { name = decodeURIComponent(m[1]); } catch (e) { name = m[1]; }
+  if (name && typeof openModal === 'function') openModal(name, '');
 }
 // 네이버 플레이스(예약·메뉴·전화가 있는 실제 가게 페이지)로 이동
 function reserveNaver() {
