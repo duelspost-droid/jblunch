@@ -687,6 +687,8 @@
   /* 추천 카드 예약 버튼 (크기는 .card-actions 공통, 색만 지정) */
   .btn-reserve { border-color: #d69e2e; color: #b7791f; }
   .btn-reserve:hover { background: #d69e2e; color: #fff; }
+  .btn-share { border-color: #805ad5; color: #6b46c1; }
+  .btn-share:hover { background: #805ad5; color: #fff; }
   /* 모바일에서 입력창 포커스 시 자동 확대(줌) 방지 — 폰트 16px 이상이면 iOS가 확대하지 않음 */
   @media (max-width: 600px) {
     input, textarea, select { font-size: 16px !important; }
@@ -1238,6 +1240,7 @@ function buildCard(r) {
         : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 도보경로</button>`}
       <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
       <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
+      <button class="btn-share" onclick="openShare('${escAttr(r.name)}')">📤 공유</button>
     </div>
   </div>`;
 }
@@ -1823,14 +1826,40 @@ function showRoute(name, lng, lat) {
   document.getElementById('route-bg').style.display = 'flex';
 }
 // 지도 버튼: 페이지 안 iframe으로 도보 경로 표시 (앱 안 띄움)
+// 네이버 지도 웹 도보 길찾기 URL (출발: JB빌딩 → 목적지)
+function naverRouteUrl(name, lng, lat) {
+  const start = `${JB_LNG},${JB_LAT},${encodeURIComponent('JB빌딩')},,`;
+  return (lng && lat)
+    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
+    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+}
+// 도보경로: 네이버 지도 웹(새 탭)에서 출발지·목적지 찍어 보여줌 (앱/임베드 X)
 async function openMapRoute(name) {
   const c = placeDetails[name] || {};
-  if (c.lat && c.lng) { showRoute(name, c.lng, c.lat); return; }
-  // 좌표 미보유: 먼저 검색 임베드로 띄운 뒤 좌표 조회되면 경로로 갱신
-  showRoute(name, null, null);
+  if (c.lat && c.lng) { window.open(naverRouteUrl(name, c.lng, c.lat), '_blank', 'noopener'); return; }
+  // 좌표 미보유: 빈 새 탭 먼저 열어 클릭 제스처 유지 → 좌표 조회 후 경로로 이동
+  const w = window.open('about:blank', '_blank');
   await fetchPlaceDetail(name);
   const cc = placeDetails[name] || {};
-  if (cc.lat && cc.lng) showRoute(name, cc.lng, cc.lat);
+  const url = naverRouteUrl(name, cc.lng, cc.lat);
+  if (w && !w.closed) w.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+}
+// 공유하기: 네이버 지도 링크를 네이티브 공유(카톡 등) → 폴백 복사
+async function openShare(name) {
+  const url = `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+  const text = `${name} — 여의도 JB빌딩 근처 맛집 추천 🍽️`;
+  if (navigator.share) {
+    try { await navigator.share({ title: name, text, url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }  // 사용자가 취소
+  }
+  // 폴백: 클립보드 복사
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`);
+    showToast('🔗 네이버 링크가 복사되었어요!');
+    return;
+  } catch (e) {}
+  window.prompt('아래 네이버 링크를 복사하세요', url);
 }
 // 네이버 플레이스(예약·메뉴·전화가 있는 실제 가게 페이지)로 이동
 function reserveNaver() {
