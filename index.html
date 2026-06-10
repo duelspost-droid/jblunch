@@ -512,6 +512,13 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .top-banner .tb-news-item:hover { color: #0a3d7a; text-decoration: underline; }
+  .top-banner .tb-news-sub { font-size: 0.66rem; font-weight: 600; color: #9aa6b5; }
+  .top-banner .tb-news-item .news-ax {
+    display: inline-block; font-size: 0.62rem; font-weight: 800; color: #fff;
+    background: linear-gradient(90deg,#1565c0,#0a3d7a); border-radius: 5px;
+    padding: 1px 5px; margin-right: 4px; vertical-align: middle; letter-spacing: 0.3px;
+  }
+  .top-banner .tb-news-item .news-dot { color: #cbd3dd; margin-right: 2px; }
   .top-banner .tb-stale { font-size: 0.72rem; font-weight: 600; color: #b7791f; background: #fff4d6; padding: 1px 7px; border-radius: 10px; }
   .nearby-cta {
     display: block; width: 100%; margin: 6px 0 4px; padding: 12px;
@@ -1283,8 +1290,8 @@ function renderHistory() {
   const msgLine = message ? `<div class="tb-msg">💬 ${escHtml(message)}</div>` : '';
   const newsLine = news.length ? `
       <div class="tb-news">
-        <div class="tb-news-head">📰 JB금융 소식</div>
-        ${news.slice(0,3).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">· ${escHtml(n.title)}</a>`).join('')}
+        <div class="tb-news-head">📰 JB금융그룹 소식 <span class="tb-news-sub">· AX·디지털 우선</span></div>
+        ${news.slice(0,3).map(n => `<a class="tb-news-item" href="${n.link||'#'}" target="_blank" rel="noopener">${n.focus ? '<span class="news-ax">AX</span>' : '<span class="news-dot">·</span>'} ${escHtml(n.title)}</a>`).join('')}
       </div>` : '';
   const bannerHtml = `
     <div class="top-banner">

@@ -327,11 +327,14 @@ def fetch_weather():
         return ""
 
 
-# JB금융 뉴스: 폭넓게 검색할 쿼리 (AX/AI/디지털/혁신/외국인 위주)
+# JB금융그룹(JB금융지주·전북은행·광주은행·JB우리캐피탈) 뉴스 검색 쿼리
+# AX/AI/디지털을 최우선으로, 각 계열사별로 폭넓게
 JB_NEWS_QUERIES = [
-    "JB금융 AX", "JB금융 AI", "JB금융 인공지능", "JB금융 디지털",
-    "JB금융 혁신", "JB금융지주 외국인", "JB금융 디지털전환",
-    "전북은행 디지털", "광주은행 AI", "JB금융지주",
+    "JB금융 AX", "JB금융 AI", "JB금융 인공지능", "JB금융 디지털", "JB금융 DX",
+    "전북은행 AI", "전북은행 디지털", "전북은행 AX", "전북은행 디지털전환",
+    "광주은행 AI", "광주은행 디지털", "광주은행 AX",
+    "JB우리캐피탈 AI", "JB우리캐피탈 디지털", "JB우리캐피탈",
+    "JB금융 혁신", "JB금융지주 외국인", "JB금융지주",
 ]
 # 우선 추출할 주제 키워드 (제목·요약에 있으면 가점)
 JB_FOCUS_KEYWORDS = ["AX", "AI", "인공지능", "디지털", "DX", "혁신", "외국인",
@@ -399,8 +402,10 @@ def fetch_jb_news(naver_id, naver_secret, count=3, today=None):
             ts = pub_dt.timestamp()
             day_rank = 1 if pub_day == today_s else 0
             score = sum(1 for k in JB_FOCUS_KEYWORDS if k in text)
+            focus = 1 if score > 0 else 0   # AX/AI/디지털 등 주제 적합 기사
             prev = collected.get(link)
-            rank = (day_rank, score, ts)
+            # AX/AI/디지털 기사를 최상단으로: focus > score > 당일 > 최신
+            rank = (focus, score, day_rank, ts)
             if prev and prev["rank"] >= rank:
                 continue
             collected[link] = {
@@ -468,6 +473,16 @@ def merge_news(*lists, count=4):
             if len(out) >= count:
                 return out
     return out
+
+
+def prioritize_focus_news(news, count=3):
+    """AX·AI·디지털 등 주제 기사를 최상단으로 (안정 정렬: 그 외 순서 유지).
+    각 기사에 focus 플래그 부여 → 프론트에서 배지 표시 가능."""
+    def is_focus(n):
+        return any(k in (n.get("title", "")) for k in JB_FOCUS_KEYWORDS)
+    focus = [{**n, "focus": True} for n in news if is_focus(n)]
+    rest = [{**n, "focus": False} for n in news if not is_focus(n)]
+    return (focus + rest)[:count]
 
 
 def fetch_jb_stock():
@@ -940,8 +955,10 @@ def main():
     # JB 소식 보강: 웹검색(AX/AI/디지털/혁신/외국인) + 네이버 병합 (식사 생성 후 → rate limit 여유)
     time.sleep(40)
     news_web = fetch_jb_news_web(client, today=today)
-    news = merge_news(news_web, news, count=3)
-    print(f"📰 최종 JB 소식 {len(news)}건")
+    news = merge_news(news_web, news, count=6)
+    news = prioritize_focus_news(news, count=3)   # AX·AI·디지털을 최상단으로
+    focus_n = sum(1 for n in news if n.get("focus"))
+    print(f"📰 최종 JB 소식 {len(news)}건 (AX·AI·디지털 {focus_n}건 최상단)")
 
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
 
