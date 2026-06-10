@@ -277,22 +277,22 @@
   .btn-edit-review:hover { color: #0a3d7a; background: #eef4fb; }
   .no-reviews { font-size: 0.76rem; color: #ccc; padding: 2px 0; }
 
+  /* 카드 하단 가로 액션바 */
   .card-actions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 6px;
-    flex-shrink: 0;
-    width: 84px;
-    padding-left: 10px;
-    align-self: flex-start;
-    padding-top: 2px;
+    margin-top: 11px;
+    padding-top: 11px;
+    border-top: 1px solid #f1f3f6;
   }
-  /* 공통 버튼 스타일 — 폭·높이·폰트 통일 */
+  /* 공통 버튼 스타일 — 균등 분배, 통일된 높이·폰트 */
   .card-actions button, .card-actions .btn-map {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
-    font-size: 0.72rem;
-    padding: 6px 0;
+    font-size: 0.74rem;
+    padding: 7px 4px;
     border-radius: 8px;
     font-weight: 700;
     white-space: nowrap;
@@ -1239,14 +1239,14 @@ function buildCard(r) {
         <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
       </div>
       ${reviewsHtml}
-    </div>
-    <div class="card-actions">
-      ${r.verified === false
-        ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
-        : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 도보경로</button>`}
-      <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
-      <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
-      <button class="btn-share" onclick="openShare('${escAttr(r.name)}')">📤 공유</button>
+      <div class="card-actions">
+        ${r.verified === false
+          ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
+          : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 경로</button>`}
+        <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
+        <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
+        <button class="btn-share" onclick="openShare('${escAttr(r.name)}')">📤 공유</button>
+      </div>
     </div>
   </div>`;
 }
