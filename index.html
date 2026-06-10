@@ -162,6 +162,13 @@
     background: #f0f5fb; border-radius: 10px; padding: 13px 15px;
     font-size: 0.93rem; color: #44566b; line-height: 1.6; margin-bottom: 14px;
   }
+  .modal-menu {
+    background: #fffaf0; border: 1px solid #f5e6c8; border-radius: 10px;
+    padding: 11px 14px; margin-bottom: 14px;
+  }
+  .modal-menu .mm-head { font-size: 0.8rem; font-weight: 800; color: #b7791f; margin-bottom: 5px; }
+  .modal-menu .mm-approx { font-size: 0.68rem; font-weight: 600; color: #c8a96b; }
+  .modal-menu .mm-list { font-size: 0.88rem; color: #5a4a2a; line-height: 1.6; }
   /* 모달 상단 맛집 상세 정보 */
   .modal-detail {
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
@@ -748,6 +755,7 @@
     <div class="modal-scroll">
     <div class="modal-detail" id="modal-detail"></div>
     <div class="modal-intro" id="modal-intro"></div>
+    <div class="modal-menu" id="modal-menu"></div>
     <div class="modal-reviews" id="modal-reviews"></div>
     <div class="modal-write" id="modal-write">
       <div class="mw-head" id="modal-write-head">✍️ 리뷰 작성</div>
@@ -870,11 +878,11 @@ try {
 let _introPending = {};   // 중복 호출 방지
 // 서버 공유 캐시(place_meta)에서 여러 맛집 소개·가격·거리를 한 번에 로드 (크레딧 절약)
 async function loadSharedMeta(names) {
-  const need = names.filter(n => !placeIntros[n] || !(placeDetails[n]||{}).price || !hasDualDist(n));
+  const need = names.filter(n => !placeIntros[n] || !(placeDetails[n]||{}).price || !(placeDetails[n]||{}).menu || !hasDualDist(n));
   if (!need.length) return;
   try {
     const inList = need.map(n => `"${n.replace(/"/g,'')}"`).join(',');
-    const res = await fetch(`${SB_URL}/rest/v1/place_meta?name=in.(${encodeURIComponent(inList)})&select=name,intro,price,distance,verified`, { headers: SB_HEADERS });
+    const res = await fetch(`${SB_URL}/rest/v1/place_meta?name=in.(${encodeURIComponent(inList)})&select=name,intro,price,distance,verified,menu`, { headers: SB_HEADERS });
     if (!res.ok) return;
     const rows = await res.json();
     rows.forEach(r => {
@@ -883,6 +891,7 @@ async function loadSharedMeta(names) {
         if (!placeDetails[r.name]) placeDetails[r.name] = { name: r.name };
         const pd = placeDetails[r.name];
         if (r.price && !pd.price) pd.price = r.price;
+        if (r.menu && !pd.menu) pd.menu = r.menu;
         if (r.distance && /카카오|네이버/.test(r.distance)) pd.distance = r.distance;
         if (r.verified !== undefined && r.verified !== null) pd.verified = r.verified;
       }
@@ -896,8 +905,8 @@ function hasDualDist(name) {
   return /카카오/.test(d) && /네이버/.test(d);
 }
 async function fetchPlaceIntro(name) {
-  // 소개·가격·양쪽거리 모두 캐시됐으면 네트워크 호출 생략
-  if (placeIntros[name] && (placeDetails[name]||{}).price && hasDualDist(name)) return placeIntros[name];
+  // 소개·가격·양쪽거리·메뉴 모두 캐시됐으면 네트워크 호출 생략
+  if (placeIntros[name] && (placeDetails[name]||{}).price && (placeDetails[name]||{}).menu && hasDualDist(name)) return placeIntros[name];
   if (_introPending[name]) return _introPending[name];
   const d = placeDetails[name] || {};
   _introPending[name] = (async () => {
@@ -908,11 +917,12 @@ async function fetchPlaceIntro(name) {
         body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
       });
       const data = await res.json();
-      // 가격·거리(카카오+네이버) 보강 (일관성)
-      if (data && (data.price || data.distance)) {
+      // 가격·거리(카카오+네이버)·메뉴 보강 (일관성)
+      if (data && (data.price || data.distance || data.menu)) {
         if (!placeDetails[name]) placeDetails[name] = { name };
         const pd = placeDetails[name];
         if (data.price && !pd.price) pd.price = data.price;
+        if (data.menu && !pd.menu) pd.menu = data.menu;
         // 양쪽 출처 거리가 있으면 단일 출처 거리보다 우선
         if (data.distance && /카카오|네이버/.test(data.distance)) {
           pd.distance = data.distance;
@@ -1777,16 +1787,29 @@ function openModal(name, feature, editC) {
     introEl.style.display = txt ? 'block' : 'none';
   }
   setIntro(feature);
+  // 대표 메뉴 · 대략 가격 (있을 때만)
+  const menuEl = document.getElementById('modal-menu');
+  function setMenu(txt) {
+    if (menuEl) {
+      menuEl.innerHTML = txt
+        ? `<div class="mm-head">🍴 대표 메뉴 <span class="mm-approx">· 가격은 대략</span></div><div class="mm-list">${escHtml(txt)}</div>`
+        : '';
+      menuEl.style.display = txt ? 'block' : 'none';
+    }
+  }
+  setMenu((info && info.menu) || (placeDetails[name] || {}).menu || '');
   // 상세정보가 비어있으면(직접검색/주변검색 맛집) 백엔드로 재조회해 채움
   if (!info || !info.cuisine) {
     fetchPlaceDetail(name).then(d => {
       if (d && mId === name) renderModalDetail(name, d);
     });
   }
-  // 디테일한 AI 소개가 아직 없으면 생성해서 채움
-  if (!placeIntros[name]) {
+  // 디테일한 AI 소개·메뉴가 아직 없으면 생성해서 채움
+  if (!placeIntros[name] || !(placeDetails[name] || {}).menu) {
     fetchPlaceIntro(name).then(intro => {
-      if (intro && mId === name) { mFeature = intro; setIntro(intro); }
+      if (mId !== name) return;
+      if (intro) { mFeature = intro; setIntro(intro); }
+      setMenu((placeDetails[name] || {}).menu || '');
     });
   }
   // 기존 리뷰 목록

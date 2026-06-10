@@ -212,11 +212,13 @@ Deno.serve(async (req) => {
       if (SB_URL && SB_SRV) {
         try {
           const cr = await fetch(
-            `${SB_URL}/rest/v1/place_meta?name=eq.${encodeURIComponent(describe)}&select=intro,price,distance,verified`,
+            `${SB_URL}/rest/v1/place_meta?name=eq.${encodeURIComponent(describe)}&select=intro,price,distance,verified,menu`,
             { headers: metaHeaders },
           );
           const rows = await cr.json();
-          if (Array.isArray(rows) && rows.length && rows[0].intro) {
+          // 소개가 있고 메뉴 컬럼이 채워졌으면(빈문자열 포함) 캐시 반환.
+          // 메뉴가 null(기존 행)이면 통과시켜 메뉴까지 재생성.
+          if (Array.isArray(rows) && rows.length && rows[0].intro && rows[0].menu != null) {
             return json({ ...rows[0], cached: true }, 200);
           }
         } catch (_e) { /* 캐시 실패 시 생성으로 진행 */ }
@@ -233,7 +235,10 @@ Deno.serve(async (req) => {
   ④ 추천 포인트(이런 분께 좋아요) 순으로 자연스럽게 풀어써. 단조롭지 않게 구체적으로.
   구체적 수상·연혁 같은 확인 불가한 허위는 만들지 말되, 무난하고 일반적인 소개는 OK. 가격·평점·전화번호는 쓰지 마.
 - price: 종류·이름으로 합리적으로 추정 → "저렴"/"보통"/"비쌈" 중 하나.
-- 반드시 JSON만 출력(다른 말·사과 없이): {"intro":"...","price":"보통"}`;
+- menu: 이 가게에서 먹을 법한 대표 메뉴 2~4개를 "메뉴 ~가격" 형식으로, 중간점(·)으로 구분한 한 줄.
+  가격은 종류·이름 기반의 대략적 추정치(예: "한우 등심 ~6만원 · 육회비빔밥 ~1.5만원 · 냉면 ~1.2만원").
+  메뉴를 합리적으로 떠올리기 어려우면 빈 문자열("")로.
+- 반드시 JSON만 출력(다른 말·사과 없이): {"intro":"...","price":"보통","menu":"..."}`;
       const dResp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -247,15 +252,15 @@ Deno.serve(async (req) => {
       const dData = await dResp.json();
       const dContent = dData.content?.[0]?.text ?? "";
       const dMatch = dContent.match(/\{[\s\S]*\}/);
-      let intro = "", price = "";
-      if (dMatch) { try { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; } catch (_e) { /* 파싱 실패 → intro 비움 */ } }
+      let intro = "", price = "", menu = "";
+      if (dMatch) { try { const p = JSON.parse(dMatch[0]); intro = p.intro || ""; price = p.price || ""; menu = (p.menu || "").toString().slice(0, 200); } catch (_e) { /* 파싱 실패 → intro 비움 */ } }
       // 면책/사과성 응답이면 소개로 쓰지 않음 (프론트가 기본 설명으로 폴백)
       if (/죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다/.test(intro)) intro = "";
       if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
       // 카카오·네이버 양쪽 거리 실측 (JB빌딩 기준)
       const dObj: Record<string, unknown> = { name: describe };
       await verifyOne(dObj, kakaoKey, naverId, naverSecret);
-      const result = { intro, price, distance: dObj.distance || "", verified: dObj.verified };
+      const result = { intro, price, menu, distance: dObj.distance || "", verified: dObj.verified };
       // ② 결과를 서버 캐시에 저장 (upsert) — 다음부터 모든 사용자가 재사용
       if (SB_URL && SB_SRV && intro) {
         try {
