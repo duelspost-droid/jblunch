@@ -1320,7 +1320,7 @@ function renderHistory() {
 
   const prefHtml = bannerHtml + `
     <div class="pref-card">
-      <div class="pref-title">🙋 오늘 컨디션은? <span class="pref-hint">여러 개 선택 가능 · 기본=해당없음</span></div>
+      <div class="pref-title">🙋 오늘 컨디션은? <span class="pref-hint">최대 2개 선택 가능 · 기본=해당없음</span></div>
       <div class="pref-chips">
         <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
         <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
@@ -1642,8 +1642,14 @@ function selectCond(el) {
     currentConds = [];                       // 기본 = 해당사항 없음 (전부 해제)
   } else {
     const i = currentConds.indexOf(cond);
-    if (i >= 0) currentConds.splice(i, 1);   // 이미 켜져 있으면 끔
-    else currentConds.push(cond);            // 아니면 추가
+    if (i >= 0) {
+      currentConds.splice(i, 1);             // 이미 켜져 있으면 끔
+    } else if (currentConds.length >= 2) {
+      showToast('컨디션은 최대 2개까지 선택할 수 있어요');
+      return;                                // 3개째는 막음 (상태 변화 없음)
+    } else {
+      currentConds.push(cond);               // 추가
+    }
   }
   syncCondChips();
   applyConds();
