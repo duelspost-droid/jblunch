@@ -1239,14 +1239,14 @@ function buildCard(r) {
     <div class="card-emoji">${emo(r.cuisine)}</div>
     <div class="card-body">
       <div class="card-top">
-        <span class="card-name">${r.name}</span>
-        <span class="badge badge-cuisine">${r.cuisine}</span>
+        <span class="card-name">${escHtml(r.name)}</span>
+        <span class="badge badge-cuisine">${escHtml(r.cuisine)}</span>
         ${tagBadge}
         ${reviewBadge}
       </div>
-      <div class="card-feature">${r.feature}</div>
+      <div class="card-feature">${escHtml(r.feature||'')}</div>
       <div class="card-meta">
-        <span>💰 ${r.price}</span>
+        <span>💰 ${escHtml(r.price||'')}</span>
         <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
       </div>
       ${reviewsHtml}
@@ -2177,8 +2177,8 @@ function renderStats() {
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
         <div class="top-rank">${i+1}</div>
         <div class="top-info">
-          <div class="top-name">${emo(r.cuisine)} ${r.name} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span></div>
-          <div class="top-cuisine">${r.cuisine||''}</div>
+          <div class="top-name">${emo(r.cuisine)} ${escHtml(r.name)} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span></div>
+          <div class="top-cuisine">${escHtml(r.cuisine||'')}</div>
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
             ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
