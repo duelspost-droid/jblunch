@@ -23,7 +23,9 @@
     align-items: center;
     gap: 12px;
     box-shadow: 0 2px 10px rgba(10,61,122,0.18);
+    cursor: pointer;
   }
+  .app-header:active { opacity: 0.92; }
   .app-header .logo {
     font-size: 0.95rem; font-weight: 900; letter-spacing: 0.5px;
     background: #fff; color: #0a3d7a;
@@ -705,7 +707,7 @@
 </head>
 <body>
 
-<div class="app-header">
+<div class="app-header" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="맨 위로">
   <span class="logo">JB</span>
   <div class="title-block">
     <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
