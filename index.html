@@ -1208,6 +1208,11 @@ function shortDistance(d) {
 
 function buildCard(r) {
   const cms = commentsState[r.name] || [];
+  // 컨디션 추천 등 일부 항목은 cuisine/feature/price가 비어옴 → describe 캐시로 폴백
+  const pd = placeDetails[r.name] || {};
+  const dCuisine = r.cuisine || pd.cuisine || '';
+  const dFeature = r.feature || placeIntros[r.name] || pd.feature || '';
+  const dPrice = r.price || pd.price || '';
   const cnt = cms.length;
   const ratings = cms.map(c => c.rating).filter(Boolean);
   const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
@@ -1236,17 +1241,17 @@ function buildCard(r) {
     }).join('')}</div>` : '';
   return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
     <div class="card-stripe"></div>
-    <div class="card-emoji">${emo(r.cuisine)}</div>
+    <div class="card-emoji">${emo(dCuisine)}</div>
     <div class="card-body">
       <div class="card-top">
         <span class="card-name">${escHtml(r.name)}</span>
-        <span class="badge badge-cuisine">${escHtml(r.cuisine)}</span>
+        ${dCuisine ? `<span class="badge badge-cuisine">${escHtml(dCuisine)}</span>` : ''}
         ${tagBadge}
         ${reviewBadge}
       </div>
-      <div class="card-feature">${escHtml(r.feature||'')}</div>
+      ${dFeature ? `<div class="card-feature">${escHtml(dFeature)}</div>` : ''}
       <div class="card-meta">
-        <span>💰 ${escHtml(r.price||'')}</span>
+        ${dPrice ? `<span>💰 ${escHtml(dPrice)}</span>` : ''}
         <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
       </div>
       ${reviewsHtml}
@@ -1705,6 +1710,26 @@ function renderCondGroup() {
   // 추가 추천(extras)은 기본(컨디션 미선택) 보기에서만 노출
   const extras = isBase ? md.extras : null;
   document.getElementById('today-group').innerHTML = renderGroup({ date: day.date, restaurants, extras }, true);
+  // 컨디션 추천처럼 cuisine/feature/price가 비어온 항목 → 백엔드 캐시로 보강 후 재렌더
+  backfillCardDetails(restaurants, extras, day.date);
+}
+
+// 카드에 소개/종류/가격이 비어있는 맛집을 describe 캐시로 보강하고 같은 그룹을 재렌더
+let _cardBackfillToken = 0;
+async function backfillCardDetails(restaurants, extras, date) {
+  const need = (restaurants || []).filter(r => r && r.name && (!r.feature || !r.cuisine || !r.price)
+    && !(placeIntros[r.name] && (placeDetails[r.name]||{}).cuisine && (placeDetails[r.name]||{}).price));
+  if (!need.length) return;
+  const token = ++_cardBackfillToken;                 // 메뉴/컨디션 바뀌면 중단
+  const snapMeal = currentMeal, snapCond = currentCond;
+  for (const r of need) {
+    await fetchPlaceDetail(r.name);                   // cuisine/주소/거리
+    await fetchPlaceIntro(r.name);                    // feature/price/menu
+    if (token !== _cardBackfillToken || currentMeal !== snapMeal || currentCond !== snapCond) return;
+    const el = document.getElementById('today-group');
+    if (el && !customResult) el.innerHTML = renderGroup({ date, restaurants, extras }, true);
+    await new Promise(res => setTimeout(res, 350));
+  }
 }
 
 function escHtml(s) {
