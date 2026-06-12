@@ -471,6 +471,35 @@
   .btn-cancel { background: #f5f5f5; color: #666; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
   .btn-save { background: #0a3d7a; color: #fff; border: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; cursor: pointer; font-size: 0.86rem; }
   .saving-msg { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: right; min-height: 18px; }
+  /* 리뷰 사진 첨부 */
+  .photo-attach { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-photo {
+    border: 1.5px dashed #b9c6d6; background: #f7f9fc; color: #4a6285;
+    border-radius: 10px; padding: 9px 14px; font-size: 0.84rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-photo:hover { background: #eef3fa; border-color: #0a3d7a; color: #0a3d7a; }
+  .photo-preview { position: relative; }
+  .photo-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; display: block; }
+  .photo-preview .photo-remove {
+    position: absolute; top: -7px; right: -7px; width: 22px; height: 22px;
+    border-radius: 50%; border: none; background: #e53e3e; color: #fff;
+    font-size: 0.8rem; line-height: 1; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  .photo-uploading { font-size: 0.78rem; color: #888; }
+  /* 리뷰에 표시되는 사진 */
+  .review-photo-wrap { margin-top: 6px; }
+  img.review-photo {
+    max-width: 160px; max-height: 160px; border-radius: 10px; border: 1px solid #eee;
+    cursor: zoom-in; object-fit: cover; display: block;
+  }
+  /* 사진 라이트박스 */
+  .photo-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 80;
+    background: rgba(0,0,0,0.88); align-items: center; justify-content: center; padding: 20px;
+  }
+  .photo-lightbox.open { display: flex; }
+  .photo-lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 
   .empty { text-align:center; padding:44px 20px; color:#ccc; font-size:0.86rem; }
 
@@ -786,6 +815,17 @@
         <label>리뷰 내용</label>
         <textarea id="modal-text" placeholder="방문 소감을 자유롭게 적어주세요…"></textarea>
       </div>
+      <div class="modal-field">
+        <label>📷 사진 (선택)</label>
+        <input type="file" id="modal-photo-input" accept="image/*" style="display:none" onchange="onPhotoSelect(this)">
+        <div class="photo-attach">
+          <button type="button" class="btn-photo" id="btn-photo" onclick="document.getElementById('modal-photo-input').click()">📷 사진 첨부</button>
+          <div class="photo-preview" id="photo-preview" style="display:none">
+            <img id="photo-preview-img" src="" alt="첨부 사진">
+            <button type="button" class="photo-remove" onclick="removePhoto()" title="사진 삭제">✕</button>
+          </div>
+        </div>
+      </div>
       <div class="saving-msg" id="saving-msg"></div>
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeModal()">취소</button>
@@ -797,6 +837,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="photo-lightbox" id="photo-lightbox" onclick="this.classList.remove('open')"><img id="photo-lightbox-img" src="" alt=""></div>
 
 <script>
 // ── Supabase 설정 ─────────────────────────────────────────────
@@ -1106,13 +1147,14 @@ async function backfillReviewedDetails() {
   }
 }
 
-async function insertComment(restaurantId, reviewerName, content, rating, meal) {
+async function insertComment(restaurantId, reviewerName, content, rating, meal, imageUrl) {
   const body = {
     restaurant_id: restaurantId,
     reviewer_name: reviewerName,
     content: content || null,
     rating: rating || null,
     meal: meal || null,
+    image_url: imageUrl || null,
     created_at: new Date().toISOString()
   };
   const res = await fetch(`${SB_URL}/rest/v1/comments`, {
@@ -1133,7 +1175,7 @@ async function deleteComment(commentId) {
   if (!res.ok) throw new Error(await res.text());
 }
 
-async function updateComment(commentId, reviewerName, content, rating, meal) {
+async function updateComment(commentId, reviewerName, content, rating, meal, imageUrl) {
   const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
     method: 'PATCH',
     headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
@@ -1141,7 +1183,8 @@ async function updateComment(commentId, reviewerName, content, rating, meal) {
       reviewer_name: reviewerName,
       content: content || null,
       rating: rating || null,
-      meal: meal || null
+      meal: meal || null,
+      image_url: imageUrl || null
     })
   });
   if (!res.ok) throw new Error(await res.text());
@@ -1234,6 +1277,7 @@ function buildCard(r) {
             <span class="review-date">${fmtDate(c.created_at)}</span>
           </div>
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+          ${c.image_url ? `<div class="review-photo-wrap"><img class="review-photo" src="${escHtml(c.image_url)}" loading="lazy" onclick="event.stopPropagation();openPhoto('${escAttr(c.image_url)}')"></div>` : ''}
         </div>
         <div class="review-actions">
           <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
@@ -1743,6 +1787,75 @@ function escAttr(s) {
 
 // ── 리뷰 모달 ─────────────────────────────────────────────────
 let mId = null, mRating = 0, mFeature = '', mMeal = '점심', mEditId = null;
+let mPhotoBlob = null;   // 새로 첨부한 사진(압축본)
+let mPhotoUrl = '';      // 기존(수정모드) 또는 업로드된 사진 URL
+
+// 이미지 클라이언트 압축 (최대변 1280px, JPEG)
+function compressImage(file, maxDim = 1280, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (Math.max(w, h) > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv.toBlob(b => b ? resolve(b) : reject(new Error('compress')), 'image/jpeg', quality);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => reject(new Error('image load'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function onPhotoSelect(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!/^image\//.test(file.type)) { showToast('⚠️ 이미지 파일만 첨부할 수 있어요'); input.value=''; return; }
+  try {
+    const blob = await compressImage(file);
+    mPhotoBlob = blob; mPhotoUrl = '';
+    const url = URL.createObjectURL(blob);
+    document.getElementById('photo-preview-img').src = url;
+    document.getElementById('photo-preview').style.display = 'block';
+    document.getElementById('btn-photo').textContent = '📷 사진 변경';
+  } catch (e) { showToast('⚠️ 사진 처리 실패'); }
+  input.value = '';
+}
+function removePhoto() {
+  mPhotoBlob = null; mPhotoUrl = '';
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-preview-img').src = '';
+  const b = document.getElementById('btn-photo'); if (b) b.textContent = '📷 사진 첨부';
+}
+function showPhotoState(url) {   // 모달 열 때 기존 사진 표시/초기화
+  mPhotoBlob = null; mPhotoUrl = url || '';
+  const prev = document.getElementById('photo-preview');
+  const btn = document.getElementById('btn-photo');
+  if (mPhotoUrl) {
+    document.getElementById('photo-preview-img').src = mPhotoUrl;
+    if (prev) prev.style.display = 'block';
+    if (btn) btn.textContent = '📷 사진 변경';
+  } else {
+    if (prev) prev.style.display = 'none';
+    document.getElementById('photo-preview-img').src = '';
+    if (btn) btn.textContent = '📷 사진 첨부';
+  }
+}
+// Supabase Storage 업로드 → 공개 URL 반환
+async function uploadReviewPhoto(blob) {
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+  const res = await fetch(`${SB_URL}/storage/v1/object/review-photos/${path}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'image/jpeg', 'x-upsert': 'false' },
+    body: blob
+  });
+  if (!res.ok) throw new Error('upload failed: ' + res.status);
+  return `${SB_URL}/storage/v1/object/public/review-photos/${path}`;
+}
+function openPhoto(url) {
+  const lb = document.getElementById('photo-lightbox');
+  document.getElementById('photo-lightbox-img').src = url;
+  lb.classList.add('open');
+}
 
 // 리뷰 수정: 해당 리뷰를 찾아 모달을 수정 모드로 염
 function editReview(commentId, restaurantName) {
@@ -1860,6 +1973,7 @@ function openModal(name, feature, editC) {
             <span class="review-date">${fmtDate(c.created_at)}</span>
           </div>
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
+          ${c.image_url ? `<div class="review-photo-wrap"><img class="review-photo" src="${escHtml(c.image_url)}" loading="lazy" onclick="event.stopPropagation();openPhoto('${escAttr(c.image_url)}')"></div>` : ''}
         </div>
         <div class="review-actions">
           <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(name)}')">✏️</button>
@@ -1878,6 +1992,7 @@ function openModal(name, feature, editC) {
   // 수정 모드면 기존 값 채우기
   document.getElementById('modal-name').value = editC ? (editC.reviewer_name || '') : '';
   document.getElementById('modal-text').value = editC ? (editC.content || '') : '';
+  showPhotoState(editC ? (editC.image_url || '') : '');   // 사진 상태 초기화/기존표시
   document.getElementById('saving-msg').textContent = '';
   document.getElementById('btn-save').disabled = false;
   document.getElementById('btn-save').textContent = editC ? '수정 저장' : '저장';
@@ -2071,11 +2186,17 @@ async function saveReview() {
   const btn = document.getElementById('btn-save');
   const msg = document.getElementById('saving-msg');
   btn.disabled = true;
-  msg.textContent = mEditId ? '수정 중…' : '저장 중…';
 
   try {
+    // 새 사진이 첨부됐으면 먼저 업로드 → image_url 결정
+    let imageUrl = mPhotoUrl;   // 기존 유지(수정) 또는 ''(삭제)
+    if (mPhotoBlob) {
+      msg.textContent = '사진 업로드 중…';
+      imageUrl = await uploadReviewPhoto(mPhotoBlob);
+    }
+    msg.textContent = mEditId ? '수정 중…' : '저장 중…';
     if (mEditId) {
-      const updated = await updateComment(mEditId, name, text, mRating, mMeal);
+      const updated = await updateComment(mEditId, name, text, mRating, mMeal, imageUrl);
       const arr = commentsState[mId] || [];
       const i = arr.findIndex(c => String(c.id) === String(mEditId));
       if (i >= 0) arr[i] = updated;
@@ -2085,7 +2206,7 @@ async function saveReview() {
       renderHistory(); renderStats();
       showToast('✏️ 리뷰가 수정되었습니다!');
     } else {
-      const newComment = await insertComment(mId, name, text, mRating, mMeal);
+      const newComment = await insertComment(mId, name, text, mRating, mMeal, imageUrl);
       if (!commentsState[mId]) commentsState[mId] = [];
       commentsState[mId].push(newComment);
       setBadge('ok', '☁️ 동기화됨');
