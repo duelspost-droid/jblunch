@@ -114,6 +114,12 @@
   .loc-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .loc-add-grid input { border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; }
   .loc-add > input[type=text] { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; margin-bottom: 8px; }
+  /* 추천 방식 선택 */
+  .rec-label { display: block; font-size: 0.74rem; font-weight: 700; color: #6b7a90; margin: 4px 0 4px; }
+  .rec-select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.83rem; font-family: inherit; background: #fff; color: #1a2a44; margin-bottom: 6px; }
+  .rec-select:focus { outline: none; border-color: #0a3d7a; }
+  .rec-desc { font-size: 0.72rem; color: #8794a6; margin-bottom: 8px; line-height: 1.4; }
+  .lr-rec { font-size: 0.66rem; font-weight: 800; color: #5a4b9e; background: #efeafc; border-radius: 6px; padding: 2px 6px; }
   /* 좌표 검색 */
   .geo-search { margin-bottom: 8px; }
   .geo-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -310,6 +316,14 @@
           <div id="geo-picked" class="geo-picked" style="display:none"></div>
         </div>
         <input type="text" id="nl-region" placeholder="지역 (검색하면 자동 입력 · 직접 수정 가능)">
+        <label class="rec-label">추천 방식</label>
+        <select id="nl-profile" class="rec-select" onchange="document.getElementById('nl-profile-desc').textContent=REC_DESC[this.value]">
+          <option value="auto">자동 (권장) — 근처 우선, 부족하면 자동으로 넓게</option>
+          <option value="walk">도보 위주 — 걸어갈 수 있는 가까운 곳만</option>
+          <option value="drive">차량 권역 — 차로 이동 전제, 넓은 범위</option>
+          <option value="city">도심 밀집 — 가게 많은 도심, 좁고 촘촘하게</option>
+        </select>
+        <div class="rec-desc" id="nl-profile-desc">근처를 우선 추천하고, 가까운 가게가 적으면 자동으로 범위를 넓혀요. 대부분의 위치에 권장.</div>
         <div class="msg" id="loc-msg"></div>
         <button class="btn" onclick="addLocation()">위치 추가</button>
       </div>
@@ -676,6 +690,17 @@ async function changePw(){
 }
 
 // ── 기준 위치 관리 ────────────────────────────────────────────
+const REC_LABELS = { auto:'자동', walk:'도보 위주', drive:'차량 권역', city:'도심 밀집' };
+const REC_DESC = {
+  auto:  '근처를 우선 추천하고, 가까운 가게가 적으면 자동으로 범위를 넓혀요. 대부분의 위치에 권장.',
+  walk:  '걸어서 갈 수 있는 가까운 곳만 추천해요. 도심 사무실 등에 적합.',
+  drive: '차로 이동을 전제로 넓은 범위에서 추천하고, 거리를 "차로 N분"으로 표기해요. 외곽·시골에 적합.',
+  city:  '가게가 밀집한 도심에서 좁고 촘촘하게 추천해요.',
+};
+function recSelectHtml(id, cur){
+  return ['auto','walk','drive','city'].map(k =>
+    `<option value="${k}" ${(cur||'auto')===k?'selected':''}>${REC_LABELS[k]} — ${REC_DESC[k].split('.')[0]}</option>`).join('');
+}
 async function loadLocList(){
   const wrap = document.getElementById('loc-list');
   if(!wrap) return;
@@ -684,6 +709,7 @@ async function loadLocList(){
   if(!ok){ wrap.innerHTML = '<div style="color:#c0394b;font-size:0.82rem">목록을 불러오지 못했어요.</div>'; return; }
   const locs = data.locations || [];
   window._locs = {};
+  const RECN = REC_LABELS;
   wrap.innerHTML = locs.map(l => {
     window._locs[l.key] = l;
     const off = l.enabled === false;
@@ -695,7 +721,7 @@ async function loadLocList(){
     return `
     <div class="loc-row${off?' off':''}" id="lrow-${esc(l.key)}">
       <div class="lr-main">
-        <div class="lr-name">${esc(l.name)} ${badge}</div>
+        <div class="lr-name">${esc(l.name)} ${badge} <span class="lr-rec">${esc(RECN[l.rec_profile||'auto']||'자동')}</span></div>
         <div class="lr-meta">${esc(l.short||'')} · ${esc(l.region||'')} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
       </div>
       <div class="lr-btns">
@@ -732,6 +758,8 @@ function editLoc(key){
       <input id="le-short-${key}" value="${esc(l.short||'')}" placeholder="짧은 이름">
       <input id="le-region-${key}" class="le-full" value="${esc(l.region||'')}" placeholder="지역">
     </div>
+    <label class="rec-label">추천 방식</label>
+    <select id="le-profile-${key}" class="rec-select">${recSelectHtml('le-profile-'+key, l.rec_profile)}</select>
     <div class="le-coord" id="le-coord-${key}">📍 좌표: ${(+l.lat).toFixed(5)}, ${(+l.lng).toFixed(5)} <span style="color:#8794a6">(바꾸려면 아래에서 검색)</span></div>
     <div class="geo-search-row">
       <input id="le-search-${key}" placeholder="좌표 다시 검색 (장소명/주소)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEditGeo('${key}');}">
@@ -772,7 +800,8 @@ async function saveLoc(key){
   const payload = { action:'loc_update', token: curToken, key,
     name: document.getElementById('le-name-'+key).value.trim(),
     short: document.getElementById('le-short-'+key).value.trim(),
-    region: document.getElementById('le-region-'+key).value.trim() };
+    region: document.getElementById('le-region-'+key).value.trim(),
+    rec_profile: document.getElementById('le-profile-'+key).value };
   if(_editCoord[key]){ payload.lat = _editCoord[key].lat; payload.lng = _editCoord[key].lng; }
   msg.className='msg'; msg.textContent='저장 중…';
   const { ok, data } = await adminCall(payload);
@@ -820,8 +849,9 @@ async function addLocation(){
   const region = document.getElementById('nl-region').value.trim();
   if(!name || !region){ msg.className='msg err'; msg.textContent='이름과 지역은 필수예요.'; return; }
   if(!pickedGeo){ msg.className='msg err'; msg.textContent='먼저 장소를 검색해서 좌표를 선택해주세요.'; return; }
+  const rec_profile = document.getElementById('nl-profile').value;
   msg.className='msg'; msg.textContent='추가 중…';
-  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, lat: pickedGeo.lat, lng: pickedGeo.lng });
+  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, lat: pickedGeo.lat, lng: pickedGeo.lng, rec_profile });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'추가 실패'); return; }
   msg.className='msg ok'; msg.textContent=`✅ '${name}' 추가됨 (홈 위치 선택기에 바로 노출돼요)`;
   ['nl-name','nl-short','nl-region','nl-search'].forEach(id=>document.getElementById(id).value='');

@@ -24,6 +24,24 @@ const MEAL_DESC: Record<string, string> = {
 const NON_FOOD = ["병원", "약국", "은행", "학원", "부동산", "미용", "마트", "편의점",
   "주유소", "세탁", "사무", "오피스", "관공서", "PC방", "노래"];
 
+// ── 추천 방식 프리셋 (배치 generate_lunch.py와 동일 개념) ────────
+type Profile = { label: string; radii: number[]; minCand: number; walkMax: number; extraMax: number; allowFar: "sparse" | "no" | "always" };
+const PROFILES: Record<string, Profile> = {
+  auto:  { label: "자동 (권장)", radii: [600, 1500, 3000, 5000], minCand: 12, walkMax: 14, extraMax: 20, allowFar: "sparse" },
+  walk:  { label: "도보 위주",   radii: [700, 1000],             minCand: 8,  walkMax: 99, extraMax: 12, allowFar: "no" },
+  drive: { label: "차량 권역",   radii: [2000, 5000, 9000],      minCand: 10, walkMax: 6,  extraMax: 40, allowFar: "sparse" },
+  city:  { label: "도심 밀집",   radii: [500, 1000, 1500],       minCand: 15, walkMax: 12, extraMax: 12, allowFar: "sparse" },
+};
+function getProfile(key: string): Profile { return PROFILES[key] || PROFILES.auto; }
+
+// 거리(m) → 표기 [라벨, 도보분]. 도보 상한 초과면 차로/거리로 자동 전환
+function fmtDist(meters: number, prof: Profile): [string, number] {
+  const wm = Math.max(1, Math.round((meters * 1.35) / 80));
+  if (wm <= prof.walkMax) return [`도보 ${wm}분`, wm];
+  const drive = Math.max(2, Math.round(meters / 350));
+  return [`차로 ${drive}분 · 약 ${(meters / 1000).toFixed(1)}km`, wm];
+}
+
 function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000, rad = (d: number) => (d * Math.PI) / 180;
   const dp = rad(lat2 - lat1), dl = rad(lng2 - lng1);
@@ -55,23 +73,27 @@ function parseMinutes(distance: unknown): number | null {
   return Math.min(...nums.map((s) => parseInt(s)));
 }
 
-// 기준 위치 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순)
-async function kakaoNearby(kakaoKey: string, lat: number, lng: number): Promise<string[]> {
+// 기준 위치 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순, 적응형 반경 ①)
+async function kakaoNearby(kakaoKey: string, lat: number, lng: number, prof: Profile): Promise<string[]> {
   if (!kakaoKey) return [];
-  try {
-    const url = `https://dapi.kakao.com/v2/local/search/category.json` +
-      `?category_group_code=FD6&x=${lng}&y=${lat}&radius=600&sort=distance&size=15`;
-    const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
-    if (!r.ok) return [];
-    const data = await r.json();
-    return (data.documents || []).map((d: Record<string, string>) => {
-      const cat = (d.category_name || "").replace("음식점 > ", "").split(" > ")[0];
-      const mins = Math.max(1, Math.round(Number(d.distance || 0) / 80));
-      return `${d.place_name}(${cat}, 도보 ${mins}분)`;
-    });
-  } catch {
-    return [];
+  let best: string[] = [];
+  for (const radius of prof.radii) {
+    try {
+      const url = `https://dapi.kakao.com/v2/local/search/category.json` +
+        `?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&sort=distance&size=15`;
+      const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
+      if (r.ok) {
+        const data = await r.json();
+        best = (data.documents || []).map((d: Record<string, string>) => {
+          const cat = (d.category_name || "").replace("음식점 > ", "").split(" > ")[0];
+          const [label] = fmtDist(Number(d.distance || 0), prof);
+          return `${d.place_name}(${cat}, ${label})`;
+        });
+        if (best.length >= prof.minCand) break;   // 충분히 모이면 확대 중단
+      }
+    } catch { /* 다음 반경 시도 */ }
   }
+  return best;
 }
 
 // 지역 인기·유명 맛집 (Naver 리뷰순 — 조금 멀어도 다양성용)
@@ -107,17 +129,19 @@ async function naverPopular(meal: string, id: string, secret: string, region: st
   return out;
 }
 
-// 후보 블록 = 가까운 검증(Kakao) + 인기 유명(Naver) — 병렬
-async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string, lat: number, lng: number, region: string): Promise<string> {
+// 후보 블록 = 가까운 검증(Kakao, 적응형) + 인기 유명(Naver) — 병렬
+// 반환: { block, sparse } — sparse=근처 후보가 minCand에 못 미침(③ 분기용)
+async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string, lat: number, lng: number, region: string, prof: Profile): Promise<{ block: string; sparse: boolean }> {
   const [near, popular] = await Promise.all([
-    kakaoNearby(kakaoKey, lat, lng),
+    kakaoNearby(kakaoKey, lat, lng, prof),
     naverPopular(meal, naverId, naverSecret, region),
   ]);
-  if (!near.length && !popular.length) return "";
-  let block = "\n[참고 목록 — 실제 존재하는 가게]\n";
+  const sparse = near.length < prof.minCand;
+  if (!near.length && !popular.length) return { block: "", sparse: true };
+  let block = "\n[참고 목록 — 실제 존재하는 가게, 가까운 순]\n";
   if (near.length) block += `· 가까운 검증 맛집(거리 정확): ${near.join(", ")}\n`;
-  if (popular.length) block += `· 여의도 인기·유명 맛집(조금 멀 수 있음): ${popular.join(", ")}\n`;
-  return block;
+  if (popular.length) block += `· ${region} 인기·유명 맛집(조금 멀 수 있음): ${popular.join(", ")}\n`;
+  return { block, sparse };
 }
 
 async function kakaoPlace(name: string, key: string, region: string): Promise<[number, number, string] | null> {
@@ -165,6 +189,7 @@ async function verifyOne(
   lat = JB_LAT,
   lng = JB_LNG,
   region = "여의도",
+  prof: Profile = PROFILES.auto,
 ): Promise<void> {
   const name = cleanName(String(r.name || ""));
   r.name = name;
@@ -174,21 +199,21 @@ async function verifyOne(
     naverId && naverSecret ? naverPlace(name, naverId, naverSecret, region) : Promise.resolve(null),
   ]);
 
-  const dists: Record<string, number> = {};
+  const labels: Record<string, string> = {};
   const votes: (boolean | null)[] = [];
-  if (k) { dists["카카오"] = walkMin(haversineM(lat, lng, k[0], k[1])); votes.push(isFood(k[2])); }
-  if (n) { dists["네이버"] = walkMin(haversineM(lat, lng, n[0], n[1])); votes.push(isFood(n[2])); }
+  if (k) { labels["카카오"] = fmtDist(haversineM(lat, lng, k[0], k[1]), prof)[0]; votes.push(isFood(k[2])); }
+  if (n) { labels["네이버"] = fmtDist(haversineM(lat, lng, n[0], n[1]), prof)[0]; votes.push(isFood(n[2])); }
 
   const foundFood = !(votes.length && votes.every((v) => v === false));
-  if (!Object.keys(dists).length || !foundFood) {
+  if (!Object.keys(labels).length || !foundFood) {
     r.verified = false;
     r.distance = "거리 미확인";
     return;
   }
   r.verified = true;
-  if (dists["카카오"] && dists["네이버"]) r.distance = `도보 ${dists["카카오"]}분 (카카오) / ${dists["네이버"]}분 (네이버)`;
-  else if (dists["카카오"]) r.distance = `도보 ${dists["카카오"]}분 (카카오)`;
-  else r.distance = `도보 ${dists["네이버"]}분 (네이버)`;
+  if (labels["카카오"] && labels["네이버"]) r.distance = `${labels["카카오"]} (카카오) / ${labels["네이버"]} (네이버)`;
+  else if (labels["카카오"]) r.distance = `${labels["카카오"]} (카카오)`;
+  else r.distance = `${labels["네이버"]} (네이버)`;
 }
 
 Deno.serve(async (req) => {
@@ -204,6 +229,7 @@ Deno.serve(async (req) => {
     const lng = Number(body.lng) || JB_LNG;
     const region = (body.region || "여의도").toString().trim() || "여의도";
     const place = (body.place || "JB빌딩").toString().trim() || "JB빌딩";
+    const prof = getProfile((body.profile || "auto").toString());
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "API key not set" }, 500);
@@ -267,7 +293,7 @@ Deno.serve(async (req) => {
       if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
       // 카카오·네이버 양쪽 거리 실측 (선택 위치 기준)
       const dObj: Record<string, unknown> = { name: describe };
-      await verifyOne(dObj, kakaoKey, naverId, naverSecret, lat, lng, region);
+      await verifyOne(dObj, kakaoKey, naverId, naverSecret, lat, lng, region, prof);
       const result = { intro, price, menu, distance: dObj.distance || "", verified: dObj.verified };
       // ② 결과를 서버 캐시에 저장 (upsert) — 다음부터 모든 사용자가 재사용
       if (SB_URL && SB_SRV && intro) {
@@ -282,8 +308,13 @@ Deno.serve(async (req) => {
       return json(result, 200);
     }
 
-    // ① 실제 후보 목록 (가까운 검증 + 인기 유명)
-    const candBlock = await fetchCandidates(meal, kakaoKey, naverId, naverSecret, lat, lng, region);
+    // ① 실제 후보 목록 (가까운 검증 + 인기 유명, 적응형 반경)
+    const { block: candBlock, sparse } = await fetchCandidates(meal, kakaoKey, naverId, naverSecret, lat, lng, region, prof);
+    // ③ 후보 충분도·프로파일 → 먼 곳 허용 여부 + 거리 분산 지시
+    const farOk = prof.allowFar === "always" || (prof.allowFar === "sparse" && sparse);
+    const nearRule = farOk
+      ? `이 지역은 가까운 가게가 많지 않아요. 위 목록을 우선 쓰되, 목록에 없어도 실제 영업 중인 ${region} 인근 알려진 가게를 추가해도 됩니다. 다소 멀어도 괜찮아요.`
+      : `반드시 위 목록 안에서, 가까운 순서대로 골라줘. 목록에 없는 멀리 떨어진 유명 맛집은 넣지 마.`;
 
     const condLine = text
       ? `\n사용자가 입력한 오늘의 컨디션/취향: "${text}" — 이걸 최우선으로 반영해줘.
@@ -294,11 +325,11 @@ Deno.serve(async (req) => {
 사용자에게 오늘 ${meal} 자리로 갈 만한, ${MEAL_DESC[meal]} 5곳을 추천해줘.${condLine}
 ${candBlock}
 규칙:
-- 실제 존재하는 ${region}(${place} 도보권) 근처 가게로, 시간대(${meal})에 어울리게 골라.
-- restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 최대한 다양하게).
-- extras: 추가 추천 2곳 — 아래 형식 그대로 2개 (둘 다 반드시 도보 10분 이내의 실제 가게):
-  · 1곳은 tag="근처유명" — 도보 10분 이내의 ${region} 유명 맛집
-  · 1곳은 tag="검색유명" — 웹에서 평이 좋은 유명 맛집이되 도보 10분 이내
+- 실제 존재하는 ${region}(${place} 인근) 가게로, 시간대(${meal})에 어울리게 골라. ${nearRule}
+- restaurants: 추천 맛집 5곳 (가까운 곳 우선, 음식 종류 최대한 다양하게).
+- extras: 추가 추천 2곳 — 아래 형식 그대로 2개 (둘 다 반드시 약 ${prof.extraMax}분 이내의 실제 가게):
+  · 1곳은 tag="근처유명" — 약 ${prof.extraMax}분 이내의 ${region} 유명 맛집
+  · 1곳은 tag="검색유명" — 웹에서 평이 좋은 유명 맛집이되 약 ${prof.extraMax}분 이내
   · extras는 restaurants 5곳과 겹치지 않게.
 - comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
@@ -348,13 +379,13 @@ ${candBlock}
 
     // ③ 거리 실측 + 검증 — 기본 5곳 + 추가 2곳 모두 병렬 처리 (속도)
     await Promise.all(
-      [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret, lat, lng, region)),
+      [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret, lat, lng, region, prof)),
     );
     restaurants.forEach((r, i) => { r.id = `custom-${stamp}-${i + 1}`; });
-    // 추가 추천은 도보 10분 이내 + 검증된 곳만 (거리 미확인/초과 제외)
+    // 추가 추천은 프로파일 거리 상한 이내 + 검증된 곳만 (거리 미확인/초과 제외)
     const nearExtras = extras.filter((r) => {
       const m = parseMinutes(r.distance);
-      return r.verified === true && m !== null && m <= 10;
+      return r.verified === true && m !== null && m <= prof.extraMax;
     });
     nearExtras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
     parsed.extras = nearExtras;

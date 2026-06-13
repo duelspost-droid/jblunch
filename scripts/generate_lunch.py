@@ -37,30 +37,59 @@ PLACE_NAME = "JB빌딩"        # 프롬프트의 기준 건물명
 # Naver는 반경 검색 미지원 → 지역 키워드로 모아 거리 필터링
 REGION_QUERIES = ["여의도 맛집", "여의나루 맛집", "여의도 점심", "여의도 일식", "여의도 한식", "여의도 술집"]
 
+# ── 추천 방식 프리셋 ────────────────────────────────────────────
+# 위치별 rec_profile에 따라 반경·거리표기·프롬프트를 조절한다.
+#  radii      : 근처 후보를 모을 반경(m). 후보가 min_cand에 못 미치면 다음 반경으로 확대(적응형 ①)
+#  min_cand   : 이 개수만큼 후보가 모이면 반경 확대 중단
+#  walk_max   : 도보 표기 상한(분). 초과하면 '차로 N분·Nkm'로 자동 전환(②)
+#  extra_max  : extras(추가추천) 허용 거리 상한(분)
+#  allow_far  : 'sparse'=후보 부족할 때만 먼 유명맛집 허용 / 'no'=항상 근처만 / 'always'=항상 허용(③)
+PROFILES = {
+    "auto":  {"label": "자동 (권장)",   "radii": [600, 1500, 3000, 5000], "min_cand": 12, "walk_max": 14, "extra_max": 20, "allow_far": "sparse"},
+    "walk":  {"label": "도보 위주",     "radii": [700, 1000],             "min_cand": 8,  "walk_max": 99, "extra_max": 12, "allow_far": "no"},
+    "drive": {"label": "차량 권역",     "radii": [2000, 5000, 9000],      "min_cand": 10, "walk_max": 6,  "extra_max": 40, "allow_far": "sparse"},
+    "city":  {"label": "도심 밀집",     "radii": [500, 1000, 1500],       "min_cand": 15, "walk_max": 12, "extra_max": 12, "allow_far": "sparse"},
+}
+def get_profile(key):
+    return PROFILES.get(key or "auto", PROFILES["auto"])
+
+PROFILE = PROFILES["auto"]   # 현재 위치의 추천 방식 (set_origin에서 전환)
+
 _coords_cache = {}
 _candidates_cache = None
 
 
-def set_origin(lat, lng, region, place):
+def set_origin(lat, lng, region, place, profile="auto"):
     """현재 처리할 위치로 전역 컨텍스트 전환 + 위치 종속 캐시 초기화."""
-    global ORIGIN_LAT, ORIGIN_LNG, REGION, PLACE_NAME, REGION_QUERIES
+    global ORIGIN_LAT, ORIGIN_LNG, REGION, PLACE_NAME, REGION_QUERIES, PROFILE
     global _coords_cache, _candidates_cache
     ORIGIN_LAT, ORIGIN_LNG = lat, lng
     REGION = region
     PLACE_NAME = place
+    PROFILE = get_profile(profile)
     REGION_QUERIES = [f"{region} 맛집", f"{region} 점심", f"{region} 한식",
                       f"{region} 일식", f"{region} 술집"]
     _coords_cache = {}       # 좌표 캐시는 거리 기준점이 바뀌면 무효
     _candidates_cache = None  # 근처 후보도 위치별로 다시 수집
 
 
+def fmt_dist(meters):
+    """거리(m) → 표기. 도보 상한 초과면 차로/거리로 자동 전환 (프로파일 walk_max 기준)."""
+    wm = max(1, round(meters * 1.35 / 80))
+    if wm <= PROFILE["walk_max"]:
+        return f"도보 {wm}분", wm
+    drive = max(2, round(meters / 350))   # 도심 평균 ~21km/h 가정
+    km = meters / 1000
+    return f"차로 {drive}분 · 약 {km:.1f}km", wm
+
+
 def fetch_locations():
     """app_locations(공개 SELECT)에서 배치 대상 위치 목록 조회.
     실패 시 JB빌딩 1곳으로 폴백."""
     fallback = [{"key": "jb", "name": "JB빌딩", "region": "여의도",
-                 "lat": JB_LAT, "lng": JB_LNG, "auto": True}]
+                 "lat": JB_LAT, "lng": JB_LNG, "auto": True, "rec_profile": "auto"}]
     try:
-        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto&enabled=not.eq.false&order=sort.asc"
+        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto,rec_profile&enabled=not.eq.false&order=sort.asc"
         req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
         with urllib.request.urlopen(req, timeout=8) as r:
             rows = json.loads(r.read())
@@ -69,7 +98,8 @@ def fetch_locations():
             try:
                 out.append({"key": l["key"], "name": l.get("name") or l["key"],
                             "region": l.get("region") or "", "short": l.get("short") or l.get("name"),
-                            "lat": float(l["lat"]), "lng": float(l["lng"]), "auto": bool(l.get("auto"))})
+                            "lat": float(l["lat"]), "lng": float(l["lng"]), "auto": bool(l.get("auto")),
+                            "rec_profile": l.get("rec_profile") or "auto"})
             except (KeyError, ValueError, TypeError):
                 continue
         return out or fallback
@@ -117,8 +147,8 @@ def _is_food_category(category):
     return True
 
 
-def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
-    """Kakao 카테고리(반경) 검색으로 JB빌딩 근처 실제 음식점 → [(이름, 분, 카테고리)]."""
+def fetch_kakao_candidates(kakao_key, radius, max_count=40):
+    """Kakao 카테고리(반경) 검색으로 근처 실제 음식점 → [(이름, 거리m, 카테고리)]."""
     if not kakao_key:
         return []
     out = []
@@ -132,8 +162,7 @@ def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
                 data = json.loads(r.read())
             for d in data.get("documents", []):
                 cat = d.get("category_name", "").replace("음식점 > ", "").split(" > ")[0]
-                mins = max(1, round(int(d.get("distance", 0)) / 80))
-                out.append((d["place_name"], mins, cat))
+                out.append((d["place_name"], int(d.get("distance", 0)), cat))
                 if len(out) >= max_count:
                     return out
             if data.get("meta", {}).get("is_end"):
@@ -143,9 +172,9 @@ def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
     return out
 
 
-def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
+def fetch_naver_candidates(naver_id, naver_secret, radius, max_count=30):
     """Naver 지역검색은 반경 검색을 지원하지 않아, 여러 키워드로 검색 후
-    기준 위치 반경 내만 거리 필터링 → [(이름, 분, 카테고리)]."""
+    기준 위치 반경 내만 거리 필터링 → [(이름, 거리m, 카테고리)]."""
     if not (naver_id and naver_secret):
         return []
     out, seen = [], set()
@@ -170,7 +199,7 @@ def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
                     continue
                 seen.add(name)
                 cat = (it.get("category", "").split(">")[-1]).strip()
-                out.append((name, max(1, round(dist_m * 1.35 / 80)), cat))
+                out.append((name, dist_m, cat))
                 if len(out) >= max_count:
                     return out
         except Exception as e:
@@ -178,23 +207,38 @@ def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
     return out
 
 
+# 후보 수집 결과 메타 (프롬프트 분기용) — fetch_nearby_candidates가 갱신
+_cand_sparse = False   # 가장 넓은 반경에서도 후보가 부족했는지
+
+
 def fetch_nearby_candidates(kakao_key, naver_id=None, naver_secret=None, max_count=45):
-    """Kakao(반경) + Naver(키워드+거리필터) 후보를 합쳐 중복 제거 → 문자열 리스트.
-    끼니마다 동일하므로 1회만 조회 후 캐싱."""
-    global _candidates_cache
+    """적응형 반경(①): PROFILE['radii']를 차례로 넓히며 후보를 모은다.
+    min_cand만큼 모이면 중단. 끝까지 부족하면 sparse=True. 끼니마다 동일하므로 캐싱."""
+    global _candidates_cache, _cand_sparse
     if _candidates_cache is not None:
         return _candidates_cache
     merged, seen = [], set()
-    for name, mins, cat in fetch_kakao_candidates(kakao_key) + fetch_naver_candidates(naver_id, naver_secret):
-        key = name.replace(" ", "")
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append(f"{name}({cat}, 도보 {mins}분)" if cat else f"{name}(도보 {mins}분)")
-        if len(merged) >= max_count:
-            break
+    used_radius = PROFILE["radii"][0]
+    for radius in PROFILE["radii"]:
+        used_radius = radius
+        cand = fetch_kakao_candidates(kakao_key, radius) + fetch_naver_candidates(naver_id, naver_secret, radius)
+        cand.sort(key=lambda c: c[1])   # 거리 가까운 순
+        merged, seen = [], set()
+        for name, meters, cat in cand:
+            key = name.replace(" ", "")
+            if key in seen:
+                continue
+            seen.add(key)
+            label, _wm = fmt_dist(meters)
+            merged.append(f"{name}({cat}, {label})" if cat else f"{name}({label})")
+            if len(merged) >= max_count:
+                break
+        if len(merged) >= PROFILE["min_cand"]:
+            break   # 충분히 모임 → 반경 확대 중단
+    _cand_sparse = len(merged) < PROFILE["min_cand"]
     _candidates_cache = merged
-    print(f"  🗂️  근처 실제 음식점 후보 {len(merged)}곳 확보 (Kakao+Naver)")
+    sp = " · 후보 부족(넓게 탐색)" if _cand_sparse else ""
+    print(f"  🗂️  근처 음식점 후보 {len(merged)}곳 (반경 {used_radius}m{sp}, 방식={PROFILE['label']})")
     return merged
 
 
@@ -260,25 +304,25 @@ def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
 
     for r in restaurants:
         r["name"] = clean_name(r["name"])
-        distances = {}
+        labels = {}       # 소스별 거리 표기 (도보/차로 자동전환)
         food_votes = []   # 카테고리 판정 결과 (True/False/None)
 
         # Kakao
         klat, klng, kcat = get_kakao_place(r["name"], kakao_key)
         if klat and klng:
-            distances["카카오"] = max(1, round(haversine_m(ORIGIN_LAT, ORIGIN_LNG, klat, klng) * 1.35 / 80))
+            labels["카카오"], _ = fmt_dist(haversine_m(ORIGIN_LAT, ORIGIN_LNG, klat, klng))
             food_votes.append(_is_food_category(kcat))
 
         # Naver
         if naver_id and naver_secret:
             nlat, nlng, ncat = get_naver_place(r["name"], naver_id, naver_secret)
             if nlat and nlng:
-                distances["네이버"] = max(1, round(haversine_m(ORIGIN_LAT, ORIGIN_LNG, nlat, nlng) * 1.35 / 80))
+                labels["네이버"], _ = fmt_dist(haversine_m(ORIGIN_LAT, ORIGIN_LNG, nlat, nlng))
                 food_votes.append(_is_food_category(ncat))
 
         # 검증 실패 판정: 어디서도 못 찾음 OR 모든 소스가 비음식점
         is_food = not (food_votes and all(v is False for v in food_votes))
-        if not distances or not is_food:
+        if not labels or not is_food:
             r["verified"] = False
             r["distance"] = "거리 미확인"
             unverified.append(r["name"])
@@ -287,12 +331,12 @@ def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
 
         # 검증 성공 — 거리 표기 (찾은 소스만)
         r["verified"] = True
-        if "카카오" in distances and "네이버" in distances:
-            r["distance"] = f"도보 {distances['카카오']}분 (카카오) / {distances['네이버']}분 (네이버)"
-        elif "카카오" in distances:
-            r["distance"] = f"도보 {distances['카카오']}분 (카카오)"
+        if "카카오" in labels and "네이버" in labels:
+            r["distance"] = f"{labels['카카오']} (카카오) / {labels['네이버']} (네이버)"
+        elif "카카오" in labels:
+            r["distance"] = f"{labels['카카오']} (카카오)"
         else:
-            r["distance"] = f"도보 {distances['네이버']}분 (네이버)"
+            r["distance"] = f"{labels['네이버']} (네이버)"
         print(f"  ✅ {r['name']}: {r['distance']}")
 
     if unverified:
@@ -858,22 +902,39 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     idp = MEAL_IDP[meal]
     id_prefix = date_compact + (f"-{idp}" if idp else "")
 
-    # 하이브리드: JB빌딩 근처 실제 음식점 후보 목록 (Kakao 반경 + Naver 키워드)
+    # 하이브리드: 근처 실제 음식점 후보 목록 (적응형 반경)
     candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
+    # ③ 후보 충분도·프로파일에 따라 '먼 곳 추가' 허용 여부를 다르게 안내
+    allow_far = PROFILE["allow_far"]
+    far_ok = (allow_far == "always") or (allow_far == "sparse" and _cand_sparse)
     cand_block = ""
     if candidates:
-        cand_block = (f"\n참고용 — {PLACE_NAME} 근처 실제 등록 음식점(거리 정확):\n"
-                      + ", ".join(candidates)
-                      + f"\n위 목록을 우선 활용하되, 여기 없어도 네가 아는 {REGION} 유명 맛집은 추가해도 됨.\n")
+        if far_ok:
+            tail = (f"\n이 지역은 가까운 가게가 많지 않아요. 위 목록을 우선 쓰되, 목록에 없어도 "
+                    f"실제 영업 중인 {REGION} 인근 알려진 가게를 추가해도 됩니다. 다소 멀어도 괜찮아요.\n")
+        else:
+            tail = (f"\n반드시 위 목록 안에서, 가까운 순서대로 골라줘. "
+                    f"목록에 없는 멀리 떨어진 유명 맛집은 넣지 마.\n")
+        cand_block = (f"\n참고용 — {PLACE_NAME} 근처 실제 등록 음식점(거리 정확, 가까운 순):\n"
+                      + ", ".join(candidates) + tail)
+    elif allow_far != "no":
+        cand_block = (f"\n{PLACE_NAME} 근처 등록 음식점을 찾지 못했어요. "
+                      f"네가 아는 {REGION} 인근 실제 가게를 가까운 순으로 추천해줘. 다소 멀어도 괜찮아요.\n")
     # 위치 기준 문구 (프롬프트 머리말)
     origin_desc = f"{REGION} {PLACE_NAME}".strip()
 
-    # 다양성: 최근 추천한 곳은 겹치지 않게 + 거리대 분산
+    # 다양성: 최근 추천한 곳은 겹치지 않게 + 거리대 분산(프로파일·후보 충분도 반영)
     avoid_line = ""
     if recent_names:
         avoid_line = f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.\n"
-    band_line = ("restaurants 5곳은 거리대를 다양하게: 도보 0~3분 2곳 + 3~7분 2곳 + 7~10분 1곳, "
-                 "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
+    if far_ok:
+        band_line = ("restaurants 5곳은 위 목록에서 가까운 순으로 골라줘(거리대를 억지로 분산하지 말 것). "
+                     "음식 종류는 최대한 겹치지 않게.")
+    else:
+        band_line = ("restaurants 5곳은 거리대를 다양하게(가까운 곳 위주, 가장 가까운 2곳 + 중간 2곳 + 조금 먼 1곳), "
+                     "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
+    # extras 허용 거리(분) — 프로파일별
+    ex_max = PROFILE["extra_max"]
 
     if with_conditions:
         cond_list = " / ".join(CONDITIONS)
@@ -884,7 +945,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 {mood_ctx}{cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
-- extras: 추가 추천 2곳(둘 다 반드시 도보 10분 이내 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
+- extras: 추가 추천 2곳(둘 다 반드시 약 {ex_max}분 이내의 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
@@ -899,7 +960,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 {cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
-- extras: 추가 2곳(둘 다 반드시 도보 10분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
+- extras: 추가 2곳(둘 다 반드시 약 {ex_max}분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
 - feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 긴 문장 설명 X, 짧은 구절 나열
 
@@ -932,12 +993,13 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         entry["restaurants"], _ = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
         if entry.get("extras"):
             extras, _ = verify_and_enrich(entry["extras"], kakao_key, naver_id, naver_secret)
-            # 추가 추천은 도보 10분 이내 + 검증된 곳만 (미확인/초과 제외)
+            # 추가 추천은 프로파일 거리 상한 이내 + 검증된 곳만 (미확인/초과 제외)
+            ex_max = PROFILE["extra_max"]
             entry["extras"] = [r for r in extras
-                               if r.get("verified") and (parse_minutes(r.get("distance")) or 99) <= 10]
+                               if r.get("verified") and (parse_minutes(r.get("distance")) or 999) <= ex_max]
             dropped = len(extras) - len(entry["extras"])
             if dropped:
-                print(f"  ✂️  추가 추천 {dropped}곳 제외 (10분 초과/미확인)")
+                print(f"  ✂️  추가 추천 {dropped}곳 제외 ({ex_max}분 초과/미확인)")
         for cond in list(entry.get("by_condition", {}).keys()):
             entry["by_condition"][cond], _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
 
@@ -999,8 +1061,9 @@ def process_location(client, loc, today, date_compact, kakao_key, naver_id, nave
     is_jb = loc["key"] == "jb"
     path = "history.json" if is_jb else os.path.join("data", f"history-{loc['key']}.json")
     set_origin(loc["lat"], loc["lng"], loc.get("region") or "여의도",
-               loc.get("short") or loc.get("name") or loc["key"])
-    print(f"\n=== 📍 [{loc['name']}] 추천 생성 → {path} ===")
+               loc.get("short") or loc.get("name") or loc["key"],
+               loc.get("rec_profile") or "auto")
+    print(f"\n=== 📍 [{loc['name']}] 추천 생성 (방식={PROFILE['label']}) → {path} ===")
 
     recent = get_recent_names(path, days=3)
     if recent:

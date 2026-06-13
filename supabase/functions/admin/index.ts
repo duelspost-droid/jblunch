@@ -265,8 +265,10 @@ Deno.serve(async (req) => {
         lat = g.lat; lng = g.lng;
       }
       const key = "loc_" + randHex(5);
-      const subtitle = (body.subtitle || "").toString().trim() || `${name} 근처 · 실시간 맛집 추천`;
-      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100 };
+      const subtitle = (body.subtitle || "").toString().trim() || `${name} 근처 · 맛집 추천`;
+      const REC = ["auto", "walk", "drive", "city"];
+      const rec_profile = REC.includes((body.rec_profile || "").toString()) ? body.rec_profile : "auto";
+      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100, rec_profile };
       const ins = await fetch(`${SB_URL}/rest/v1/app_locations`, {
         method: "POST", headers: { ...SH, Prefer: "return=representation" }, body: JSON.stringify(row),
       });
@@ -282,6 +284,7 @@ Deno.serve(async (req) => {
       if (body.short != null) { const v = body.short.toString().trim(); if (v) patch.short = v; }
       if (body.region != null) { const v = body.region.toString().trim(); if (v) patch.region = v; }
       if (body.subtitle != null) patch.subtitle = body.subtitle.toString().trim();
+      if (body.rec_profile != null && ["auto", "walk", "drive", "city"].includes(body.rec_profile.toString())) patch.rec_profile = body.rec_profile.toString();
       const lat = Number(body.lat), lng = Number(body.lng);
       if (isFinite(lat) && isFinite(lng) && lat && lng) { patch.lat = lat; patch.lng = lng; }
       if (!Object.keys(patch).length) return json({ error: "변경할 내용이 없어요." }, 400);
