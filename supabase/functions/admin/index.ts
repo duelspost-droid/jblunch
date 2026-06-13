@@ -160,6 +160,20 @@ Deno.serve(async (req) => {
       return json({ ok: true, changed: true, token: sess.token, expiresAt: sess.expires_at });
     }
 
+    // ── 기능 제안 제출 (인증 불필요, 누구든지) ──────────────────
+    if (action === "suggestion_add") {
+      const content = (body.content || "").toString().trim();
+      const contact = (body.contact || "").toString().trim().slice(0, 100);
+      if (!content || content.length < 5) return json({ error: "제안 내용을 5자 이상 입력해주세요." }, 400);
+      if (content.length > 1000) return json({ error: "1000자 이내로 입력해주세요." }, 400);
+      const ins = await fetch(`${SB_URL}/rest/v1/suggestions`, {
+        method: "POST", headers: { ...SH, Prefer: "return=representation" },
+        body: JSON.stringify({ content, contact: contact || null, status: "pending", ip }),
+      });
+      if (!ins.ok) return json({ error: "저장 실패" }, 500);
+      return json({ ok: true });
+    }
+
     // ── 그 외(로그/로그아웃): 토큰 인증 (레거시 비번도 허용, 단 잠금 적용) ──
     const token = (body.token || "").toString();
     let authed = await validSession(token);
@@ -172,6 +186,60 @@ Deno.serve(async (req) => {
 
     // ── 로그아웃 ──
     if (action === "logout") { await deleteSession(token); return json({ ok: true }); }
+
+    // ── 기능 제안 관리 (관리자) ─────────────────────────────────
+    if (action === "suggestion_list") {
+      const r = await fetch(`${SB_URL}/rest/v1/suggestions?select=*&order=created_at.desc`, { headers: SH });
+      return json({ ok: true, suggestions: r.ok ? await r.json() : [] });
+    }
+    if (action === "suggestion_reply") {
+      const id = (body.id || "").toString();
+      const reply = (body.reply || "").toString().trim();
+      if (!id) return json({ error: "id 필요" }, 400);
+      await fetch(`${SB_URL}/rest/v1/suggestions?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH", headers: SH,
+        body: JSON.stringify({ admin_reply: reply, status: reply ? "answered" : "pending", replied_at: reply ? new Date().toISOString() : null }),
+      });
+      await logAdmin("suggestion_reply", ip, id, ua);
+      return json({ ok: true });
+    }
+
+    // ── 기준 위치 관리 ──────────────────────────────────────────
+    if (action === "loc_list") {
+      const r = await fetch(`${SB_URL}/rest/v1/app_locations?select=*&order=sort.asc`, { headers: SH });
+      return json({ ok: true, locations: r.ok ? await r.json() : [] });
+    }
+    if (action === "loc_add") {
+      const name = (body.name || "").toString().trim();
+      const short = (body.short || "").toString().trim() || name;
+      const region = (body.region || "").toString().trim();
+      const address = (body.address || "").toString().trim();
+      let lat = Number(body.lat), lng = Number(body.lng);
+      if (!name || !region) return json({ error: "이름과 지역은 필수예요." }, 400);
+      // 좌표 미지정 → 주소(없으면 이름+지역)로 지오코딩
+      if (!(isFinite(lat) && isFinite(lng) && lat && lng)) {
+        const g = await geocode(address || `${name} ${region}`);
+        if (!g) return json({ error: "주소로 좌표를 찾지 못했어요. 주소를 더 정확히 입력하거나 위경도를 직접 넣어주세요." }, 422);
+        lat = g.lat; lng = g.lng;
+      }
+      const key = "loc_" + randHex(5);
+      const subtitle = (body.subtitle || "").toString().trim() || `${name} 근처 · 실시간 맛집 추천`;
+      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100 };
+      const ins = await fetch(`${SB_URL}/rest/v1/app_locations`, {
+        method: "POST", headers: { ...SH, Prefer: "return=representation" }, body: JSON.stringify(row),
+      });
+      if (!ins.ok) return json({ error: "저장 실패: " + (await ins.text()) }, 500);
+      await logAdmin("loc_add", ip, name, ua);
+      return json({ ok: true, location: (await ins.json())[0] });
+    }
+    if (action === "loc_delete") {
+      const key = (body.key || "").toString();
+      if (!key) return json({ error: "key 필요" }, 400);
+      if (key === "jb") return json({ error: "기본 위치(JB빌딩)는 삭제할 수 없어요." }, 400);
+      await fetch(`${SB_URL}/rest/v1/app_locations?key=eq.${encodeURIComponent(key)}`, { method: "DELETE", headers: SH });
+      await logAdmin("loc_delete", ip, key, ua);
+      return json({ ok: true });
+    }
 
     // ── 로그/통계 조회 (기본, 기간·액션 필터) ──
     return json({ ok: true, ...(await dashboard(body)) });
@@ -242,6 +310,22 @@ async function geoLookup(ips: string[]): Promise<Record<string, Geo>> {
     } catch (_e) { /* 배치 실패 무시 */ }
   }
   return map;
+}
+
+// ── Kakao 주소/장소 지오코딩 (위치 추가용) ──────────────────────
+async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
+  const key = Deno.env.get("KAKAO_REST_API_KEY") || "af04c6cff1c0c408283c25e84d5b481d";
+  if (!key || !query) return null;
+  const head = { headers: { Authorization: `KakaoAK ${key}` } };
+  try {
+    const a = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`, head);
+    if (a.ok) { const d = (await a.json()).documents?.[0]; if (d) return { lat: Number(d.y), lng: Number(d.x) }; }
+  } catch (_e) { /* ignore */ }
+  try {
+    const k = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=1`, head);
+    if (k.ok) { const d = (await k.json()).documents?.[0]; if (d) return { lat: Number(d.y), lng: Number(d.x) }; }
+  } catch (_e) { /* ignore */ }
+  return null;
 }
 
 // ── 대시보드 데이터 (기간·액션 필터) ──────────────────────────

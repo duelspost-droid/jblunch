@@ -106,6 +106,44 @@
     transition: all 0.15s;
   }
   .tab.active { color: #0a3d7a; border-bottom-color: #0a3d7a; }
+  .suggest-tab-btn {
+    margin-left: auto; align-self: center;
+    background: none; border: 1.5px solid #0a3d7a; border-radius: 20px;
+    color: #0a3d7a; font-size: 0.75rem; font-weight: 700; font-family: inherit;
+    padding: 4px 11px; cursor: pointer; white-space: nowrap;
+    transition: background .12s, color .12s;
+  }
+  .suggest-tab-btn:hover { background: #0a3d7a; color: #fff; }
+  /* 기능제안 모달 */
+  .sug-modal-bg {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(10,30,60,0.45); align-items: flex-end; justify-content: center;
+  }
+  .sug-modal-bg.open { display: flex; }
+  .sug-modal {
+    background: #fff; width: 100%; max-width: 520px;
+    border-radius: 20px 20px 0 0; padding: 22px 20px 32px;
+    box-shadow: 0 -6px 30px rgba(10,40,90,0.18);
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(40px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+  .sug-modal h3 { font-size: 1rem; font-weight: 800; color: #0a3d7a; margin-bottom: 4px; }
+  .sug-modal .sug-desc { font-size: 0.78rem; color: #8794a6; margin-bottom: 14px; }
+  .sug-modal textarea {
+    width: 100%; height: 110px; border: 1.5px solid #e2e8f0; border-radius: 12px;
+    padding: 10px 12px; font-size: 0.88rem; resize: none; font-family: inherit;
+    color: #333; line-height: 1.55; margin-bottom: 9px;
+  }
+  .sug-modal textarea:focus { outline: none; border-color: #0a3d7a; }
+  .sug-modal input[type=text] {
+    width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px;
+    padding: 9px 12px; font-size: 0.86rem; font-family: inherit; color: #333; margin-bottom: 12px;
+  }
+  .sug-modal input[type=text]:focus { outline: none; border-color: #0a3d7a; }
+  .sug-modal .sug-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .sug-modal .sug-msg { font-size: 0.78rem; min-height: 18px; margin-bottom: 8px; }
+  .sug-modal .sug-msg.err { color: #c53030; }
+  .sug-modal .sug-msg.ok { color: #2f855a; }
 
   .content { padding: 14px; max-width: 640px; margin: 0 auto; }
   .section { display: none; }
@@ -793,6 +831,7 @@
 <div class="tabs">
   <button class="tab active" onclick="showTab('history',this)">🍽️ 오늘의 추천</button>
   <button class="tab" onclick="showTab('stats',this)">📝 리뷰</button>
+  <button class="suggest-tab-btn" onclick="openSuggest()">💡 기능제안</button>
 </div>
 
 <div class="content">
@@ -818,6 +857,21 @@
     <div class="reserve-opts" id="reserve-opts"></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeReserve()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기능제안 모달 -->
+<div class="sug-modal-bg" id="sug-modal-bg" onclick="if(event.target===this)closeSuggest()">
+  <div class="sug-modal">
+    <h3>💡 기능 제안하기</h3>
+    <p class="sug-desc">불편한 점이나 원하는 기능을 자유롭게 남겨주세요. 관리자가 확인 후 답변드릴게요.</p>
+    <textarea id="sug-content" placeholder="제안 내용을 입력하세요 (5자 이상)" maxlength="1000"></textarea>
+    <input type="text" id="sug-contact" placeholder="연락처 또는 이름 (선택, 답변 받으실 경우)">
+    <div class="sug-msg" id="sug-msg"></div>
+    <div class="sug-btns">
+      <button class="btn-cancel" onclick="closeSuggest()">닫기</button>
+      <button class="btn-save" onclick="submitSuggest()">제출하기</button>
     </div>
   </div>
 </div>
@@ -1036,12 +1090,36 @@ function bestIntro(name) {
   return base.feature || '';
 }
 // 이름으로 장소검색 백엔드(Kakao/Naver) 재조회 → 상세 채우기 (캐시에 없을 때)
-// ── 기준 위치 (JB금융 거점 3곳) ───────────────────────────────
-const LOCATIONS = {
+// ── 기준 위치 (관리자에서 추가 가능, DB app_locations) ────────────
+// 기본값(폴백) — DB 로드 실패 시 사용
+let LOCATIONS = {
   jb:      { name: 'JB빌딩 (여의도)',  short: 'JB빌딩',      region: '여의도',     lat: 37.5240914884765, lng: 126.927376521939, subtitle: '여의도 JB빌딩 근처 · 점심·저녁·술집 추천', auto: true },
   gwangju: { name: '광주은행 본점',    short: '광주은행',    region: '광주 동구',  lat: 35.1548269706022, lng: 126.912881392668, subtitle: '광주은행 본점 근처 · 실시간 맛집 추천', auto: false },
   jeonbuk: { name: '전북은행 본점',    short: '전북은행',    region: '전주 덕진구', lat: 35.8397433521131, lng: 127.131381897342, subtitle: '전북은행 본점 근처 · 실시간 맛집 추천', auto: false },
 };
+// DB에서 위치 목록 로드 → LOCATIONS 갱신 + 드롭다운 재구성
+async function loadLocations() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/app_locations?select=*&order=sort.asc`, { headers: SB_HEADERS });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return;
+    const map = {};
+    rows.forEach(l => { map[l.key] = { name: l.name, short: l.short, region: l.region, lat: +l.lat, lng: +l.lng, subtitle: l.subtitle || `${l.name} 근처 · 실시간 맛집 추천`, auto: !!l.auto }; });
+    LOCATIONS = map;
+    if (!LOCATIONS[curLoc]) { curLoc = LOCATIONS.jb ? 'jb' : Object.keys(LOCATIONS)[0]; try { localStorage.setItem('jbloc', curLoc); } catch(e) {} }
+    renderLocMenu();
+    applyLocationUI();
+  } catch(e) {}
+}
+// 드롭다운 메뉴 옵션을 LOCATIONS로 렌더
+function renderLocMenu() {
+  const menu = document.getElementById('loc-menu');
+  if (!menu) return;
+  menu.innerHTML = Object.keys(LOCATIONS).map(k =>
+    `<button class="loc-opt" data-loc="${k}" onclick="changeLocation('${k}')"><span class="lo-name">${escHtml(LOCATIONS[k].name)}</span><span class="lo-sub">${escHtml(LOCATIONS[k].region)}</span></button>`
+  ).join('');
+}
 let curLoc = 'jb';
 try { const sv = localStorage.getItem('jbloc'); if (sv && LOCATIONS[sv]) curLoc = sv; } catch(e) {}
 function LOC() { return LOCATIONS[curLoc]; }
@@ -1094,7 +1172,9 @@ async function fetchPlaceDetail(name) {
 // ── Supabase API ──────────────────────────────────────────────
 // 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
 function init() {
+  renderLocMenu();      // 위치 드롭다운 옵션 렌더(기본값)
   applyLocationUI();    // 저장된 기준 위치 → 선택기·부제 반영
+  loadLocations();      // DB에서 위치 목록 동기화(관리자 추가분 포함)
   renderHistory();
   renderStats();
   loadComments();
@@ -2112,6 +2192,37 @@ function closeModal() { document.getElementById('modal-bg').classList.remove('op
 // ── 예약 팝업 ────────────────────────────────────────────────
 let reserveName = null;
 function closeReserve() { document.getElementById('reserve-bg').classList.remove('open'); reserveName = null; }
+
+// ── 기능제안 ──────────────────────────────────────────────────
+function openSuggest() {
+  document.getElementById('sug-content').value = '';
+  document.getElementById('sug-contact').value = '';
+  document.getElementById('sug-msg').textContent = '';
+  document.getElementById('sug-msg').className = 'sug-msg';
+  document.getElementById('sug-modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('sug-content').focus(), 100);
+}
+function closeSuggest() { document.getElementById('sug-modal-bg').classList.remove('open'); }
+async function submitSuggest() {
+  const content = document.getElementById('sug-content').value.trim();
+  const contact = document.getElementById('sug-contact').value.trim();
+  const msg = document.getElementById('sug-msg');
+  if (content.length < 5) { msg.className = 'sug-msg err'; msg.textContent = '내용을 5자 이상 입력해주세요.'; return; }
+  msg.className = 'sug-msg'; msg.textContent = '제출 중…';
+  try {
+    const res = await fetch(`${SB_URL}/functions/v1/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SB_KEY}` },
+      body: JSON.stringify({ action: 'suggestion_add', content, contact })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { msg.className = 'sug-msg err'; msg.textContent = '⚠️ ' + (data.error || '제출 실패'); return; }
+    msg.className = 'sug-msg ok'; msg.textContent = '✅ 제안이 접수됐어요. 감사합니다!';
+    document.getElementById('sug-content').value = '';
+    document.getElementById('sug-contact').value = '';
+    setTimeout(closeSuggest, 1800);
+  } catch (e) { msg.className = 'sug-msg err'; msg.textContent = '⚠️ 네트워크 오류'; }
+}
 function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
 
 // 도보 경로 출발지 = 선택한 기준 위치 (JB빌딩/광주은행/전북은행)

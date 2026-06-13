@@ -84,6 +84,37 @@
   }
   .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
   .pager .pinfo { font-size: 0.8rem; color: #667; font-weight: 600; }
+  /* 위치 관리 */
+  .loc-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .loc-row { display: flex; align-items: center; gap: 10px; background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 11px; padding: 10px 12px; }
+  .loc-row .lr-main { flex: 1; min-width: 0; }
+  .loc-row .lr-name { font-size: 0.88rem; font-weight: 700; color: #1a2a44; }
+  .loc-row .lr-meta { font-size: 0.72rem; color: #8794a6; margin-top: 2px; }
+  .loc-row .lr-badge { font-size: 0.66rem; font-weight: 800; color: #0a3d7a; background: #e3edfb; border-radius: 6px; padding: 2px 6px; }
+  .loc-row .lr-del { border: 1.5px solid #f0d4d9; background: #fff; color: #c0394b; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .loc-row .lr-del:disabled { opacity: 0.35; cursor: not-allowed; }
+  .loc-add { border-top: 1px dashed #e3e8f0; padding-top: 14px; }
+  .loc-add-title { font-size: 0.84rem; font-weight: 700; color: #0a3d7a; margin-bottom: 10px; }
+  .loc-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .loc-add-grid input { border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; }
+  /* 기능 제안 관리 */
+  .sug-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+  .sug-item { background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 12px; padding: 13px 14px; }
+  .sug-item.answered { border-color: #c6e8d1; background: #f4fbf6; }
+  .sug-meta { font-size: 0.7rem; color: #8794a6; margin-bottom: 5px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .sug-meta .sug-badge { padding: 1px 7px; border-radius: 10px; font-weight: 700; font-size: 0.68rem; }
+  .sug-badge.pending { background: #fff3cd; color: #856404; }
+  .sug-badge.answered { background: #c6e8d1; color: #1a5e36; }
+  .sug-content { font-size: 0.86rem; color: #1a2a44; line-height: 1.55; margin-bottom: 8px; white-space: pre-wrap; word-break: break-all; }
+  .sug-contact { font-size: 0.74rem; color: #4a6285; margin-bottom: 6px; }
+  .sug-reply-box { display: flex; gap: 7px; align-items: flex-start; margin-top: 6px; }
+  .sug-reply-box textarea { flex: 1; border: 1.5px solid #d4e0f0; border-radius: 9px; padding: 8px 10px; font-size: 0.82rem; font-family: inherit; resize: vertical; min-height: 58px; }
+  .sug-reply-box textarea:focus { outline: none; border-color: #0a3d7a; }
+  .sug-reply-box button { background: #0a3d7a; color: #fff; border: none; border-radius: 9px; padding: 8px 13px; font-size: 0.78rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .sug-replied { background: #eef8f2; border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; color: #2f6a46; margin-top: 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+  .sug-replied strong { font-size: 0.7rem; color: #2f855a; display: block; margin-bottom: 3px; }
+  .loc-add-grid input:focus { outline: none; border-color: #0a3d7a; }
+  @media (max-width: 600px) { .loc-add-grid { grid-template-columns: 1fr; } }
   /* 로그 검색 */
   .toolbar { background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 12px; padding: 11px 12px; margin-bottom: 12px; }
   .log-filter { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
@@ -215,6 +246,33 @@
       </div>
       <div class="logs" id="logs"></div>
       <div class="pager" id="pager"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>📍 기준 위치 관리</h2>
+        <button class="btn gray" onclick="loadLocList()">↻ 새로고침</button>
+      </div>
+      <div id="loc-list" class="loc-list"></div>
+      <div class="loc-add">
+        <div class="loc-add-title">+ 새 위치 추가</div>
+        <div class="loc-add-grid">
+          <input type="text" id="nl-name" placeholder="이름 (예: 광주은행 동지점)">
+          <input type="text" id="nl-short" placeholder="짧은 이름 (예: 동지점)">
+          <input type="text" id="nl-region" placeholder="지역 (예: 광주 북구)">
+          <input type="text" id="nl-addr" placeholder="주소 (좌표 자동 검색용, 예: 광주 북구 ...)">
+        </div>
+        <div class="msg" id="loc-msg"></div>
+        <button class="btn" onclick="addLocation()">위치 추가</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>💡 기능 제안 관리</h2>
+        <button class="btn gray" onclick="loadSuggestions()">↻ 새로고침</button>
+      </div>
+      <div id="sug-list" class="sug-list"><div style="color:#8794a6;font-size:0.82rem">불러오는 중…</div></div>
     </div>
 
     <div class="card">
@@ -460,6 +518,9 @@ function render(data){
   renderChart(v.daily || []);
   // 통계 + 로그 목록(현재 필터 기준)
   refreshLogView();
+  loadLocList();      // 기준 위치 목록
+  loadSuggestions();  // 기능 제안 목록
+
 }
 
 // 방문 추이 막대그래프 (의존성 없는 인라인 SVG)
@@ -564,6 +625,77 @@ async function changePw(){
   try { localStorage.setItem(SESSION_KEY, curToken); } catch(e) {}
   document.getElementById('cpw').value=''; document.getElementById('np1').value=''; document.getElementById('np2').value='';
   msg.className='msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다. (다른 기기는 재로그인 필요)';
+}
+
+// ── 기준 위치 관리 ────────────────────────────────────────────
+async function loadLocList(){
+  const wrap = document.getElementById('loc-list');
+  if(!wrap) return;
+  wrap.innerHTML = '<div style="color:#8794a6;font-size:0.82rem;padding:6px 2px">불러오는 중…</div>';
+  const { ok, data } = await adminCall({ action:'loc_list', token: curToken });
+  if(!ok){ wrap.innerHTML = '<div style="color:#c0394b;font-size:0.82rem">목록을 불러오지 못했어요.</div>'; return; }
+  const locs = data.locations || [];
+  wrap.innerHTML = locs.map(l => `
+    <div class="loc-row">
+      <div class="lr-main">
+        <div class="lr-name">${esc(l.name)} ${l.auto?'<span class="lr-badge">자동배치</span>':'<span class="lr-badge" style="background:#e9f6ee;color:#2f855a">실시간</span>'}</div>
+        <div class="lr-meta">${esc(l.short)} · ${esc(l.region)} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
+      </div>
+      <button class="lr-del" ${l.key==='jb'?'disabled title="기본 위치는 삭제 불가"':''} onclick="deleteLocation('${esc(l.key)}','${esc(l.name)}')">삭제</button>
+    </div>`).join('') || '<div style="color:#8794a6;font-size:0.82rem">등록된 위치가 없어요.</div>';
+}
+async function addLocation(){
+  const msg = document.getElementById('loc-msg');
+  const name = document.getElementById('nl-name').value.trim();
+  const short = document.getElementById('nl-short').value.trim();
+  const region = document.getElementById('nl-region').value.trim();
+  const address = document.getElementById('nl-addr').value.trim();
+  if(!name || !region){ msg.className='msg err'; msg.textContent='이름과 지역은 필수예요.'; return; }
+  msg.className='msg'; msg.textContent='주소로 좌표 찾는 중…';
+  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, address });
+  if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'추가 실패'); return; }
+  msg.className='msg ok'; msg.textContent=`✅ '${name}' 추가됨 (홈 위치 선택기에 바로 노출돼요)`;
+  ['nl-name','nl-short','nl-region','nl-addr'].forEach(id=>document.getElementById(id).value='');
+  loadLocList();
+}
+async function deleteLocation(key, name){
+  if(!confirm(`'${name}' 위치를 삭제할까요?\n(해당 위치의 리뷰는 남아있지만 선택기에서 사라져요)`)) return;
+  const { ok, data } = await adminCall({ action:'loc_delete', token: curToken, key });
+  if(!ok){ alert('삭제 실패: '+(data.error||'')); return; }
+  loadLocList();
+}
+
+// ── 기능 제안 관리 ───────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function loadSuggestions() {
+  const wrap = document.getElementById('sug-list');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="color:#8794a6;font-size:0.82rem;padding:4px 2px">불러오는 중…</div>';
+  const { ok, data } = await adminCall({ action: 'suggestion_list', token: curToken });
+  if (!ok) { wrap.innerHTML = '<div style="color:#c0394b;font-size:0.82rem">불러오지 못했어요.</div>'; return; }
+  const list = data.suggestions || [];
+  if (!list.length) { wrap.innerHTML = '<div style="color:#8794a6;font-size:0.82rem">아직 제안이 없어요.</div>'; return; }
+  wrap.innerHTML = list.map(s => `
+    <div class="sug-item ${s.status==='answered'?'answered':''}" id="si-${s.id}">
+      <div class="sug-meta">
+        <span class="sug-badge ${s.status==='answered'?'answered':'pending'}">${s.status==='answered'?'답변완료':'미답변'}</span>
+        <span>${new Date(s.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+        ${s.ip?`<span>${esc(s.ip)}</span>`:''}
+      </div>
+      <div class="sug-content">${esc(s.content)}</div>
+      ${s.contact?`<div class="sug-contact">📬 ${esc(s.contact)}</div>`:''}
+      ${s.admin_reply?`<div class="sug-replied"><strong>✅ 관리자 답변</strong>${esc(s.admin_reply)}</div>`:''}
+      <div class="sug-reply-box">
+        <textarea id="sr-${s.id}" placeholder="답변을 입력하세요…">${esc(s.admin_reply||'')}</textarea>
+        <button onclick="replySuggest('${s.id}')">저장</button>
+      </div>
+    </div>`).join('');
+}
+async function replySuggest(id) {
+  const reply = (document.getElementById('sr-'+id)?.value||'').trim();
+  const { ok, data } = await adminCall({ action: 'suggestion_reply', token: curToken, id, reply });
+  if (!ok) { alert('저장 실패: '+(data.error||'')); return; }
+  loadSuggestions();
 }
 
 // 페이지 로드 시 자동 재로그인 시도
