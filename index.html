@@ -42,27 +42,39 @@
     font-weight: 900; letter-spacing: 0;
   }
   .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* 위치 선택 알약 */
-  .loc-pill {
-    margin-left: auto; flex-shrink: 0;
-    display: inline-flex; align-items: center; gap: 3px;
-    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 999px; padding: 5px 8px 5px 10px; cursor: pointer;
-    transition: background .12s;
-  }
-  .loc-pill:hover { background: rgba(255,255,255,0.24); }
-  .loc-pill .loc-pin { font-size: 0.78rem; line-height: 1; }
-  .loc-sel {
-    -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    background: transparent; color: #fff; border: none; cursor: pointer;
+  /* 위치 선택 (커스텀 드롭다운) */
+  .loc-wrap { margin-left: auto; flex-shrink: 0; position: relative; }
+  .loc-btn {
+    display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px; padding: 6px 11px; color: #fff;
     font-size: 0.78rem; font-weight: 700; font-family: inherit;
-    padding: 0 16px 0 2px;
-    /* 커스텀 caret(흰색 ▾) */
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3l4 4 4-4' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-    background-repeat: no-repeat; background-position: right 1px center;
+    transition: background .12s, border-color .12s;
   }
-  .loc-sel:focus { outline: none; }
-  .loc-sel option { color: #1a1a2e; font-weight: 600; }
+  .loc-btn:hover { background: rgba(255,255,255,0.25); }
+  .loc-btn .loc-pin { font-size: 0.74rem; line-height: 1; }
+  .loc-btn .loc-caret { font-size: 0.62rem; opacity: 0.85; transition: transform .18s; }
+  .loc-wrap.open .loc-btn { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.55); }
+  .loc-wrap.open .loc-caret { transform: rotate(180deg); }
+  .loc-menu {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+    background: #fff; border-radius: 13px; padding: 6px;
+    box-shadow: 0 8px 26px rgba(10,40,90,0.22); border: 1px solid #eaeef4;
+    min-width: 168px; opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: opacity .15s, transform .15s, visibility .15s;
+  }
+  .loc-wrap.open .loc-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+  .loc-opt {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    width: 100%; text-align: left; cursor: pointer;
+    background: none; border: none; border-radius: 9px; padding: 9px 11px; font-family: inherit;
+  }
+  .loc-opt:hover { background: #f3f7fc; }
+  .loc-opt .lo-name { font-size: 0.84rem; font-weight: 700; color: #1a2a44; }
+  .loc-opt .lo-sub { font-size: 0.7rem; color: #8794a6; }
+  .loc-opt.on { background: #eaf2fd; }
+  .loc-opt.on .lo-name { color: #0a3d7a; }
+  .loc-opt.on .lo-name::after { content: ' ✓'; color: #1565c0; font-weight: 900; }
   .sync-badge {
     margin-left: auto;
     font-size: 0.72rem;
@@ -764,14 +776,17 @@
     <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
     <p id="header-sub">여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
   </div>
-  <div class="loc-pill" onclick="event.stopPropagation()" title="기준 위치 선택">
-    <span class="loc-pin">📍</span>
-    <select id="loc-sel" class="loc-sel"
-            onchange="event.stopPropagation();changeLocation(this.value)">
-      <option value="jb">JB빌딩</option>
-      <option value="gwangju">광주은행</option>
-      <option value="jeonbuk">전북은행</option>
-    </select>
+  <div class="loc-wrap" onclick="event.stopPropagation()">
+    <button class="loc-btn" id="loc-btn" onclick="toggleLocMenu(event)" title="기준 위치 선택">
+      <span class="loc-pin">📍</span>
+      <span class="loc-btn-label" id="loc-btn-label">JB빌딩</span>
+      <span class="loc-caret">▾</span>
+    </button>
+    <div class="loc-menu" id="loc-menu">
+      <button class="loc-opt" data-loc="jb" onclick="changeLocation('jb')"><span class="lo-name">JB빌딩</span><span class="lo-sub">여의도</span></button>
+      <button class="loc-opt" data-loc="gwangju" onclick="changeLocation('gwangju')"><span class="lo-name">광주은행 본점</span><span class="lo-sub">광주 동구</span></button>
+      <button class="loc-opt" data-loc="jeonbuk" onclick="changeLocation('jeonbuk')"><span class="lo-name">전북은행 본점</span><span class="lo-sub">전주 덕진구</span></button>
+    </div>
   </div>
 </div>
 
@@ -1033,11 +1048,20 @@ function LOC() { return LOCATIONS[curLoc]; }
 function locParams() { const l = LOC(); return { lat: l.lat, lng: l.lng, region: l.region, place: l.name }; }
 function isBankLoc() { return !LOC().auto; }   // JB 외(광주·전북)는 실시간 추천
 function applyLocationUI() {
-  const sel = document.getElementById('loc-sel'); if (sel) sel.value = curLoc;
+  const lbl = document.getElementById('loc-btn-label'); if (lbl) lbl.textContent = LOC().short;
   const sub = document.getElementById('header-sub'); if (sub) sub.textContent = LOC().subtitle;
+  document.querySelectorAll('.loc-opt').forEach(o => o.classList.toggle('on', o.dataset.loc === curLoc));
 }
+function toggleLocMenu(e) {
+  if (e) e.stopPropagation();
+  document.querySelector('.loc-wrap')?.classList.toggle('open');
+}
+function closeLocMenu() { document.querySelector('.loc-wrap')?.classList.remove('open'); }
+document.addEventListener('click', closeLocMenu);   // 바깥 클릭 시 닫힘
 function changeLocation(key) {
+  closeLocMenu();
   if (!LOCATIONS[key]) return;
+  if (key === curLoc) return;
   curLoc = key;
   try { localStorage.setItem('jbloc', key); } catch(e) {}
   applyLocationUI();
