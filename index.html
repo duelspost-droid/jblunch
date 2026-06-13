@@ -1120,7 +1120,8 @@ async function loadLocations() {
     const rows = await r.json();
     if (!Array.isArray(rows) || !rows.length) return;
     const map = {};
-    rows.forEach(l => { map[l.key] = { name: l.name, short: l.short, region: l.region, lat: +l.lat, lng: +l.lng, subtitle: l.subtitle || `${l.name} 근처 · 실시간 맛집 추천`, auto: !!l.auto }; });
+    rows.filter(l => l.enabled !== false)   // 중지된 위치는 선택기에서 제외
+        .forEach(l => { map[l.key] = { name: l.name, short: l.short, region: l.region, lat: +l.lat, lng: +l.lng, subtitle: l.subtitle || `${l.name} 근처 · 실시간 맛집 추천`, auto: !!l.auto }; });
     LOCATIONS = map;
     if (!LOCATIONS[curLoc]) { curLoc = LOCATIONS.jb ? 'jb' : Object.keys(LOCATIONS)[0]; try { localStorage.setItem('jbloc', curLoc); } catch(e) {} }
     renderLocMenu();

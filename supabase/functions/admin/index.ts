@@ -212,6 +212,31 @@ Deno.serve(async (req) => {
       await logAdmin("suggestion_reply", ip, id, ua);
       return json({ ok: true });
     }
+    if (action === "suggestion_update") {
+      const id = (body.id || "").toString();
+      if (!id) return json({ error: "id 필요" }, 400);
+      const patch: Record<string, unknown> = {};
+      if (body.content != null) { const v = body.content.toString().trim(); if (v) patch.content = v; }
+      if (body.reply != null) {
+        const reply = body.reply.toString().trim();
+        patch.admin_reply = reply || null;
+        patch.status = reply ? "answered" : "pending";
+        patch.replied_at = reply ? new Date().toISOString() : null;
+      }
+      if (!Object.keys(patch).length) return json({ error: "변경할 내용이 없어요." }, 400);
+      await fetch(`${SB_URL}/rest/v1/suggestions?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH", headers: SH, body: JSON.stringify(patch),
+      });
+      await logAdmin("suggestion_update", ip, id, ua);
+      return json({ ok: true });
+    }
+    if (action === "suggestion_delete") {
+      const id = (body.id || "").toString();
+      if (!id) return json({ error: "id 필요" }, 400);
+      await fetch(`${SB_URL}/rest/v1/suggestions?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: SH });
+      await logAdmin("suggestion_delete", ip, id, ua);
+      return json({ ok: true });
+    }
 
     // ── 좌표 검색 (장소명·주소 → 후보 목록) ─────────────────────
     if (action === "geo_search") {
@@ -248,6 +273,35 @@ Deno.serve(async (req) => {
       if (!ins.ok) return json({ error: "저장 실패: " + (await ins.text()) }, 500);
       await logAdmin("loc_add", ip, name, ua);
       return json({ ok: true, location: (await ins.json())[0] });
+    }
+    if (action === "loc_update") {
+      const key = (body.key || "").toString();
+      if (!key) return json({ error: "key 필요" }, 400);
+      const patch: Record<string, unknown> = {};
+      if (body.name != null) { const v = body.name.toString().trim(); if (v) patch.name = v; }
+      if (body.short != null) { const v = body.short.toString().trim(); if (v) patch.short = v; }
+      if (body.region != null) { const v = body.region.toString().trim(); if (v) patch.region = v; }
+      if (body.subtitle != null) patch.subtitle = body.subtitle.toString().trim();
+      const lat = Number(body.lat), lng = Number(body.lng);
+      if (isFinite(lat) && isFinite(lng) && lat && lng) { patch.lat = lat; patch.lng = lng; }
+      if (!Object.keys(patch).length) return json({ error: "변경할 내용이 없어요." }, 400);
+      const r = await fetch(`${SB_URL}/rest/v1/app_locations?key=eq.${encodeURIComponent(key)}`, {
+        method: "PATCH", headers: { ...SH, Prefer: "return=representation" }, body: JSON.stringify(patch),
+      });
+      if (!r.ok) return json({ error: "수정 실패: " + (await r.text()) }, 500);
+      await logAdmin("loc_update", ip, key, ua);
+      return json({ ok: true, location: (await r.json())[0] });
+    }
+    if (action === "loc_toggle") {
+      const key = (body.key || "").toString();
+      if (!key) return json({ error: "key 필요" }, 400);
+      if (key === "jb") return json({ error: "기본 위치(JB빌딩)는 중지할 수 없어요." }, 400);
+      const enabled = body.enabled === true || body.enabled === "true";
+      await fetch(`${SB_URL}/rest/v1/app_locations?key=eq.${encodeURIComponent(key)}`, {
+        method: "PATCH", headers: SH, body: JSON.stringify({ enabled }),
+      });
+      await logAdmin("loc_toggle", ip, `${key}=${enabled}`, ua);
+      return json({ ok: true });
     }
     if (action === "loc_delete") {
       const key = (body.key || "").toString();

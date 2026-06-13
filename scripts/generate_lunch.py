@@ -60,7 +60,7 @@ def fetch_locations():
     fallback = [{"key": "jb", "name": "JB빌딩", "region": "여의도",
                  "lat": JB_LAT, "lng": JB_LNG, "auto": True}]
     try:
-        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto&order=sort.asc"
+        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto&enabled=not.eq.false&order=sort.asc"
         req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
         with urllib.request.urlopen(req, timeout=8) as r:
             rows = json.loads(r.read())

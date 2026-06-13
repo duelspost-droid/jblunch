@@ -93,6 +93,22 @@
   .loc-row .lr-badge { font-size: 0.66rem; font-weight: 800; color: #0a3d7a; background: #e3edfb; border-radius: 6px; padding: 2px 6px; }
   .loc-row .lr-del { border: 1.5px solid #f0d4d9; background: #fff; color: #c0394b; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
   .loc-row .lr-del:disabled { opacity: 0.35; cursor: not-allowed; }
+  .loc-row .lr-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .loc-row .lr-edit { border: 1.5px solid #cfdcf0; background: #fff; color: #2b5a9e; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer; }
+  .loc-row .lr-edit:hover { background: #f0f5fc; }
+  .loc-row .lr-toggle { border: 1.5px solid #e2e8f0; background: #fff; color: #4a5a72; border-radius: 8px; padding: 6px 10px; font-size: 0.76rem; font-weight: 700; cursor: pointer; }
+  .loc-row .lr-toggle:hover { background: #f4f7fb; }
+  .loc-row.off { opacity: 0.62; }
+  .lr-badge.stopped { background: #fdeaea; color: #b1404f; }
+  /* 인라인 위치 수정 폼 */
+  .loc-edit { background: #f7f9fc; border: 1.5px solid #dde7f3; border-radius: 11px; padding: 12px; margin-bottom: 8px; }
+  .loc-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .loc-edit input { border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 8px 10px; font-size: 0.82rem; font-family: inherit; }
+  .loc-edit .le-full { grid-column: 1 / -1; }
+  .loc-edit .le-coord { font-size: 0.74rem; color: #5a8a6e; margin-bottom: 8px; }
+  .loc-edit .le-btns { display: flex; gap: 7px; }
+  .loc-edit .le-results { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
+  .loc-edit .le-results:not(:empty) { margin-bottom: 8px; }
   .loc-add { border-top: 1px dashed #e3e8f0; padding-top: 14px; }
   .loc-add-title { font-size: 0.84rem; font-weight: 700; color: #0a3d7a; margin-bottom: 10px; }
   .loc-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
@@ -128,6 +144,14 @@
   .sug-reply-box button { background: #0a3d7a; color: #fff; border: none; border-radius: 9px; padding: 8px 13px; font-size: 0.78rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
   .sug-replied { background: #eef8f2; border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; color: #2f6a46; margin-top: 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
   .sug-replied strong { font-size: 0.7rem; color: #2f855a; display: block; margin-bottom: 3px; }
+  /* 제안 수정/삭제 폼 */
+  .sug-flabel { display: block; font-size: 0.7rem; font-weight: 700; color: #6b7a90; margin: 7px 0 3px; }
+  .sug-q-edit, .sug-a-edit { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 8px 10px; font-size: 0.83rem; font-family: inherit; resize: vertical; min-height: 50px; line-height: 1.5; }
+  .sug-a-edit { border-color: #d4e0f0; min-height: 58px; }
+  .sug-q-edit:focus, .sug-a-edit:focus { outline: none; border-color: #0a3d7a; }
+  .sug-actions { display: flex; gap: 7px; margin-top: 8px; }
+  .btn.red { background: #fff; color: #c0394b; border: 1.5px solid #f0d4d9; }
+  .btn.red:hover { background: #fdf3f4; opacity: 1; }
   .loc-add-grid input:focus { outline: none; border-color: #0a3d7a; }
   @media (max-width: 600px) { .loc-add-grid { grid-template-columns: 1fr; } }
   /* 로그 검색 */
@@ -659,14 +683,101 @@ async function loadLocList(){
   const { ok, data } = await adminCall({ action:'loc_list', token: curToken });
   if(!ok){ wrap.innerHTML = '<div style="color:#c0394b;font-size:0.82rem">목록을 불러오지 못했어요.</div>'; return; }
   const locs = data.locations || [];
-  wrap.innerHTML = locs.map(l => `
-    <div class="loc-row">
+  window._locs = {};
+  wrap.innerHTML = locs.map(l => {
+    window._locs[l.key] = l;
+    const off = l.enabled === false;
+    const badge = off ? '<span class="lr-badge stopped">중지됨</span>'
+      : (l.auto ? '<span class="lr-badge">본사 · 매일배치</span>'
+                : '<span class="lr-badge" style="background:#e9f6ee;color:#2f855a">매일배치</span>');
+    const toggleBtn = l.key === 'jb' ? '' :
+      `<button class="lr-toggle" onclick="toggleLoc('${esc(l.key)}',${off})">${off ? '▶ 재개' : '⏸ 중지'}</button>`;
+    return `
+    <div class="loc-row${off?' off':''}" id="lrow-${esc(l.key)}">
       <div class="lr-main">
-        <div class="lr-name">${esc(l.name)} ${l.auto?'<span class="lr-badge">본사 · 매일배치</span>':'<span class="lr-badge" style="background:#e9f6ee;color:#2f855a">매일배치</span>'}</div>
-        <div class="lr-meta">${esc(l.short)} · ${esc(l.region)} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
+        <div class="lr-name">${esc(l.name)} ${badge}</div>
+        <div class="lr-meta">${esc(l.short||'')} · ${esc(l.region||'')} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
       </div>
-      <button class="lr-del" ${l.key==='jb'?'disabled title="기본 위치는 삭제 불가"':''} onclick="deleteLocation('${esc(l.key)}','${esc(l.name)}')">삭제</button>
-    </div>`).join('') || '<div style="color:#8794a6;font-size:0.82rem">등록된 위치가 없어요.</div>';
+      <div class="lr-btns">
+        <button class="lr-edit" onclick="editLoc('${esc(l.key)}')">수정</button>
+        ${toggleBtn}
+        <button class="lr-del" ${l.key==='jb'?'disabled title="기본 위치는 삭제 불가"':''} onclick="deleteLocation('${esc(l.key)}','${esc(l.name)}')">삭제</button>
+      </div>
+    </div>
+    <div class="loc-edit" id="ledit-${esc(l.key)}" style="display:none"></div>`;
+  }).join('') || '<div style="color:#8794a6;font-size:0.82rem">등록된 위치가 없어요.</div>';
+}
+// 위치 중지/재개
+async function toggleLoc(key, currentlyOff){
+  const enabled = currentlyOff;   // 현재 중지면 → 재개(enabled=true)
+  if(!enabled && !confirm('이 위치를 중지할까요?\n(홈 위치 선택기에서 사라지고 배치 대상에서 제외돼요. 리뷰·데이터는 보존)')) return;
+  const { ok, data } = await adminCall({ action:'loc_toggle', token: curToken, key, enabled });
+  if(!ok){ alert('변경 실패: '+(data.error||'')); return; }
+  loadLocList();
+}
+// 인라인 수정 폼 열기
+const _editCoord = {};
+function editLoc(key){
+  const l = (window._locs||{})[key];
+  const box = document.getElementById('ledit-'+key);
+  if(!l || !box) return;
+  const open = box.style.display !== 'none';
+  document.querySelectorAll('.loc-edit').forEach(b=>b.style.display='none');
+  if(open) return;   // 토글: 이미 열려있으면 닫기
+  _editCoord[key] = null;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="loc-edit-grid">
+      <input id="le-name-${key}" value="${esc(l.name||'')}" placeholder="이름">
+      <input id="le-short-${key}" value="${esc(l.short||'')}" placeholder="짧은 이름">
+      <input id="le-region-${key}" class="le-full" value="${esc(l.region||'')}" placeholder="지역">
+    </div>
+    <div class="le-coord" id="le-coord-${key}">📍 좌표: ${(+l.lat).toFixed(5)}, ${(+l.lng).toFixed(5)} <span style="color:#8794a6">(바꾸려면 아래에서 검색)</span></div>
+    <div class="geo-search-row">
+      <input id="le-search-${key}" placeholder="좌표 다시 검색 (장소명/주소)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEditGeo('${key}');}">
+      <button class="btn gray" type="button" onclick="searchEditGeo('${key}')">🔍 검색</button>
+    </div>
+    <div class="le-results" id="le-results-${key}"></div>
+    <div class="msg" id="le-msg-${key}"></div>
+    <div class="le-btns">
+      <button class="btn" onclick="saveLoc('${key}')">저장</button>
+      <button class="btn gray" onclick="document.getElementById('ledit-${key}').style.display='none'">취소</button>
+    </div>`;
+}
+async function searchEditGeo(key){
+  const q = document.getElementById('le-search-'+key).value.trim();
+  const box = document.getElementById('le-results-'+key);
+  if(!q){ box.innerHTML='<div class="geo-empty">검색어를 입력하세요.</div>'; return; }
+  box.innerHTML = '<div class="geo-empty">검색 중…</div>';
+  const { ok, data } = await adminCall({ action:'geo_search', token: curToken, query: q });
+  if(!ok){ box.innerHTML='<div class="geo-empty">⚠️ '+(data.error||'검색 실패')+'</div>'; return; }
+  const list = data.results || [];
+  if(!list.length){ box.innerHTML='<div class="geo-empty">결과가 없어요.</div>'; return; }
+  window['_geoEdit_'+key] = list;
+  box.innerHTML = list.map((r,i)=>`
+    <button type="button" class="geo-opt" onclick='pickEditGeo("${key}",${i})'>
+      <div class="go-name">${esc(r.name)}</div>${r.address?`<div class="go-addr">${esc(r.address)}</div>`:''}
+    </button>`).join('');
+}
+function pickEditGeo(key,i){
+  const r = (window['_geoEdit_'+key]||[])[i];
+  if(!r) return;
+  _editCoord[key] = { lat:r.lat, lng:r.lng };
+  document.getElementById('le-results-'+key).innerHTML = '';
+  document.getElementById('le-coord-'+key).innerHTML =
+    `📍 새 좌표: <b>${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</b> <span style="color:#5a8a6e">(${esc(r.address||r.name)})</span>`;
+}
+async function saveLoc(key){
+  const msg = document.getElementById('le-msg-'+key);
+  const payload = { action:'loc_update', token: curToken, key,
+    name: document.getElementById('le-name-'+key).value.trim(),
+    short: document.getElementById('le-short-'+key).value.trim(),
+    region: document.getElementById('le-region-'+key).value.trim() };
+  if(_editCoord[key]){ payload.lat = _editCoord[key].lat; payload.lng = _editCoord[key].lng; }
+  msg.className='msg'; msg.textContent='저장 중…';
+  const { ok, data } = await adminCall(payload);
+  if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'수정 실패'); return; }
+  loadLocList();
 }
 // 검색으로 선택된 좌표 (위치 추가 시 사용)
 let pickedGeo = null;
@@ -743,19 +854,29 @@ async function loadSuggestions() {
         <span>${new Date(s.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
         ${s.ip?`<span>${esc(s.ip)}</span>`:''}
       </div>
-      <div class="sug-content">${esc(s.content)}</div>
       ${s.contact?`<div class="sug-contact">📬 ${esc(s.contact)}</div>`:''}
-      ${s.admin_reply?`<div class="sug-replied"><strong>✅ 관리자 답변</strong>${esc(s.admin_reply)}</div>`:''}
-      <div class="sug-reply-box">
-        <textarea id="sr-${s.id}" placeholder="답변을 입력하세요…">${esc(s.admin_reply||'')}</textarea>
-        <button onclick="replySuggest('${s.id}')">저장</button>
+      <label class="sug-flabel">질문 (수정 가능)</label>
+      <textarea class="sug-q-edit" id="sq-${s.id}">${esc(s.content)}</textarea>
+      <label class="sug-flabel">관리자 답변</label>
+      <textarea class="sug-a-edit" id="sr-${s.id}" placeholder="답변을 입력하세요…">${esc(s.admin_reply||'')}</textarea>
+      <div class="sug-actions">
+        <button class="btn" onclick="saveSuggestion('${s.id}')">저장</button>
+        <button class="btn red" onclick="deleteSuggestion('${s.id}')">삭제</button>
       </div>
     </div>`).join('');
 }
-async function replySuggest(id) {
+async function saveSuggestion(id) {
+  const content = (document.getElementById('sq-'+id)?.value||'').trim();
   const reply = (document.getElementById('sr-'+id)?.value||'').trim();
-  const { ok, data } = await adminCall({ action: 'suggestion_reply', token: curToken, id, reply });
+  if (!content) { alert('질문 내용은 비울 수 없어요.'); return; }
+  const { ok, data } = await adminCall({ action: 'suggestion_update', token: curToken, id, content, reply });
   if (!ok) { alert('저장 실패: '+(data.error||'')); return; }
+  loadSuggestions();
+}
+async function deleteSuggestion(id) {
+  if (!confirm('이 제안을 삭제할까요?\n(질문과 답변이 영구히 사라집니다)')) return;
+  const { ok, data } = await adminCall({ action: 'suggestion_delete', token: curToken, id });
+  if (!ok) { alert('삭제 실패: '+(data.error||'')); return; }
   loadSuggestions();
 }
 
