@@ -33,21 +33,36 @@
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   }
-  .app-header .title-block h1 { font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+  .app-header .title-block { min-width: 0; }
+  .app-header .title-block h1 { font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; white-space: nowrap; }
   .app-header .title-block h1 .hl-ax {
     background: linear-gradient(90deg, #ffd54a, #ffb300);
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 900; letter-spacing: 0;
   }
-  .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
-  .loc-sel {
-    margin-left: auto; flex-shrink: 0; cursor: pointer;
-    background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.35);
-    border-radius: 9px; padding: 7px 9px; font-size: 0.78rem; font-weight: 700; font-family: inherit;
-    max-width: 42vw;
+  .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 위치 선택 알약 */
+  .loc-pill {
+    margin-left: auto; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 3px;
+    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px; padding: 5px 8px 5px 10px; cursor: pointer;
+    transition: background .12s;
   }
-  .loc-sel option { color: #1a1a2e; }
+  .loc-pill:hover { background: rgba(255,255,255,0.24); }
+  .loc-pill .loc-pin { font-size: 0.78rem; line-height: 1; }
+  .loc-sel {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    background: transparent; color: #fff; border: none; cursor: pointer;
+    font-size: 0.78rem; font-weight: 700; font-family: inherit;
+    padding: 0 16px 0 2px;
+    /* 커스텀 caret(흰색 ▾) */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3l4 4 4-4' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 1px center;
+  }
+  .loc-sel:focus { outline: none; }
+  .loc-sel option { color: #1a1a2e; font-weight: 600; }
   .sync-badge {
     margin-left: auto;
     font-size: 0.72rem;
@@ -749,12 +764,15 @@
     <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
     <p id="header-sub">여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
   </div>
-  <select id="loc-sel" class="loc-sel" onclick="event.stopPropagation()"
-          onchange="event.stopPropagation();changeLocation(this.value)" title="기준 위치 선택">
-    <option value="jb">📍 JB빌딩(여의도)</option>
-    <option value="gwangju">📍 광주은행 본점</option>
-    <option value="jeonbuk">📍 전북은행 본점</option>
-  </select>
+  <div class="loc-pill" onclick="event.stopPropagation()" title="기준 위치 선택">
+    <span class="loc-pin">📍</span>
+    <select id="loc-sel" class="loc-sel"
+            onchange="event.stopPropagation();changeLocation(this.value)">
+      <option value="jb">JB빌딩</option>
+      <option value="gwangju">광주은행</option>
+      <option value="jeonbuk">전북은행</option>
+    </select>
+  </div>
 </div>
 
 <div class="tabs">
