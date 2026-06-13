@@ -36,6 +36,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add history.json index.html
+          git add data/ 2>/dev/null || true   # 배치된 위치 데이터(없을 수도 있음)
           git diff --staged --quiet || git commit -m "🍽️ $(TZ=Asia/Seoul date +'%Y-%m-%d') 점심 맛집 추천 업데이트"
           git push
           echo "✅ 배포 완료"

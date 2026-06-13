@@ -26,7 +26,56 @@ SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6I
 JB_LAT = 37.5240914884765
 JB_LNG = 126.927376521939
 
+# ── 위치 컨텍스트 (set_origin으로 위치별 전환) ──────────────────
+# 배치는 app_locations의 모든 위치를 순회한다. 아래 작업 변수는
+# 현재 처리 중인 위치를 가리키며, set_origin()이 좌표·지역·검색어를
+# 통째로 바꾸고 좌표/후보 캐시를 무효화한다. (기본값 = JB빌딩)
+ORIGIN_LAT = JB_LAT
+ORIGIN_LNG = JB_LNG
+REGION = "여의도"            # 지도 검색 보조 키워드 ('가게명 + REGION')
+PLACE_NAME = "JB빌딩"        # 프롬프트의 기준 건물명
+# Naver는 반경 검색 미지원 → 지역 키워드로 모아 거리 필터링
+REGION_QUERIES = ["여의도 맛집", "여의나루 맛집", "여의도 점심", "여의도 일식", "여의도 한식", "여의도 술집"]
+
 _coords_cache = {}
+_candidates_cache = None
+
+
+def set_origin(lat, lng, region, place):
+    """현재 처리할 위치로 전역 컨텍스트 전환 + 위치 종속 캐시 초기화."""
+    global ORIGIN_LAT, ORIGIN_LNG, REGION, PLACE_NAME, REGION_QUERIES
+    global _coords_cache, _candidates_cache
+    ORIGIN_LAT, ORIGIN_LNG = lat, lng
+    REGION = region
+    PLACE_NAME = place
+    REGION_QUERIES = [f"{region} 맛집", f"{region} 점심", f"{region} 한식",
+                      f"{region} 일식", f"{region} 술집"]
+    _coords_cache = {}       # 좌표 캐시는 거리 기준점이 바뀌면 무효
+    _candidates_cache = None  # 근처 후보도 위치별로 다시 수집
+
+
+def fetch_locations():
+    """app_locations(공개 SELECT)에서 배치 대상 위치 목록 조회.
+    실패 시 JB빌딩 1곳으로 폴백."""
+    fallback = [{"key": "jb", "name": "JB빌딩", "region": "여의도",
+                 "lat": JB_LAT, "lng": JB_LNG, "auto": True}]
+    try:
+        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto&order=sort.asc"
+        req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            rows = json.loads(r.read())
+        out = []
+        for l in rows:
+            try:
+                out.append({"key": l["key"], "name": l.get("name") or l["key"],
+                            "region": l.get("region") or "", "short": l.get("short") or l.get("name"),
+                            "lat": float(l["lat"]), "lng": float(l["lng"]), "auto": bool(l.get("auto"))})
+            except (KeyError, ValueError, TypeError):
+                continue
+        return out or fallback
+    except Exception as e:
+        print(f"⚠️  위치 목록 조회 실패 → JB빌딩만 처리: {e}")
+        return fallback
 
 
 def parse_minutes(distance):
@@ -76,7 +125,7 @@ def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
     try:
         for page in range(1, 4):  # 최대 3페이지(45곳)
             url = (f"https://dapi.kakao.com/v2/local/search/category.json"
-                   f"?category_group_code=FD6&x={JB_LNG}&y={JB_LAT}"
+                   f"?category_group_code=FD6&x={ORIGIN_LNG}&y={ORIGIN_LAT}"
                    f"&radius={radius}&sort=distance&size=15&page={page}")
             req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
             with urllib.request.urlopen(req, timeout=5) as r:
@@ -94,18 +143,14 @@ def fetch_kakao_candidates(kakao_key, radius=600, max_count=40):
     return out
 
 
-# 네이버 후보 수집용 키워드 (반경 검색 미지원 → 키워드 검색 후 거리 필터)
-NAVER_CAND_QUERIES = ["여의도 맛집", "여의나루 맛집", "여의도 점심", "여의도 일식", "여의도 한식", "여의도 술집"]
-
-
 def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
     """Naver 지역검색은 반경 검색을 지원하지 않아, 여러 키워드로 검색 후
-    JB빌딩 반경 내만 거리 필터링 → [(이름, 분, 카테고리)]."""
+    기준 위치 반경 내만 거리 필터링 → [(이름, 분, 카테고리)]."""
     if not (naver_id and naver_secret):
         return []
     out, seen = [], set()
     headers = {"X-Naver-Client-Id": naver_id, "X-Naver-Client-Secret": naver_secret}
-    for kw in NAVER_CAND_QUERIES:
+    for kw in REGION_QUERIES:
         try:
             q = urllib.parse.quote(kw)
             url = f"https://openapi.naver.com/v1/search/local.json?query={q}&display=5&sort=comment"
@@ -120,7 +165,7 @@ def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
                     lng, lat = float(it["mapx"]) / 1e7, float(it["mapy"]) / 1e7
                 except (KeyError, ValueError):
                     continue
-                dist_m = haversine_m(JB_LAT, JB_LNG, lat, lng)
+                dist_m = haversine_m(ORIGIN_LAT, ORIGIN_LNG, lat, lng)
                 if dist_m > radius * 1.4:   # 반경 밖 제외 (도로보정 감안 여유)
                     continue
                 seen.add(name)
@@ -131,9 +176,6 @@ def fetch_naver_candidates(naver_id, naver_secret, radius=600, max_count=30):
         except Exception as e:
             print(f"  ⚠️  Naver 후보 조회 실패({kw}): {e}")
     return out
-
-
-_candidates_cache = None
 
 
 def fetch_nearby_candidates(kakao_key, naver_id=None, naver_secret=None, max_count=45):
@@ -161,7 +203,7 @@ def get_kakao_place(name, kakao_key):
     cache_key = f"kakao:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
-    query = urllib.parse.quote(f"{clean_name(name)} 여의도")
+    query = urllib.parse.quote(f"{clean_name(name)} {REGION}")
     url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={query}&size=1"
     try:
         req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
@@ -188,7 +230,7 @@ def get_naver_place(name, naver_id, naver_secret):
     cache_key = f"naver:{name}"
     if cache_key in _coords_cache:
         return _coords_cache[cache_key]
-    query = urllib.parse.quote(f"{clean_name(name)} 여의도")
+    query = urllib.parse.quote(f"{clean_name(name)} {REGION}")
     url = f"https://openapi.naver.com/v1/search/local.json?query={query}&display=1"
     try:
         req = urllib.request.Request(url, headers={
@@ -224,14 +266,14 @@ def verify_and_enrich(restaurants, kakao_key, naver_id=None, naver_secret=None):
         # Kakao
         klat, klng, kcat = get_kakao_place(r["name"], kakao_key)
         if klat and klng:
-            distances["카카오"] = max(1, round(haversine_m(JB_LAT, JB_LNG, klat, klng) * 1.35 / 80))
+            distances["카카오"] = max(1, round(haversine_m(ORIGIN_LAT, ORIGIN_LNG, klat, klng) * 1.35 / 80))
             food_votes.append(_is_food_category(kcat))
 
         # Naver
         if naver_id and naver_secret:
             nlat, nlng, ncat = get_naver_place(r["name"], naver_id, naver_secret)
             if nlat and nlng:
-                distances["네이버"] = max(1, round(haversine_m(JB_LAT, JB_LNG, nlat, nlng) * 1.35 / 80))
+                distances["네이버"] = max(1, round(haversine_m(ORIGIN_LAT, ORIGIN_LNG, nlat, nlng) * 1.35 / 80))
                 food_votes.append(_is_food_category(ncat))
 
         # 검증 실패 판정: 어디서도 못 찾음 OR 모든 소스가 비음식점
@@ -297,11 +339,15 @@ def translate_weather_desc(desc):
     return desc  # 매칭 실패 시 원문 유지
 
 
-def fetch_weather():
-    """wttr.in으로 서울 여의도 날씨 (무료, 키 불필요). 실패 시 ''."""
+def fetch_weather(region="여의도"):
+    """wttr.in으로 해당 지역 날씨 (무료, 키 불필요). 실패 시 ''.
+    지역명 첫 단어를 도시 키워드로 사용 (예: '광주 동구' → '광주')."""
+    loc = (region or "여의도").split()[0] or "여의도"
+    if loc == "여의도":
+        loc = "Yeouido"   # 영문 키워드가 더 정확
     try:
         req = urllib.request.Request(
-            "https://wttr.in/Yeouido?format=j1&lang=ko",
+            f"https://wttr.in/{urllib.parse.quote(loc)}?format=j1&lang=ko",
             headers={"User-Agent": "curl/8", "Accept-Language": "ko"})
         with urllib.request.urlopen(req, timeout=6) as r:
             data = json.loads(r.read())
@@ -692,6 +738,9 @@ def update_history(new_entry, history_path="history.json"):
     # 맨 앞에 추가
     history["recommendations"].insert(0, new_entry)
 
+    parent = os.path.dirname(history_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(history_path, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
 
@@ -813,9 +862,11 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
     cand_block = ""
     if candidates:
-        cand_block = ("\n참고용 — JB빌딩 근처 실제 등록 음식점(거리 정확):\n"
+        cand_block = (f"\n참고용 — {PLACE_NAME} 근처 실제 등록 음식점(거리 정확):\n"
                       + ", ".join(candidates)
-                      + "\n위 목록을 우선 활용하되, 여기 없어도 네가 아는 여의도 유명 맛집은 추가해도 됨.\n")
+                      + f"\n위 목록을 우선 활용하되, 여기 없어도 네가 아는 {REGION} 유명 맛집은 추가해도 됨.\n")
+    # 위치 기준 문구 (프롬프트 머리말)
+    origin_desc = f"{REGION} {PLACE_NAME}".strip()
 
     # 다양성: 최근 추천한 곳은 겹치지 않게 + 거리대 분산
     avoid_line = ""
@@ -827,11 +878,11 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     if with_conditions:
         cond_list = " / ".join(CONDITIONS)
         hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
-        weather_line = "오늘 서울 여의도 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
+        weather_line = f"오늘 {REGION} 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
-        prompt = f"""{weather_line}여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
+        prompt = f"""{weather_line}{origin_desc} 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 {mood_ctx}{cand_block}{avoid_line}
-웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
+웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 2곳(둘 다 반드시 도보 10분 이내 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
 - by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
@@ -844,9 +895,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 {{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}],"by_condition":{{{cond_json}}}}}
 ```"""
     else:
-        prompt = f"""여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
+        prompt = f"""{origin_desc} 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
 {cand_block}{avoid_line}
-웹 검색으로 여의도/여의나루 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
+웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 2곳(둘 다 반드시 도보 10분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
@@ -897,6 +948,95 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     return entry, text
 
 
+def build_mood_ctx(weather, stock, headlines):
+    """날씨·주가·JB금융 소식을 맛집 선정에 반영할 분위기 블록으로."""
+    if not (weather or headlines or stock):
+        return ""
+    return (
+        "\n[오늘의 분위기 — 맛집 선정에 함께 반영]\n"
+        f"· 날씨: {weather or '정보 없음'}\n"
+        f"· JB금융지주 주가: {stock or '정보 없음'}\n"
+        f"· JB금융그룹 소식: {headlines or '특이사항 없음'}\n"
+        "위 날씨와 'JB금융 소식'의 분위기를 함께 판단해서 어울리는 맛집을 골라줘.\n"
+        "회사 소식 반영 가이드(과하지 않게 살짝 가중):\n"
+        "  · 호재(호실적·수상·자사주 매입·주가 강세 등) → 축하·회식 분위기 좋은 곳, 살짝 특별한 메뉴\n"
+        "  · 악재·무거운 소식(실적 부진·구조조정·시장 불안 등) → 든든하고 위로가 되는 따뜻한 메뉴\n"
+        "  · 중요 일정(주주총회·실적발표·인사·접대 이슈 등) → 격식 있고 조용한, 접대 가능한 식당\n"
+        "  · 특이사항 없으면 날씨와 평소 취향 위주로.\n"
+        "그리고 comment 한 줄에 오늘 날씨와 회사 분위기를 자연스럽게 녹여줘.\n")
+
+
+def build_entry(today, lunch, dinner, bar, daily_msg, weather, news):
+    """점심(최상위) + 저녁·술집(meals)으로 history 엔트리 구성."""
+    entry = {
+        "date": today,
+        "comment": lunch.get("comment", ""),
+        "message": daily_msg,
+        "weather": weather,
+        "news": news,
+        "restaurants": lunch.get("restaurants", []),
+        "extras": lunch.get("extras", []),
+        "by_condition": lunch.get("by_condition", {}),
+        "meals": {},
+    }
+    if dinner:
+        entry["meals"]["저녁"] = {
+            "restaurants": dinner.get("restaurants", []),
+            "extras": dinner.get("extras", []),
+            "by_condition": dinner.get("by_condition", {}),
+        }
+    if bar:
+        entry["meals"]["술집"] = {
+            "restaurants": bar.get("restaurants", []),
+            "extras": bar.get("extras", []),
+        }
+    return entry
+
+
+def process_location(client, loc, today, date_compact, kakao_key, naver_id, naver_secret, news, stock):
+    """한 위치의 점심·저녁·술집 추천을 생성해 history 파일에 저장.
+    JB빌딩(key=jb)은 index.html 갱신 + 이메일까지, 그 외는 data/history-{key}.json만."""
+    is_jb = loc["key"] == "jb"
+    path = "history.json" if is_jb else os.path.join("data", f"history-{loc['key']}.json")
+    set_origin(loc["lat"], loc["lng"], loc.get("region") or "여의도",
+               loc.get("short") or loc.get("name") or loc["key"])
+    print(f"\n=== 📍 [{loc['name']}] 추천 생성 → {path} ===")
+
+    recent = get_recent_names(path, days=3)
+    if recent:
+        print(f"🔁 최근 추천 {len(recent)}곳 회피: {', '.join(recent[:8])}…")
+    weather = fetch_weather(loc.get("region"))
+    headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
+    mood_ctx = build_mood_ctx(weather, stock, headlines)
+
+    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True,
+                                      kakao_key, naver_id, naver_secret, recent, mood_ctx)
+    if not lunch:
+        print(f"❌ [{loc['name']}] 점심 생성 실패 — 이 위치 건너뜀")
+        return False
+    time.sleep(70)  # rate limit(10k tokens/min) 회피
+    dinner, _ = generate_meal(client, today, date_compact, "저녁", True,
+                              kakao_key, naver_id, naver_secret, recent, mood_ctx)
+    time.sleep(70)
+    bar, _ = generate_meal(client, today, date_compact, "술집", False,
+                           kakao_key, naver_id, naver_secret, recent, mood_ctx)
+
+    daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
+    new_entry = build_entry(today, lunch, dinner, bar, daily_msg, weather, news)
+
+    print(f"📂 {path} 업데이트 중...")
+    history = update_history(new_entry, path)
+    print(f"✅ [{loc['name']}] 총 {len(history['recommendations'])}일치 저장됨")
+
+    if is_jb:
+        print("🌐 index.html 업데이트 중...")
+        update_index_html(history)
+        print("📧 이메일 발송 중...")
+        send_email(new_entry.get("restaurants", []), today, lunch_text, new_entry.get("comment", ""),
+                   weather=weather, news=news, extras=new_entry.get("extras", []), message=daily_msg)
+    return True
+
+
 def main():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -916,90 +1056,36 @@ def main():
     else:
         print("⚠️  Naver API 미설정 (Kakao만 사용)")
 
-    # 최근 며칠 추천 가게 (중복 방지) — 오늘 데이터 추가 전 history에서 조회
-    recent = get_recent_names(days=3)
-    if recent:
-        print(f"🔁 최근 추천 {len(recent)}곳 회피: {', '.join(recent[:8])}…")
+    # 배치 대상 위치 (DB의 app_locations 전체) — JB 먼저 처리되도록 정렬
+    locations = fetch_locations()
+    locations.sort(key=lambda l: (l["key"] != "jb",))  # jb 우선
+    print(f"📍 배치 대상 위치 {len(locations)}곳: {', '.join(l['name'] for l in locations)}")
 
-    # 날씨 + JB금융 뉴스 먼저 수집 → 추천 분위기에 반영
-    print("\n🌤️  날씨/뉴스 수집 중...")
-    weather = fetch_weather()
+    # JB금융 뉴스·주가는 전 위치 공통 → 1회만 수집해 모든 위치에 공유
+    print("\n📰 JB금융 뉴스·주가 수집 중 (전 위치 공통)...")
     news = fetch_jb_news(naver_id, naver_secret, today=today)
     stock = fetch_jb_stock()
-    headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
-    mood_ctx = ""
-    if weather or headlines or stock:
-        mood_ctx = (
-            "\n[오늘의 분위기 — 맛집 선정에 함께 반영]\n"
-            f"· 날씨: {weather or '정보 없음'}\n"
-            f"· JB금융지주 주가: {stock or '정보 없음'}\n"
-            f"· JB금융그룹 소식: {headlines or '특이사항 없음'}\n"
-            "위 날씨와 'JB금융 소식'의 분위기를 함께 판단해서 어울리는 맛집을 골라줘.\n"
-            "회사 소식 반영 가이드(과하지 않게 살짝 가중):\n"
-            "  · 호재(호실적·수상·자사주 매입·주가 강세 등) → 축하·회식 분위기 좋은 곳, 살짝 특별한 메뉴\n"
-            "  · 악재·무거운 소식(실적 부진·구조조정·시장 불안 등) → 든든하고 위로가 되는 따뜻한 메뉴\n"
-            "  · 중요 일정(주주총회·실적발표·인사·접대 이슈 등) → 격식 있고 조용한, 접대 가능한 식당\n"
-            "  · 특이사항 없으면 날씨와 평소 취향 위주로.\n"
-            "그리고 comment 한 줄에 오늘 날씨와 회사 분위기를 자연스럽게 녹여줘.\n")
-
-    # 점심(날씨+컨디션), 저녁(컨디션), 술집(기본만)
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
-    if not lunch:
-        print("❌ 점심 생성 실패 — 중단")
-        sys.exit(1)
-    time.sleep(70)  # rate limit(10k tokens/min) 회피 — 컨디션 10종이라 토큰 회복 여유 필요
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True, kakao_key, naver_id, naver_secret, recent, mood_ctx)
-    time.sleep(70)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False, kakao_key, naver_id, naver_secret, recent, mood_ctx)
-
-    # JB 소식 보강: 웹검색(AX/AI/디지털/혁신/외국인) + 네이버 병합 (식사 생성 후 → rate limit 여유)
-    time.sleep(40)
+    time.sleep(20)
     news_web = fetch_jb_news_web(client, today=today)
     news = merge_news(news_web, news, count=6)
     news = prioritize_focus_news(news, count=3)   # AX·AI·디지털을 최상단으로
     focus_n = sum(1 for n in news if n.get("focus"))
     print(f"📰 최종 JB 소식 {len(news)}건 (AX·AI·디지털 {focus_n}건 최상단)")
 
-    daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
+    ok_count = 0
+    for i, loc in enumerate(locations):
+        try:
+            if process_location(client, loc, today, date_compact, kakao_key, naver_id, naver_secret, news, stock):
+                ok_count += 1
+        except Exception as e:
+            print(f"❌ [{loc.get('name')}] 처리 중 오류 (계속 진행): {e}")
+        if i < len(locations) - 1:
+            time.sleep(40)  # 위치 간 rate limit 여유
 
-    # 엔트리: 점심은 최상위(이메일/카카오 호환), 저녁·술집은 meals에 저장
-    new_entry = {
-        "date": today,
-        "comment": lunch.get("comment", ""),
-        "message": daily_msg,
-        "weather": weather,
-        "news": news,
-        "restaurants": lunch.get("restaurants", []),
-        "extras": lunch.get("extras", []),
-        "by_condition": lunch.get("by_condition", {}),
-        "meals": {},
-    }
-    if dinner:
-        new_entry["meals"]["저녁"] = {
-            "restaurants": dinner.get("restaurants", []),
-            "extras": dinner.get("extras", []),
-            "by_condition": dinner.get("by_condition", {}),
-        }
-    if bar:
-        new_entry["meals"]["술집"] = {
-            "restaurants": bar.get("restaurants", []),
-            "extras": bar.get("extras", []),
-        }
-
-    text = lunch_text  # 이메일 본문 참고용
-
-    print("\n📂 history.json 업데이트 중...")
-    history = update_history(new_entry)
-    print(f"✅ 총 {len(history['recommendations'])}일치 데이터 저장됨")
-
-    print("\n🌐 index.html 업데이트 중...")
-    update_index_html(history)
-
-    print("\n📧 이메일 발송 중...")
-    send_email(new_entry.get("restaurants", []), today, text, new_entry.get("comment", ""),
-               weather=weather, news=news, extras=new_entry.get("extras", []), message=daily_msg)
-
-    print("\n✨ 완료!")
+    if ok_count == 0:
+        print("❌ 모든 위치 생성 실패")
+        sys.exit(1)
+    print(f"\n✨ 완료! {ok_count}/{len(locations)}개 위치 생성됨")
 
 
 if __name__ == "__main__":

@@ -1139,7 +1139,27 @@ let curLoc = 'jb';
 try { const sv = localStorage.getItem('jbloc'); if (sv && LOCATIONS[sv]) curLoc = sv; } catch(e) {}
 function LOC() { return LOCATIONS[curLoc]; }
 function locParams() { const l = LOC(); return { lat: l.lat, lng: l.lng, region: l.region, place: l.name }; }
-function isBankLoc() { return !LOC().auto; }   // JB 외(광주·전북)는 실시간 추천
+function isBankLoc() { return !LOC().auto; }   // JB 외(광주·전북)는 비-자동 위치
+
+// 현재 비-JB 위치의 배치 데이터 (null = 미로딩/없음 → 실시간 fallback)
+let curLocHistory = null;
+// 현재 위치의 추천 데이터 배열 (JB=내장 / 그 외=배치 파일)
+function histData() { return curLoc === 'jb' ? HISTORY_DATA : (curLocHistory || []); }
+// 배치 데이터로 렌더할지: JB이거나, 비-JB라도 배치 파일이 있으면 true
+function useBatch() { return curLoc === 'jb' || !!(curLocHistory && curLocHistory.length); }
+// data/history-{key}.json 로드 → curLocHistory 세팅 (없으면 null 유지 → 실시간)
+async function loadLocHistory(key) {
+  curLocHistory = null;
+  if (key === 'jb') return;
+  try {
+    const res = await fetch(`data/history-${key}.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const j = await res.json();
+      const recs = Array.isArray(j) ? j : (j.recommendations || []);
+      if (recs && recs.length) curLocHistory = recs;
+    }
+  } catch (e) { /* 배치 파일 없음 → 실시간 추천으로 진행 */ }
+}
 function applyLocationUI() {
   const lbl = document.getElementById('loc-btn-label'); if (lbl) lbl.textContent = LOC().short;
   const sub = document.getElementById('header-sub'); if (sub) sub.textContent = LOC().subtitle;
@@ -1151,7 +1171,7 @@ function toggleLocMenu(e) {
 }
 function closeLocMenu() { document.querySelector('.loc-wrap')?.classList.remove('open'); }
 document.addEventListener('click', closeLocMenu);   // 바깥 클릭 시 닫힘
-function changeLocation(key) {
+async function changeLocation(key) {
   closeLocMenu();
   if (!LOCATIONS[key]) return;
   if (key === curLoc) return;
@@ -1163,8 +1183,9 @@ function changeLocation(key) {
   placeDetails = {};
   try { localStorage.removeItem('placeDetails'); } catch(e) {}
   track('location_change', LOC().name);
+  await loadLocHistory(key);   // 비-JB: 배치 데이터 우선 로드(없으면 실시간 fallback)
   loadComments();     // 위치별 리뷰 재로드
-  renderHistory();    // 추천 영역 재구성 (JB=배치 / 은행=실시간)
+  renderHistory();    // 추천 영역 재구성 (배치 있으면 배치 / 없으면 실시간)
   renderStats();
 }
 
@@ -1190,8 +1211,13 @@ function init() {
   renderLocMenu();      // 위치 드롭다운 옵션 렌더(기본값)
   applyLocationUI();    // 저장된 기준 위치 → 선택기·부제 반영
   loadLocations();      // DB에서 위치 목록 동기화(관리자 추가분 포함)
-  renderHistory();
-  renderStats();
+  // 저장된 위치가 비-JB면 배치 데이터 먼저 로드 후 렌더
+  if (curLoc !== 'jb') {
+    loadLocHistory(curLoc).then(() => { renderHistory(); renderStats(); });
+  } else {
+    renderHistory();
+    renderStats();
+  }
   loadComments();
   loadStock();
   track('visit');
@@ -1522,7 +1548,7 @@ function renderGroup(group, bare) {
 // ── 오늘의 추천 (홈) ──────────────────────────────────────────
 function renderHistory() {
   const el = document.getElementById('tab-history');
-  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  const sorted = [...histData()].sort((a,b) => b.date.localeCompare(a.date));
 
   // 상단 날짜 + 날씨 배너
   const today = new Date();
@@ -1531,12 +1557,12 @@ function renderHistory() {
   currentMeal = defMeal;
   const todayData = sorted.find(g => g.by_condition) || sorted[0];
   // 날짜는 '추천 데이터의 실제 생성일' 기준 (주말·미생성일 날짜 어긋남 방지)
-  const recDate = (!isBankLoc() && todayData && todayData.date) ? new Date(todayData.date + 'T00:00:00') : today;
+  const recDate = (useBatch() && todayData && todayData.date) ? new Date(todayData.date + 'T00:00:00') : today;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const isStale = !isBankLoc() && !!(todayData && todayData.date && todayData.date !== todayStr);
+  const isStale = useBatch() && !!(todayData && todayData.date && todayData.date !== todayStr);
   const dateLabel = `${recDate.getFullYear()}년 ${recDate.getMonth()+1}월 ${recDate.getDate()}일 (${days[recDate.getDay()]})`
     + (isStale ? ' <span class="tb-stale">· 최근 추천</span>' : '');
-  const bank = isBankLoc();   // 광주·전북 = 실시간 추천(배치 데이터 없음)
+  const bank = !useBatch();   // 배치 데이터 없는 위치 = 실시간 추천
   const weather = bank ? '' : ((todayData && todayData.weather) || '');
   const message = bank
     ? `📍 ${LOC().name} 근처 맛집을 AI가 실시간으로 추천해요.`
@@ -1602,12 +1628,12 @@ function renderHistory() {
     </div>
     <div id="today-group"></div>
     <button class="nearby-cta" onclick="goNearby()">📍 이 근처 다른 맛집 찾아서 리뷰하기 →</button>`;
-  if (!sorted.length && !isBankLoc()) { el.innerHTML = prefHtml; return; }
+  if (!sorted.length && useBatch()) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
   updateMealInfo();
   updateCondChips();
-  if (isBankLoc()) loadBankRecommend();   // 은행 거점: 실시간 추천
-  else renderCondGroup();                 // JB: 미리 생성된 배치 데이터
+  if (useBatch()) renderCondGroup();      // 배치 데이터(JB·배치된 위치)
+  else loadBankRecommend();               // 배치 없는 위치: 실시간 추천
   loadHistory();           // 공유 검색기록 서버에서 불러오기
 }
 
@@ -1842,7 +1868,7 @@ function renderCustomGroup() {
 
 // 오늘 데이터 / 시간대별 데이터 추출
 function getDay() {
-  const sorted = [...HISTORY_DATA].sort((a,b) => b.date.localeCompare(a.date));
+  const sorted = [...histData()].sort((a,b) => b.date.localeCompare(a.date));
   return sorted.find(g => g.by_condition) || sorted[0];
 }
 function getMealData(day, meal) {
@@ -1854,7 +1880,7 @@ function getMealData(day, meal) {
 // 컨디션 칩 표시/숨김 + 선택 동기화 (JB=by_condition 있을 때 / 은행=항상 노출)
 function updateCondChips() {
   const md = getMealData(getDay(), currentMeal);
-  const hasCond = isBankLoc() || !!(md && md.by_condition && Object.keys(md.by_condition).length);
+  const hasCond = !useBatch() || !!(md && md.by_condition && Object.keys(md.by_condition).length);
   const wrap = document.querySelector('.pref-chips');
   if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
   syncCondChips();
@@ -1881,7 +1907,7 @@ function selectMeal(el) {
   document.getElementById('pref-progress').classList.remove('show');
   updateMealInfo();
   updateCondChips();
-  if (isBankLoc()) loadBankRecommend(); else renderCondGroup();
+  if (useBatch()) renderCondGroup(); else loadBankRecommend();
   loadHistory();   // 시간대별 검색기록 갱신
 }
 
@@ -1921,7 +1947,7 @@ function syncCondChips() {
 
 // 선택 상태에 따라 추천 갱신: 0개=기본, 1개=미리생성(없으면 백엔드), 2개↑=조합 백엔드
 function applyConds() {
-  if (isBankLoc()) {            // 은행 거점: 컨디션 조합을 실시간 추천으로
+  if (!useBatch()) {           // 배치 없는 위치: 컨디션 조합을 실시간 추천으로
     currentCond = currentConds.length === 1 ? currentConds[0] : '';
     loadBankRecommend();
     return;
