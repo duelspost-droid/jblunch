@@ -55,12 +55,12 @@ function parseMinutes(distance: unknown): number | null {
   return Math.min(...nums.map((s) => parseInt(s)));
 }
 
-// JB 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순)
-async function kakaoNearby(kakaoKey: string): Promise<string[]> {
+// 기준 위치 반경 내 가까운 검증 음식점 (Kakao 카테고리 거리순)
+async function kakaoNearby(kakaoKey: string, lat: number, lng: number): Promise<string[]> {
   if (!kakaoKey) return [];
   try {
     const url = `https://dapi.kakao.com/v2/local/search/category.json` +
-      `?category_group_code=FD6&x=${JB_LNG}&y=${JB_LAT}&radius=600&sort=distance&size=15`;
+      `?category_group_code=FD6&x=${lng}&y=${lat}&radius=600&sort=distance&size=15`;
     const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
     if (!r.ok) return [];
     const data = await r.json();
@@ -74,12 +74,12 @@ async function kakaoNearby(kakaoKey: string): Promise<string[]> {
   }
 }
 
-// 여의도 인기·유명 맛집 (Naver 리뷰순 — 조금 멀어도 다양성용)
-async function naverPopular(meal: string, id: string, secret: string): Promise<string[]> {
+// 지역 인기·유명 맛집 (Naver 리뷰순 — 조금 멀어도 다양성용)
+async function naverPopular(meal: string, id: string, secret: string, region: string): Promise<string[]> {
   if (!id || !secret) return [];
   const queries = meal === "술집"
-    ? ["여의도 술집", "여의도 이자카야", "여의도 와인바"]
-    : ["여의도 맛집", "여의도 유명 맛집", `여의도 ${meal}`];
+    ? [`${region} 술집`, `${region} 이자카야`, `${region} 와인바`]
+    : [`${region} 맛집`, `${region} 유명 맛집`, `${region} ${meal}`];
   const seen = new Set<string>();
   const out: string[] = [];
   const results = await Promise.all(queries.map(async (kw) => {
@@ -108,10 +108,10 @@ async function naverPopular(meal: string, id: string, secret: string): Promise<s
 }
 
 // 후보 블록 = 가까운 검증(Kakao) + 인기 유명(Naver) — 병렬
-async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string): Promise<string> {
+async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string, lat: number, lng: number, region: string): Promise<string> {
   const [near, popular] = await Promise.all([
-    kakaoNearby(kakaoKey),
-    naverPopular(meal, naverId, naverSecret),
+    kakaoNearby(kakaoKey, lat, lng),
+    naverPopular(meal, naverId, naverSecret, region),
   ]);
   if (!near.length && !popular.length) return "";
   let block = "\n[참고 목록 — 실제 존재하는 가게]\n";
@@ -120,9 +120,9 @@ async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, 
   return block;
 }
 
-async function kakaoPlace(name: string, key: string): Promise<[number, number, string] | null> {
+async function kakaoPlace(name: string, key: string, region: string): Promise<[number, number, string] | null> {
   try {
-    const q = encodeURIComponent(`${cleanName(name)} 여의도`);
+    const q = encodeURIComponent(`${cleanName(name)} ${region}`);
     const r = await fetch(
       `https://dapi.kakao.com/v2/local/search/keyword.json?query=${q}&size=1`,
       { headers: { Authorization: `KakaoAK ${key}` } },
@@ -139,9 +139,9 @@ async function kakaoPlace(name: string, key: string): Promise<[number, number, s
   }
 }
 
-async function naverPlace(name: string, id: string, secret: string): Promise<[number, number, string] | null> {
+async function naverPlace(name: string, id: string, secret: string, region: string): Promise<[number, number, string] | null> {
   try {
-    const q = encodeURIComponent(`${cleanName(name)} 여의도`);
+    const q = encodeURIComponent(`${cleanName(name)} ${region}`);
     const r = await fetch(
       `https://openapi.naver.com/v1/search/local.json?query=${q}&display=1`,
       { headers: { "X-Naver-Client-Id": id, "X-Naver-Client-Secret": secret } },
@@ -162,19 +162,22 @@ async function verifyOne(
   kakaoKey: string,
   naverId: string,
   naverSecret: string,
+  lat = JB_LAT,
+  lng = JB_LNG,
+  region = "여의도",
 ): Promise<void> {
   const name = cleanName(String(r.name || ""));
   r.name = name;
 
   const [k, n] = await Promise.all([
-    kakaoKey ? kakaoPlace(name, kakaoKey) : Promise.resolve(null),
-    naverId && naverSecret ? naverPlace(name, naverId, naverSecret) : Promise.resolve(null),
+    kakaoKey ? kakaoPlace(name, kakaoKey, region) : Promise.resolve(null),
+    naverId && naverSecret ? naverPlace(name, naverId, naverSecret, region) : Promise.resolve(null),
   ]);
 
   const dists: Record<string, number> = {};
   const votes: (boolean | null)[] = [];
-  if (k) { dists["카카오"] = walkMin(haversineM(JB_LAT, JB_LNG, k[0], k[1])); votes.push(isFood(k[2])); }
-  if (n) { dists["네이버"] = walkMin(haversineM(JB_LAT, JB_LNG, n[0], n[1])); votes.push(isFood(n[2])); }
+  if (k) { dists["카카오"] = walkMin(haversineM(lat, lng, k[0], k[1])); votes.push(isFood(k[2])); }
+  if (n) { dists["네이버"] = walkMin(haversineM(lat, lng, n[0], n[1])); votes.push(isFood(n[2])); }
 
   const foundFood = !(votes.length && votes.every((v) => v === false));
   if (!Object.keys(dists).length || !foundFood) {
@@ -196,6 +199,11 @@ Deno.serve(async (req) => {
     const text = (body.text || "").toString().trim();
     const meal = MEAL_DESC[body.meal] ? body.meal : "점심";
     const describe = (body.describe || "").toString().trim();
+    // 기준 위치(선택한 지점) — 없으면 JB빌딩(여의도) 기본값
+    const lat = Number(body.lat) || JB_LAT;
+    const lng = Number(body.lng) || JB_LNG;
+    const region = (body.region || "여의도").toString().trim() || "여의도";
+    const place = (body.place || "JB빌딩").toString().trim() || "JB빌딩";
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "API key not set" }, 500);
@@ -257,9 +265,9 @@ Deno.serve(async (req) => {
       // 면책/사과성 응답이면 소개로 쓰지 않음 (프론트가 기본 설명으로 폴백)
       if (/죄송|정보가 부족|잘 모르|알 수 없|확실하게 알|제공하는 것을 피|작성해드리겠습니다/.test(intro)) intro = "";
       if (!["저렴", "보통", "비쌈"].includes(price)) price = "";
-      // 카카오·네이버 양쪽 거리 실측 (JB빌딩 기준)
+      // 카카오·네이버 양쪽 거리 실측 (선택 위치 기준)
       const dObj: Record<string, unknown> = { name: describe };
-      await verifyOne(dObj, kakaoKey, naverId, naverSecret);
+      await verifyOne(dObj, kakaoKey, naverId, naverSecret, lat, lng, region);
       const result = { intro, price, menu, distance: dObj.distance || "", verified: dObj.verified };
       // ② 결과를 서버 캐시에 저장 (upsert) — 다음부터 모든 사용자가 재사용
       if (SB_URL && SB_SRV && intro) {
@@ -275,21 +283,21 @@ Deno.serve(async (req) => {
     }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명)
-    const candBlock = await fetchCandidates(meal, kakaoKey, naverId, naverSecret);
+    const candBlock = await fetchCandidates(meal, kakaoKey, naverId, naverSecret, lat, lng, region);
 
     const condLine = text
       ? `\n사용자가 입력한 오늘의 컨디션/취향: "${text}" — 이걸 최우선으로 반영해줘.
 참고 해석: "와인"=와인바·와인 페어링 좋은 곳 / "임원"·"접대"·"상사"=임원 모시거나 접대하기 좋은 격식 있는 고급 식당(프라이빗 룸 선호) / "회식"=단체 회식 좋은 곳.`
       : "";
 
-    const prompt = `너는 서울 여의도 JB빌딩(여의나루로 77, 영등포구 여의도동) 근처 맛집 큐레이터야.
+    const prompt = `너는 ${region} ${place} 근처 맛집 큐레이터야.
 사용자에게 오늘 ${meal} 자리로 갈 만한, ${MEAL_DESC[meal]} 5곳을 추천해줘.${condLine}
 ${candBlock}
 규칙:
-- 실제 존재하는 여의도/여의나루 근처 가게로, 시간대(${meal})에 어울리게 골라.
+- 실제 존재하는 ${region}(${place} 도보권) 근처 가게로, 시간대(${meal})에 어울리게 골라.
 - restaurants: 가까운 검증 맛집 5곳 (도보 가까운 곳 우선, 음식 종류 최대한 다양하게).
 - extras: 추가 추천 2곳 — 아래 형식 그대로 2개 (둘 다 반드시 도보 10분 이내의 실제 가게):
-  · 1곳은 tag="근처유명" — 도보 10분 이내의 여의도 유명 맛집
+  · 1곳은 tag="근처유명" — 도보 10분 이내의 ${region} 유명 맛집
   · 1곳은 tag="검색유명" — 웹에서 평이 좋은 유명 맛집이되 도보 10분 이내
   · extras는 restaurants 5곳과 겹치지 않게.
 - comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
@@ -340,7 +348,7 @@ ${candBlock}
 
     // ③ 거리 실측 + 검증 — 기본 5곳 + 추가 2곳 모두 병렬 처리 (속도)
     await Promise.all(
-      [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret)),
+      [...restaurants, ...extras].map((r) => verifyOne(r, kakaoKey, naverId, naverSecret, lat, lng, region)),
     );
     restaurants.forEach((r, i) => { r.id = `custom-${stamp}-${i + 1}`; });
     // 추가 추천은 도보 10분 이내 + 검증된 곳만 (거리 미확인/초과 제외)

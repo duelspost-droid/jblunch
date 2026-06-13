@@ -41,6 +41,13 @@
     font-weight: 900; letter-spacing: 0;
   }
   .app-header .title-block p { font-size: 0.74rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .loc-sel {
+    margin-left: auto; flex-shrink: 0; cursor: pointer;
+    background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 9px; padding: 7px 9px; font-size: 0.78rem; font-weight: 700; font-family: inherit;
+    max-width: 42vw;
+  }
+  .loc-sel option { color: #1a1a2e; }
   .sync-badge {
     margin-left: auto;
     font-size: 0.72rem;
@@ -740,8 +747,14 @@
   <span class="logo">🍽️</span>
   <div class="title-block">
     <h1>JB<span class="hl-ax">×AX</span> 맛집 트래커</h1>
-    <p>여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
+    <p id="header-sub">여의도 JB빌딩 근처 · 점심·저녁·술집 추천</p>
   </div>
+  <select id="loc-sel" class="loc-sel" onclick="event.stopPropagation()"
+          onchange="event.stopPropagation();changeLocation(this.value)" title="기준 위치 선택">
+    <option value="jb">📍 JB빌딩(여의도)</option>
+    <option value="gwangju">📍 광주은행 본점</option>
+    <option value="jeonbuk">📍 전북은행 본점</option>
+  </select>
 </div>
 
 <div class="tabs">
@@ -990,13 +1003,43 @@ function bestIntro(name) {
   return base.feature || '';
 }
 // 이름으로 장소검색 백엔드(Kakao/Naver) 재조회 → 상세 채우기 (캐시에 없을 때)
+// ── 기준 위치 (JB금융 거점 3곳) ───────────────────────────────
+const LOCATIONS = {
+  jb:      { name: 'JB빌딩 (여의도)',  short: 'JB빌딩',      region: '여의도',     lat: 37.5240914884765, lng: 126.927376521939, subtitle: '여의도 JB빌딩 근처 · 점심·저녁·술집 추천', auto: true },
+  gwangju: { name: '광주은행 본점',    short: '광주은행',    region: '광주 동구',  lat: 35.1548269706022, lng: 126.912881392668, subtitle: '광주은행 본점 근처 · 실시간 맛집 추천', auto: false },
+  jeonbuk: { name: '전북은행 본점',    short: '전북은행',    region: '전주 덕진구', lat: 35.8397433521131, lng: 127.131381897342, subtitle: '전북은행 본점 근처 · 실시간 맛집 추천', auto: false },
+};
+let curLoc = 'jb';
+try { const sv = localStorage.getItem('jbloc'); if (sv && LOCATIONS[sv]) curLoc = sv; } catch(e) {}
+function LOC() { return LOCATIONS[curLoc]; }
+function locParams() { const l = LOC(); return { lat: l.lat, lng: l.lng, region: l.region, place: l.name }; }
+function isBankLoc() { return !LOC().auto; }   // JB 외(광주·전북)는 실시간 추천
+function applyLocationUI() {
+  const sel = document.getElementById('loc-sel'); if (sel) sel.value = curLoc;
+  const sub = document.getElementById('header-sub'); if (sub) sub.textContent = LOC().subtitle;
+}
+function changeLocation(key) {
+  if (!LOCATIONS[key]) return;
+  curLoc = key;
+  try { localStorage.setItem('jbloc', key); } catch(e) {}
+  applyLocationUI();
+  // 위치가 바뀌면 거리·추천·리뷰가 모두 달라짐 → 캐시/결과 초기화 후 재구성
+  customResult = null;
+  placeDetails = {};
+  try { localStorage.removeItem('placeDetails'); } catch(e) {}
+  track('location_change', LOC().name);
+  loadComments();     // 위치별 리뷰 재로드
+  renderHistory();    // 추천 영역 재구성 (JB=배치 / 은행=실시간)
+  renderStats();
+}
+
 async function fetchPlaceDetail(name) {
   if (placeDetails[name] && placeDetails[name].cuisine) return placeDetails[name];
   try {
     const res = await fetch(PLACES_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: name })
+      body: JSON.stringify({ query: name, lat: LOC().lat, lng: LOC().lng })
     });
     const data = await res.json();
     const list = Array.isArray(data.places) ? data.places : [];
@@ -1009,6 +1052,7 @@ async function fetchPlaceDetail(name) {
 // ── Supabase API ──────────────────────────────────────────────
 // 1) 내장 데이터로 즉시 렌더 → 2) 리뷰는 백그라운드로 불러와 갱신
 function init() {
+  applyLocationUI();    // 저장된 기준 위치 → 선택기·부제 반영
   renderHistory();
   renderStats();
   loadComments();
@@ -1102,7 +1146,7 @@ window.addEventListener('hashchange', () => {
 async function loadComments() {
   setBadge('loading', '동기화 중…');
   try {
-    const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&order=created_at.asc`, { headers: SB_HEADERS });
+    const r2 = await fetch(`${SB_URL}/rest/v1/comments?select=*&location=eq.${encodeURIComponent(curLoc)}&order=created_at.asc`, { headers: SB_HEADERS });
     if (!r2.ok) throw new Error(r2.status);
     const comments = await r2.json();
     commentsState = {};
@@ -1155,6 +1199,7 @@ async function insertComment(restaurantId, reviewerName, content, rating, meal, 
     rating: rating || null,
     meal: meal || null,
     image_url: imageUrl || null,
+    location: curLoc,
     created_at: new Date().toISOString()
   };
   const res = await fetch(`${SB_URL}/rest/v1/comments`, {
@@ -1349,14 +1394,17 @@ function renderHistory() {
   currentMeal = defMeal;
   const todayData = sorted.find(g => g.by_condition) || sorted[0];
   // 날짜는 '추천 데이터의 실제 생성일' 기준 (주말·미생성일 날짜 어긋남 방지)
-  const recDate = (todayData && todayData.date) ? new Date(todayData.date + 'T00:00:00') : today;
+  const recDate = (!isBankLoc() && todayData && todayData.date) ? new Date(todayData.date + 'T00:00:00') : today;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const isStale = !!(todayData && todayData.date && todayData.date !== todayStr);
+  const isStale = !isBankLoc() && !!(todayData && todayData.date && todayData.date !== todayStr);
   const dateLabel = `${recDate.getFullYear()}년 ${recDate.getMonth()+1}월 ${recDate.getDate()}일 (${days[recDate.getDay()]})`
     + (isStale ? ' <span class="tb-stale">· 최근 추천</span>' : '');
-  const weather = (todayData && todayData.weather) || '';
-  const message = (todayData && todayData.message) || todayData?.comment || '오늘도 맛있는 한 끼 되세요!';
-  const news = (todayData && todayData.news) || [];
+  const bank = isBankLoc();   // 광주·전북 = 실시간 추천(배치 데이터 없음)
+  const weather = bank ? '' : ((todayData && todayData.weather) || '');
+  const message = bank
+    ? `📍 ${LOC().name} 근처 맛집을 AI가 실시간으로 추천해요.`
+    : ((todayData && todayData.message) || todayData?.comment || '오늘도 맛있는 한 끼 되세요!');
+  const news = bank ? [] : ((todayData && todayData.news) || []);
   const weatherLine = weather ? `<div class="tb-weather">🌤️ ${escHtml(weather)}</div>` : '';
   const msgLine = message ? `<div class="tb-msg">💬 ${escHtml(message)}</div>` : '';
   const newsLine = news.length ? `
@@ -1377,7 +1425,9 @@ function renderHistory() {
       <button class="meal-btn${defMeal==='저녁'?' on':''}" data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
       <button class="meal-btn${defMeal==='술집'?' on':''}" data-meal="술집" onclick="selectMeal(this)">🍺 술집</button>
     </div>
-    <div class="batch-note">🌙 점심·저녁·술집 추천은 <b>평일(월~금) 새벽 1시경</b>에 그날치를 한 번에 미리 생성해요.</div>`;
+    <div class="batch-note">${bank
+      ? `📍 <b>${escHtml(LOC().name)}</b> 기준 실시간 추천이에요. 끼니·컨디션을 바꾸면 그 위치 맛집을 새로 찾아드려요.`
+      : '🌙 점심·저녁·술집 추천은 <b>평일(월~금) 새벽 1시경</b>에 그날치를 한 번에 미리 생성해요.'}</div>`;
 
   const prefHtml = bannerHtml + `
     <div class="pref-card">
@@ -1415,11 +1465,12 @@ function renderHistory() {
     </div>
     <div id="today-group"></div>
     <button class="nearby-cta" onclick="goNearby()">📍 이 근처 다른 맛집 찾아서 리뷰하기 →</button>`;
-  if (!sorted.length) { el.innerHTML = prefHtml; return; }
+  if (!sorted.length && !isBankLoc()) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
   updateMealInfo();
   updateCondChips();
-  renderCondGroup();        // 시간대별 미리 생성된 데이터
+  if (isBankLoc()) loadBankRecommend();   // 은행 거점: 실시간 추천
+  else renderCondGroup();                 // JB: 미리 생성된 배치 데이터
   loadHistory();           // 공유 검색기록 서버에서 불러오기
 }
 
@@ -1610,7 +1661,7 @@ async function generateRecommend(text, meal, saveHist) {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, meal })
+      body: JSON.stringify({ text, meal, ...locParams() })
     });
     const data = await res.json();
     comment = data.comment || '';
@@ -1663,13 +1714,20 @@ function getMealData(day, meal) {
   return (day.meals && day.meals[meal]) || null;
 }
 
-// 컨디션 칩 표시/숨김 + 선택 동기화 (by_condition 있을 때만 노출)
+// 컨디션 칩 표시/숨김 + 선택 동기화 (JB=by_condition 있을 때 / 은행=항상 노출)
 function updateCondChips() {
   const md = getMealData(getDay(), currentMeal);
-  const hasCond = !!(md && md.by_condition && Object.keys(md.by_condition).length);
+  const hasCond = isBankLoc() || !!(md && md.by_condition && Object.keys(md.by_condition).length);
   const wrap = document.querySelector('.pref-chips');
   if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
   syncCondChips();
+}
+// 은행 거점: 실시간(analyze)으로 현재 끼니·컨디션 추천 로드
+async function loadBankRecommend() {
+  const tg = document.getElementById('today-group');
+  if (tg) tg.innerHTML = `<div class="empty">📍 ${escHtml(LOC().name)} 근처 ${currentMeal} 맛집을 실시간으로 찾는 중…</div>`;
+  const text = (currentConds && currentConds.length) ? currentConds.join(', ') : '';
+  await generateRecommend(text, currentMeal, false);
 }
 
 // 시간대 토글 (점심/저녁/술집) — 모두 미리 생성된 데이터 사용
@@ -1686,7 +1744,7 @@ function selectMeal(el) {
   document.getElementById('pref-progress').classList.remove('show');
   updateMealInfo();
   updateCondChips();
-  renderCondGroup();
+  if (isBankLoc()) loadBankRecommend(); else renderCondGroup();
   loadHistory();   // 시간대별 검색기록 갱신
 }
 
@@ -1726,6 +1784,11 @@ function syncCondChips() {
 
 // 선택 상태에 따라 추천 갱신: 0개=기본, 1개=미리생성(없으면 백엔드), 2개↑=조합 백엔드
 function applyConds() {
+  if (isBankLoc()) {            // 은행 거점: 컨디션 조합을 실시간 추천으로
+    currentCond = currentConds.length === 1 ? currentConds[0] : '';
+    loadBankRecommend();
+    return;
+  }
   const md = getMealData(getDay(), currentMeal);
   if (currentConds.length === 0) {
     currentCond = '';
@@ -2009,18 +2072,17 @@ let reserveName = null;
 function closeReserve() { document.getElementById('reserve-bg').classList.remove('open'); reserveName = null; }
 function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
 
-// JB빌딩(여의나루로 77) 좌표 — 도보 경로 출발지
-const JB_LAT = 37.5240914884765, JB_LNG = 126.927376521939;
+// 도보 경로 출발지 = 선택한 기준 위치 (JB빌딩/광주은행/전북은행)
 // 구글지도 키리스 임베드(output=embed): iframe 안에서 렌더 → 외부 앱 호출 없음
 function routeEmbedUrl(name, lng, lat) {
-  const saddr = `${JB_LAT},${JB_LNG}`;
-  const daddr = (lng && lat) ? `${lat},${lng}(${name})` : `${name} 여의도`;
+  const saddr = `${LOC().lat},${LOC().lng}`;
+  const daddr = (lng && lat) ? `${lat},${lng}(${name})` : `${name} ${LOC().region}`;
   return `https://maps.google.com/maps?saddr=${encodeURIComponent(saddr)}&daddr=${encodeURIComponent(daddr)}&dirflg=w&hl=ko&output=embed`;
 }
 // 새 탭용(임베드가 막힐 때 대비) — 역시 웹
 function routeWebUrl(name, lng, lat) {
-  const o = `${JB_LAT},${JB_LNG}`;
-  const d = (lng && lat) ? `${lat},${lng}` : `${name} 여의도`;
+  const o = `${LOC().lat},${LOC().lng}`;
+  const d = (lng && lat) ? `${lat},${lng}` : `${name} ${LOC().region}`;
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=walking&hl=ko`;
 }
 function closeRoute() {
@@ -2029,18 +2091,18 @@ function closeRoute() {
   bg.style.display = 'none';
 }
 function showRoute(name, lng, lat) {
-  document.getElementById('route-title').textContent = `🚶 JB빌딩 → ${name}`;
+  document.getElementById('route-title').textContent = `🚶 ${LOC().short} → ${name}`;
   document.getElementById('route-frame').src = routeEmbedUrl(name, lng, lat);
   document.getElementById('route-ext').href = routeWebUrl(name, lng, lat);
   document.getElementById('route-bg').style.display = 'flex';
 }
 // 지도 버튼: 페이지 안 iframe으로 도보 경로 표시 (앱 안 띄움)
-// 네이버 지도 웹 도보 길찾기 URL (출발: JB빌딩 → 목적지)
+// 네이버 지도 웹 도보 길찾기 URL (출발: 선택 위치 → 목적지)
 function naverRouteUrl(name, lng, lat) {
-  const start = `${JB_LNG},${JB_LAT},${encodeURIComponent('JB빌딩')},,`;
+  const start = `${LOC().lng},${LOC().lat},${encodeURIComponent(LOC().short)},,`;
   return (lng && lat)
     ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
-    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' 여의도')}`;
+    : `https://map.naver.com/p/search/${encodeURIComponent(name + ' ' + LOC().region)}`;
 }
 // 도보경로: 네이버 지도 웹(새 탭)에서 출발지·목적지 찍어 보여줌 (앱/임베드 X)
 async function openMapRoute(name) {
@@ -2098,7 +2160,7 @@ function openFromHash() {
 function reserveNaver() {
   if (!reserveName) return;
   // m.place 검색 → 해당 가게 페이지로 바로 진입 (예약 탭 포함). 검색결과 페이지 X
-  const url = `https://m.place.naver.com/restaurant/list?query=${encodeURIComponent(reserveName + ' 여의도')}`;
+  const url = `https://m.place.naver.com/restaurant/list?query=${encodeURIComponent(reserveName + ' ' + LOC().region)}`;
   window.open(url, '_blank', 'noopener');
 }
 function openReserve(name) {
@@ -2371,7 +2433,7 @@ function renderPlaceResults() {
       ? '<div class="place-hint">검색 결과가 없어요. 다른 이름으로 시도해보세요.</div>'
       : '<div class="place-hint">주변 맛집을 불러오지 못했어요. 🔄 새로고침 또는 이름으로 검색해보세요.</div>';
   }
-  const base = placeOrigin === '현위치' ? '현재 내 위치' : 'JB빌딩';
+  const base = placeOrigin === '현위치' ? '현재 내 위치' : (placeOrigin || LOC().short);
   const originNote = placeSearchQ
     ? `<div class="place-origin">🔎 "${escHtml(placeSearchQ)}" 검색 · ${base} 기준 · 카카오+네이버</div>`
     : `<div class="place-origin">📍 ${base} 주변 맛집 · 가까운 순 · 카카오+네이버</div>`;
@@ -2398,11 +2460,13 @@ async function fetchPlaces(query) {
   nearbyLoaded = true;
   const rwrap = document.getElementById('place-results');
   if (rwrap) rwrap.innerHTML = renderPlaceResults();
-  const pos = await getMyPosition();   // 허용 시 내 위치, 거부 시 JB 폴백
+  const pos = await getMyPosition();   // 허용 시 내 위치, 거부 시 선택 거점 폴백
   try {
     const reqBody = {};
     if (query) reqBody.query = query;
-    if (pos) { reqBody.lat = pos.lat; reqBody.lng = pos.lng; }
+    // GPS 허용 시 실제 내 위치, 아니면 선택한 기준 위치(JB/광주/전북) 좌표
+    const ctr = pos || { lat: LOC().lat, lng: LOC().lng };
+    reqBody.lat = ctr.lat; reqBody.lng = ctr.lng;
     const res = await fetch(PLACES_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
@@ -2411,7 +2475,7 @@ async function fetchPlaces(query) {
     const data = await res.json();
     searchedPlaces = Array.isArray(data.places) ? data.places : [];
     cachePlaces(searchedPlaces);
-    placeOrigin = data.origin || (pos ? '현위치' : 'JB빌딩');
+    placeOrigin = pos ? '현위치' : LOC().short;
   } catch (e) {
     searchedPlaces = [];
   }
