@@ -144,6 +144,17 @@
   .sug-modal .sug-msg { font-size: 0.78rem; min-height: 18px; margin-bottom: 8px; }
   .sug-modal .sug-msg.err { color: #c53030; }
   .sug-modal .sug-msg.ok { color: #2f855a; }
+  /* 답변된 제안 Q&A */
+  .sug-qna { margin-top: 18px; border-top: 1px solid #eef1f6; padding-top: 14px; }
+  .sug-qna-title { font-size: 0.84rem; font-weight: 800; color: #0a3d7a; margin-bottom: 10px; }
+  .sug-qna-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+  .sug-qna-empty { font-size: 0.78rem; color: #8794a6; padding: 4px 2px; }
+  .qna-item { background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 12px; padding: 11px 13px; }
+  .qna-q { font-size: 0.83rem; color: #1a2a44; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .qna-q::before { content: 'Q '; font-weight: 900; color: #1565c0; }
+  .qna-a { margin-top: 8px; padding: 8px 10px; background: #eef6f0; border-radius: 9px; font-size: 0.82rem; color: #2f6a46; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .qna-a::before { content: 'A '; font-weight: 900; color: #2f855a; }
+  .qna-date { font-size: 0.68rem; color: #a0acbd; margin-top: 6px; }
 
   .content { padding: 14px; max-width: 640px; margin: 0 auto; }
   .section { display: none; }
@@ -872,6 +883,10 @@
     <div class="sug-btns">
       <button class="btn-cancel" onclick="closeSuggest()">닫기</button>
       <button class="btn-save" onclick="submitSuggest()">제출하기</button>
+    </div>
+    <div class="sug-qna" id="sug-qna">
+      <div class="sug-qna-title">💬 답변된 제안</div>
+      <div id="sug-qna-list" class="sug-qna-list"></div>
     </div>
   </div>
 </div>
@@ -2200,7 +2215,32 @@ function openSuggest() {
   document.getElementById('sug-msg').textContent = '';
   document.getElementById('sug-msg').className = 'sug-msg';
   document.getElementById('sug-modal-bg').classList.add('open');
+  loadSuggestQna();
   setTimeout(() => document.getElementById('sug-content').focus(), 100);
+}
+async function loadSuggestQna() {
+  const wrap = document.getElementById('sug-qna-list');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="sug-qna-empty">불러오는 중…</div>';
+  try {
+    const res = await fetch(`${SB_URL}/functions/v1/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SB_KEY}` },
+      body: JSON.stringify({ action: 'suggestion_public' })
+    });
+    const data = await res.json();
+    const list = (data && data.qna) || [];
+    if (!list.length) { wrap.innerHTML = '<div class="sug-qna-empty">아직 답변된 제안이 없어요.</div>'; return; }
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    wrap.innerHTML = list.map(q => `
+      <div class="qna-item">
+        <div class="qna-q">${esc(q.content)}</div>
+        <div class="qna-a">${esc(q.admin_reply)}</div>
+        <div class="qna-date">${new Date(q.replied_at || q.created_at).toLocaleDateString('ko-KR',{month:'long',day:'numeric'})} 답변</div>
+      </div>`).join('');
+  } catch (e) {
+    wrap.innerHTML = '<div class="sug-qna-empty">목록을 불러오지 못했어요.</div>';
+  }
 }
 function closeSuggest() { document.getElementById('sug-modal-bg').classList.remove('open'); }
 async function submitSuggest() {

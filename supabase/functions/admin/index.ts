@@ -174,6 +174,15 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── 공개 Q&A 조회 (인증 불필요): 답변완료된 것만, 민감정보 제외 ──
+    if (action === "suggestion_public") {
+      const r = await fetch(
+        `${SB_URL}/rest/v1/suggestions?select=id,content,admin_reply,created_at,replied_at&status=eq.answered&order=replied_at.desc&limit=50`,
+        { headers: SH },
+      );
+      return json({ ok: true, qna: r.ok ? await r.json() : [] });
+    }
+
     // ── 그 외(로그/로그아웃): 토큰 인증 (레거시 비번도 허용, 단 잠금 적용) ──
     const token = (body.token || "").toString();
     let authed = await validSession(token);
