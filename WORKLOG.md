@@ -12,7 +12,7 @@
 - **사이트**: https://duelspost-droid.github.io/jblunch/
 - **저장소**: https://github.com/duelspost-droid/jblunch
 - **호스팅**: GitHub Pages (master 브랜치 push 시 자동 배포, 반영까지 1~3분)
-- **자동 추천**: GitHub Actions가 매일 오전 8:30 KST 실행 (`.github/workflows/daily-lunch.yml`)
+- **자동 추천**: GitHub Actions가 **평일(월~금) 06:30 KST** 실행 (`.github/workflows/daily-lunch.yml`, cron `30 21 * * 0-4`, 주말 제외)
 
 ### 기술 스택
 | 영역 | 기술 |

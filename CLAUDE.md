@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 서울 영등포구 여의나루로 77 근처 점심 맛집을 매일 자동 추천하는 서비스.
-평일(월~금) 새벽 1시경(KST) GitHub Actions가 자동 실행됨 — PC 불필요. (새벽엔 큐 부하 적어 지연↓)
+**평일(월~금) 06:30 KST** GitHub Actions가 자동 실행됨 — PC 불필요. (cron `30 21 * * 0-4`, 주말 제외)
 
 ## 사이트 & 저장소
 - **사이트**: https://duelspost-droid.github.io/jblunch/
@@ -16,7 +16,7 @@
 
 ## 아키텍처
 ```
-GitHub Actions (평일 새벽 01:10 KST)
+GitHub Actions (평일 월~금 06:30 KST)
   └─ scripts/generate_lunch.py
        ├─ Claude Haiku API + 웹검색 → 맛집 추천 (기본 + 컨디션 8종)
        ├─ Supabase → 날씨/컨디션 데이터 저장

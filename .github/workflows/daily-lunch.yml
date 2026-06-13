@@ -2,7 +2,7 @@ name: Daily Lunch Recommendation
 
 on:
   schedule:
-    - cron: '30 21 * * *'  # 매일 새벽 06:30 KST (= 전날 21:30 UTC)
+    - cron: '30 21 * * 0-4'  # KST 월~금 06:30 (= UTC 일~목 21:30) — 주말 제외
   workflow_dispatch:
 
 jobs:
