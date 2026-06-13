@@ -213,6 +213,14 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── 좌표 검색 (장소명·주소 → 후보 목록) ─────────────────────
+    if (action === "geo_search") {
+      const q = (body.query || "").toString().trim();
+      if (!q) return json({ error: "검색어를 입력하세요." }, 400);
+      const results = await geoSearch(q);
+      return json({ ok: true, results });
+    }
+
     // ── 기준 위치 관리 ──────────────────────────────────────────
     if (action === "loc_list") {
       const r = await fetch(`${SB_URL}/rest/v1/app_locations?select=*&order=sort.asc`, { headers: SH });
@@ -321,19 +329,61 @@ async function geoLookup(ips: string[]): Promise<Record<string, Geo>> {
   return map;
 }
 
+// ── Kakao GET: 여러 키를 순차 시도 (env 키가 무효면 fallback) ────
+// env KAKAO_REST_API_KEY가 잘못 설정돼 있어도 동작하도록 알려진 키로 폴백.
+const KAKAO_KEYS = [
+  Deno.env.get("KAKAO_REST_API_KEY") || "",
+  "af04c6cff1c0c408283c25e84d5b481d",
+].filter((k, i, a) => k && a.indexOf(k) === i);
+async function kakaoGet(url: string): Promise<any | null> {
+  for (const key of KAKAO_KEYS) {
+    try {
+      const r = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
+      if (r.ok) {
+        const j = await r.json();
+        if (Array.isArray(j.documents)) return j;   // 인증 OK
+      }
+      // 401/403 등 → 다음 키 시도
+    } catch (_e) { /* 다음 키 시도 */ }
+  }
+  return null;
+}
+
+// ── Kakao 장소·주소 검색 → 후보 목록 (위치 추가 UI용) ───────────
+type GeoHit = { name: string; address: string; lat: number; lng: number };
+async function geoSearch(query: string): Promise<GeoHit[]> {
+  if (!query) return [];
+  const out: GeoHit[] = [];
+  const seen = new Set<string>();
+  const push = (name: string, address: string, x: string, y: string) => {
+    const lat = Number(y), lng = Number(x);
+    if (!isFinite(lat) || !isFinite(lng) || !lat || !lng) return;
+    const k = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push({ name: name || address, address: address || "", lat, lng });
+  };
+  // 1) 키워드(장소명) 검색 — '광주은행 본점' 같은 상호명도 잡힘
+  const kw = await kakaoGet(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=10`);
+  for (const d of kw?.documents || []) {
+    push(d.place_name, d.road_address_name || d.address_name || "", d.x, d.y);
+  }
+  // 2) 주소 검색 보강 (도로명/지번 주소 직접 입력 대비)
+  const ad = await kakaoGet(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}&size=10`);
+  for (const d of ad?.documents || []) {
+    const addr = d.road_address?.address_name || d.address_name || "";
+    push(addr, addr, d.x, d.y);
+  }
+  return out.slice(0, 8);
+}
+
 // ── Kakao 주소/장소 지오코딩 (위치 추가용) ──────────────────────
 async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
-  const key = Deno.env.get("KAKAO_REST_API_KEY") || "af04c6cff1c0c408283c25e84d5b481d";
-  if (!key || !query) return null;
-  const head = { headers: { Authorization: `KakaoAK ${key}` } };
-  try {
-    const a = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`, head);
-    if (a.ok) { const d = (await a.json()).documents?.[0]; if (d) return { lat: Number(d.y), lng: Number(d.x) }; }
-  } catch (_e) { /* ignore */ }
-  try {
-    const k = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=1`, head);
-    if (k.ok) { const d = (await k.json()).documents?.[0]; if (d) return { lat: Number(d.y), lng: Number(d.x) }; }
-  } catch (_e) { /* ignore */ }
+  if (!query) return null;
+  const a = await kakaoGet(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(query)}`);
+  if (a?.documents?.[0]) { const d = a.documents[0]; return { lat: Number(d.y), lng: Number(d.x) }; }
+  const k = await kakaoGet(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=1`);
+  if (k?.documents?.[0]) { const d = k.documents[0]; return { lat: Number(d.y), lng: Number(d.x) }; }
   return null;
 }
 

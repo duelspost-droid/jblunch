@@ -97,6 +97,21 @@
   .loc-add-title { font-size: 0.84rem; font-weight: 700; color: #0a3d7a; margin-bottom: 10px; }
   .loc-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .loc-add-grid input { border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; }
+  .loc-add > input[type=text] { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; margin-bottom: 8px; }
+  /* 좌표 검색 */
+  .geo-search { margin-bottom: 8px; }
+  .geo-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .geo-search-row input { flex: 1; border: 1.5px solid #e2e8f0; border-radius: 9px; padding: 9px 11px; font-size: 0.84rem; font-family: inherit; }
+  .geo-search-row .btn { flex-shrink: 0; white-space: nowrap; }
+  .geo-results { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+  .geo-results:not(:empty) { margin-bottom: 8px; }
+  .geo-opt { text-align: left; background: #f7f9fc; border: 1.5px solid #eef1f6; border-radius: 10px; padding: 9px 12px; cursor: pointer; font-family: inherit; transition: border-color .12s, background .12s; }
+  .geo-opt:hover { background: #eef4fc; border-color: #b9d2f0; }
+  .geo-opt .go-name { font-size: 0.85rem; font-weight: 700; color: #1a2a44; }
+  .geo-opt .go-addr { font-size: 0.74rem; color: #8794a6; margin-top: 2px; }
+  .geo-picked { background: #eaf5ee; border: 1.5px solid #c6e8d1; border-radius: 10px; padding: 9px 12px; font-size: 0.8rem; color: #1a5e36; }
+  .geo-picked b { color: #176b3a; }
+  .geo-empty { font-size: 0.78rem; color: #8794a6; padding: 4px 2px; }
   /* 기능 제안 관리 */
   .sug-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
   .sug-item { background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 12px; padding: 13px 14px; }
@@ -259,9 +274,18 @@
         <div class="loc-add-grid">
           <input type="text" id="nl-name" placeholder="이름 (예: 광주은행 동지점)">
           <input type="text" id="nl-short" placeholder="짧은 이름 (예: 동지점)">
-          <input type="text" id="nl-region" placeholder="지역 (예: 광주 북구)">
-          <input type="text" id="nl-addr" placeholder="주소 (좌표 자동 검색용, 예: 광주 북구 ...)">
         </div>
+        <!-- 좌표 검색: 장소명/주소 입력 → 후보 클릭 → 좌표·지역 자동 -->
+        <div class="geo-search">
+          <div class="geo-search-row">
+            <input type="text" id="nl-search" placeholder="장소명 또는 주소로 검색 (예: 광주은행 본점, 광주 동구 제봉로 ...)"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();searchGeo();}">
+            <button class="btn" type="button" onclick="searchGeo()">🔍 검색</button>
+          </div>
+          <div id="geo-results" class="geo-results"></div>
+          <div id="geo-picked" class="geo-picked" style="display:none"></div>
+        </div>
+        <input type="text" id="nl-region" placeholder="지역 (검색하면 자동 입력 · 직접 수정 가능)">
         <div class="msg" id="loc-msg"></div>
         <button class="btn" onclick="addLocation()">위치 추가</button>
       </div>
@@ -644,18 +668,55 @@ async function loadLocList(){
       <button class="lr-del" ${l.key==='jb'?'disabled title="기본 위치는 삭제 불가"':''} onclick="deleteLocation('${esc(l.key)}','${esc(l.name)}')">삭제</button>
     </div>`).join('') || '<div style="color:#8794a6;font-size:0.82rem">등록된 위치가 없어요.</div>';
 }
+// 검색으로 선택된 좌표 (위치 추가 시 사용)
+let pickedGeo = null;
+async function searchGeo(){
+  const q = document.getElementById('nl-search').value.trim();
+  const box = document.getElementById('geo-results');
+  if(!q){ box.innerHTML = '<div class="geo-empty">검색어를 입력하세요.</div>'; return; }
+  box.innerHTML = '<div class="geo-empty">검색 중…</div>';
+  const { ok, data } = await adminCall({ action:'geo_search', token: curToken, query: q });
+  if(!ok){ box.innerHTML = '<div class="geo-empty">⚠️ '+(data.error||'검색 실패')+'</div>'; return; }
+  const list = data.results || [];
+  if(!list.length){ box.innerHTML = '<div class="geo-empty">결과가 없어요. 장소명이나 주소를 다르게 입력해보세요.</div>'; return; }
+  box.innerHTML = list.map((r,i)=>`
+    <button type="button" class="geo-opt" onclick='pickGeo(${i})'>
+      <div class="go-name">${esc(r.name)}</div>
+      ${r.address?`<div class="go-addr">${esc(r.address)}</div>`:''}
+    </button>`).join('');
+  window._geoList = list;
+}
+function pickGeo(i){
+  const r = (window._geoList||[])[i];
+  if(!r) return;
+  pickedGeo = { lat: r.lat, lng: r.lng };
+  document.getElementById('geo-results').innerHTML = '';
+  const picked = document.getElementById('geo-picked');
+  picked.style.display = 'block';
+  picked.innerHTML = `✅ 선택됨: <b>${esc(r.name)}</b><br>${esc(r.address||'')} <span style="color:#5a8a6e">(${r.lat.toFixed(5)}, ${r.lng.toFixed(5)})</span>`;
+  // 이름/지역 비어있으면 검색 결과로 자동 채움
+  const nm = document.getElementById('nl-name'); if(nm && !nm.value.trim()) nm.value = r.name;
+  const rg = document.getElementById('nl-region');
+  if(rg && !rg.value.trim() && r.address){
+    const parts = r.address.split(' ');
+    rg.value = parts.slice(0,2).join(' ');   // 예: '광주광역시 동구' → 시·구
+  }
+}
 async function addLocation(){
   const msg = document.getElementById('loc-msg');
   const name = document.getElementById('nl-name').value.trim();
   const short = document.getElementById('nl-short').value.trim();
   const region = document.getElementById('nl-region').value.trim();
-  const address = document.getElementById('nl-addr').value.trim();
   if(!name || !region){ msg.className='msg err'; msg.textContent='이름과 지역은 필수예요.'; return; }
-  msg.className='msg'; msg.textContent='주소로 좌표 찾는 중…';
-  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, address });
+  if(!pickedGeo){ msg.className='msg err'; msg.textContent='먼저 장소를 검색해서 좌표를 선택해주세요.'; return; }
+  msg.className='msg'; msg.textContent='추가 중…';
+  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, lat: pickedGeo.lat, lng: pickedGeo.lng });
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'추가 실패'); return; }
   msg.className='msg ok'; msg.textContent=`✅ '${name}' 추가됨 (홈 위치 선택기에 바로 노출돼요)`;
-  ['nl-name','nl-short','nl-region','nl-addr'].forEach(id=>document.getElementById(id).value='');
+  ['nl-name','nl-short','nl-region','nl-search'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('geo-picked').style.display='none';
+  document.getElementById('geo-results').innerHTML='';
+  pickedGeo = null;
   loadLocList();
 }
 async function deleteLocation(key, name){
