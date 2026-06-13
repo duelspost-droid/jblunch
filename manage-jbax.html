@@ -662,7 +662,7 @@ async function loadLocList(){
   wrap.innerHTML = locs.map(l => `
     <div class="loc-row">
       <div class="lr-main">
-        <div class="lr-name">${esc(l.name)} ${l.auto?'<span class="lr-badge">자동배치</span>':'<span class="lr-badge" style="background:#e9f6ee;color:#2f855a">실시간</span>'}</div>
+        <div class="lr-name">${esc(l.name)} ${l.auto?'<span class="lr-badge">본사 · 매일배치</span>':'<span class="lr-badge" style="background:#e9f6ee;color:#2f855a">매일배치</span>'}</div>
         <div class="lr-meta">${esc(l.short)} · ${esc(l.region)} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
       </div>
       <button class="lr-del" ${l.key==='jb'?'disabled title="기본 위치는 삭제 불가"':''} onclick="deleteLocation('${esc(l.key)}','${esc(l.name)}')">삭제</button>
