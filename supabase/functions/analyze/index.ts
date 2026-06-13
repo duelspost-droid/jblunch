@@ -246,21 +246,23 @@ Deno.serve(async (req) => {
       if (SB_URL && SB_SRV) {
         try {
           const cr = await fetch(
-            `${SB_URL}/rest/v1/place_meta?name=eq.${encodeURIComponent(describe)}&select=intro,price,distance,verified,menu`,
+            `${SB_URL}/rest/v1/place_meta?name=eq.${encodeURIComponent(describe)}&select=intro,price,distance,verified,menu,region`,
             { headers: metaHeaders },
           );
           const rows = await cr.json();
-          // 소개가 있고 메뉴 컬럼이 채워졌으면(빈문자열 포함) 캐시 반환.
-          // 메뉴가 null(기존 행)이면 통과시켜 메뉴까지 재생성.
-          if (Array.isArray(rows) && rows.length && rows[0].intro && rows[0].menu != null) {
-            return json({ ...rows[0], cached: true }, 200);
+          // 소개가 있고 메뉴 컬럼이 채워졌으며(빈문자열 포함) 같은 지역의 캐시일 때만 반환.
+          // 지역이 다르거나 미지정(과거 오염분)이면 통과시켜 현재 위치 기준으로 재생성.
+          if (Array.isArray(rows) && rows.length && rows[0].intro && rows[0].menu != null && rows[0].region === region) {
+            const { region: _r, ...payload } = rows[0];
+            return json({ ...payload, cached: true }, 200);
           }
         } catch (_e) { /* 캐시 실패 시 생성으로 진행 */ }
       }
       const hintCuisine = (body.cuisine || "").toString().trim();
       const hintAddr = (body.address || "").toString().trim();
-      const dPrompt = `너는 서울 여의도 맛집 큐레이터야. 아래 식당의 소개글을 써줘.
-식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : ""}
+      const dPrompt = `너는 ${region} 일대 맛집 큐레이터야. 아래 식당의 소개글을 써줘.
+식당명: ${describe}${hintCuisine ? `\n종류: ${hintCuisine}` : ""}${hintAddr ? `\n주소: ${hintAddr}` : `\n위치: ${region} ${place} 인근`}
+- 이 식당은 ${region}에 있는 가게야. 소개에 엉뚱한 다른 지역(예: 실제 위치가 아닌 곳)을 언급하지 마.
 규칙:
 - 이 가게를 정확히 몰라도 절대 사과하거나 "정보가 부족/잘 모르겠다"고 쓰지 마. 그런 면책 문구 금지.
   이름과 종류에서 자연스럽게 연상되는 소개를 그럴듯하게 작성해.
@@ -301,7 +303,7 @@ Deno.serve(async (req) => {
           await fetch(`${SB_URL}/rest/v1/place_meta?on_conflict=name`, {
             method: "POST",
             headers: { ...metaHeaders, Prefer: "resolution=merge-duplicates" },
-            body: JSON.stringify({ name: describe, ...result, updated_at: new Date().toISOString() }),
+            body: JSON.stringify({ name: describe, ...result, region, updated_at: new Date().toISOString() }),
           });
         } catch (_e) { /* 저장 실패 무시 */ }
       }

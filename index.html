@@ -1072,7 +1072,7 @@ async function fetchPlaceIntro(name) {
       const res = await fetch(ANALYZE_URL, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '' })
+        body: JSON.stringify({ describe: name, cuisine: d.cuisine || '', address: d.address || '', ...locParams() })
       });
       const data = await res.json();
       // 가격·거리(카카오+네이버)·메뉴 보강 (일관성)
@@ -1179,10 +1179,11 @@ async function changeLocation(key) {
   curLoc = key;
   try { localStorage.setItem('jbloc', key); } catch(e) {}
   applyLocationUI();
-  // 위치가 바뀌면 거리·추천·리뷰가 모두 달라짐 → 캐시/결과 초기화 후 재구성
+  // 위치가 바뀌면 거리·추천·리뷰·소개가 모두 달라짐 → 캐시/결과 초기화 후 재구성
   customResult = null;
   placeDetails = {};
-  try { localStorage.removeItem('placeDetails'); } catch(e) {}
+  placeIntros = {};   // 소개는 위치(지역)별로 다름 → 위치 전환 시 비움
+  try { localStorage.removeItem('placeDetails'); localStorage.removeItem('placeIntros'); } catch(e) {}
   track('location_change', LOC().name);
   await loadLocHistory(key);   // 비-JB: 배치 데이터 우선 로드(없으면 실시간 fallback)
   loadComments();     // 위치별 리뷰 재로드
