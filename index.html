@@ -1453,12 +1453,23 @@ const TAG_BADGE = {
 };
 
 // 거리 간결화: "도보 1분 (카카오) / 1분 (네이버)" → "도보 1분" (다르면 "도보 5~6분")
+// 거리 문자열이 차량 표기인지 (차로/차량/km 포함)
+function isCarDist(d) { return /차로|차량|km/.test(String(d || '')); }
+// 거리 아이콘: 차량이면 🚗, 도보면 🚶
+function distIcon(d) { return isCarDist(d) ? '🚗' : '🚶'; }
 function shortDistance(d) {
   const s = String(d || '');
   const nums = (s.match(/(\d+)\s*분/g) || []).map(x => parseInt(x));
   if (!nums.length) return s || '거리 미확인';
   const mn = Math.min(...nums), mx = Math.max(...nums);
-  return mn === mx ? `도보 ${mn}분` : `도보 ${mn}~${mx}분`;
+  const unit = isCarDist(s) ? '차로' : '도보';
+  let out = mn === mx ? `${unit} ${mn}분` : `${unit} ${mn}~${mx}분`;
+  // 차량 표기는 km도 함께 보여줌 (가장 가까운 km)
+  if (isCarDist(s)) {
+    const kms = (s.match(/([\d.]+)\s*km/g) || []).map(x => parseFloat(x));
+    if (kms.length) out += ` · ${Math.min(...kms)}km`;
+  }
+  return out;
 }
 
 function buildCard(r) {
@@ -1508,7 +1519,7 @@ function buildCard(r) {
       ${dFeature ? `<div class="card-feature">${escHtml(dFeature)}</div>` : ''}
       <div class="card-meta">
         ${dPrice ? `<span>💰 ${escHtml(dPrice)}</span>` : ''}
-        <span>🚶 ${escHtml(shortDistance(r.distance))}</span>
+        <span>${distIcon(r.distance)} ${escHtml(shortDistance(r.distance))}</span>
       </div>
       ${reviewsHtml}
       <div class="card-actions">
@@ -2120,7 +2131,7 @@ function renderModalDetail(name, info) {
   const chips = [];
   if (info.cuisine) chips.push(`<span class="md-chip">${emo(info.cuisine)} ${escHtml(info.cuisine)}</span>`);
   if (info.price) chips.push(`<span class="md-chip">💰 ${escHtml(info.price)}</span>`);
-  if (info.distance) chips.push(`<span class="md-chip">🚶 ${escHtml(info.distance)}</span>`);
+  if (info.distance) chips.push(`<span class="md-chip">${distIcon(info.distance)} ${escHtml(info.distance)}</span>`);
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
   const mapBtn = info.verified === false
     ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
@@ -2613,7 +2624,7 @@ function renderStats() {
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
             ${r.price ? `<span>💰 ${escHtml(r.price)}</span>` : ''}
-            ${r.distance ? `<span>🚶 ${escHtml(r.distance)}</span>` : ''}
+            ${r.distance ? `<span>${distIcon(r.distance)} ${escHtml(r.distance)}</span>` : ''}
             ${r.verified === false ? `<span style="color:#c05">🚫 지도없음</span>` : ''}
           </div>
         </div>
@@ -2666,7 +2677,7 @@ function renderPlaceResults() {
     return `<div class="place-item">
       <div class="place-info" onclick="openModal('${escAttr(p.name)}','')">
         <div class="place-name">${emo(p.cuisine)} ${escHtml(p.name)} ${srcBadge} ${cnt?`<span class="badge badge-review">리뷰 ${cnt}</span>`:''}</div>
-        <div class="place-sub">${escHtml(p.cuisine||'')} · 🚶 ${escHtml(p.distance||'')}</div>
+        <div class="place-sub">${escHtml(p.cuisine||'')} · ${distIcon(p.distance)} ${escHtml(p.distance||'')}</div>
         ${p.address?`<div class="place-addr">📍 ${escHtml(p.address)}</div>`:''}
       </div>
       <button class="place-review-btn" onclick="openModal('${escAttr(p.name)}','')">📝 리뷰</button>
