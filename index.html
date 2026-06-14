@@ -1525,7 +1525,7 @@ function buildCard(r) {
       <div class="card-actions">
         ${r.verified === false
           ? `<span class="btn-map nomap" title="지도에서 확인되지 않은 가게입니다">🚫 지도없음</span>`
-          : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">🚶 경로</button>`}
+          : `<button class="btn-map" onclick="openMapRoute('${escAttr(r.name)}')">${isCarDist(r.distance)?'🚗':'🚶'} 경로</button>`}
         <button class="btn-review" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature)}')">📝 ${cnt?'리뷰 '+cnt:'리뷰'}</button>
         <button class="btn-reserve" onclick="openReserve('${escAttr(r.name)}')">📞 예약</button>
         <button class="btn-share" onclick="openShare('${escAttr(r.name)}')">📤 공유</button>
@@ -2135,7 +2135,7 @@ function renderModalDetail(name, info) {
   if (info.address) chips.push(`<span class="md-chip">📍 ${escHtml(info.address)}</span>`);
   const mapBtn = info.verified === false
     ? `<span class="md-map nomap" title="지도 미등록">🚫 지도없음</span>`
-    : `<button class="md-map" onclick="openMapRoute('${escAttr(name)}')">🚶 도보경로</button>`;
+    : `<button class="md-map" onclick="openMapRoute('${escAttr(name)}')">${isCarDist(info.distance)?'🚗 자동차경로':'🚶 도보경로'}</button>`;
   detailEl.innerHTML = chips.join('') + mapBtn;
   detailEl.style.display = 'flex';
 }
@@ -2304,18 +2304,29 @@ async function submitSuggest() {
 }
 function fmtPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
 
-// 도보 경로 출발지 = 선택한 기준 위치 (JB빌딩/광주은행/전북은행)
+// 경로 출발지 = 선택한 기준 위치 (JB빌딩/광주은행/…)
+// 이동수단(도보/자동차)은 해당 가게 거리 표기(차로/도보) 기준으로 자동 결정.
+// 거리 정보가 없으면 위치의 추천 방식(차량 계열)으로 판단.
+function routeIsCar(name) {
+  const d = (placeDetails[name] || {}).distance || '';
+  if (d) return isCarDist(d);
+  const p = LOC().rec_profile;
+  if (['drive_near', 'drive', 'wide'].includes(p)) return true;
+  if (p === 'custom' && LOC().rec_custom && Number(LOC().rec_custom.walkMax) <= 7) return true;
+  return false;
+}
+function routeWord(car) { return car ? '자동차' : '도보'; }
 // 구글지도 키리스 임베드(output=embed): iframe 안에서 렌더 → 외부 앱 호출 없음
-function routeEmbedUrl(name, lng, lat) {
+function routeEmbedUrl(name, lng, lat, car) {
   const saddr = `${LOC().lat},${LOC().lng}`;
   const daddr = (lng && lat) ? `${lat},${lng}(${name})` : `${name} ${LOC().region}`;
-  return `https://maps.google.com/maps?saddr=${encodeURIComponent(saddr)}&daddr=${encodeURIComponent(daddr)}&dirflg=w&hl=ko&output=embed`;
+  return `https://maps.google.com/maps?saddr=${encodeURIComponent(saddr)}&daddr=${encodeURIComponent(daddr)}&dirflg=${car ? 'd' : 'w'}&hl=ko&output=embed`;
 }
 // 새 탭용(임베드가 막힐 때 대비) — 역시 웹
-function routeWebUrl(name, lng, lat) {
+function routeWebUrl(name, lng, lat, car) {
   const o = `${LOC().lat},${LOC().lng}`;
   const d = (lng && lat) ? `${lat},${lng}` : `${name} ${LOC().region}`;
-  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=walking&hl=ko`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=${car ? 'driving' : 'walking'}&hl=ko`;
 }
 function closeRoute() {
   const bg = document.getElementById('route-bg');
@@ -2323,28 +2334,28 @@ function closeRoute() {
   bg.style.display = 'none';
 }
 function showRoute(name, lng, lat) {
-  document.getElementById('route-title').textContent = `🚶 ${LOC().short} → ${name}`;
-  document.getElementById('route-frame').src = routeEmbedUrl(name, lng, lat);
-  document.getElementById('route-ext').href = routeWebUrl(name, lng, lat);
+  const car = routeIsCar(name);
+  document.getElementById('route-title').textContent = `${car ? '🚗' : '🚶'} ${LOC().short} → ${name}`;
+  document.getElementById('route-frame').src = routeEmbedUrl(name, lng, lat, car);
+  document.getElementById('route-ext').href = routeWebUrl(name, lng, lat, car);
   document.getElementById('route-bg').style.display = 'flex';
 }
-// 지도 버튼: 페이지 안 iframe으로 도보 경로 표시 (앱 안 띄움)
-// 네이버 지도 웹 도보 길찾기 URL (출발: 선택 위치 → 목적지)
-function naverRouteUrl(name, lng, lat) {
+// 네이버 지도 웹 길찾기 URL (출발: 선택 위치 → 목적지, 도보/자동차)
+function naverRouteUrl(name, lng, lat, car) {
   const start = `${LOC().lng},${LOC().lat},${encodeURIComponent(LOC().short)},,`;
   return (lng && lat)
-    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`
+    ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/${car ? 'car' : 'walk'}`
     : `https://map.naver.com/p/search/${encodeURIComponent(name + ' ' + LOC().region)}`;
 }
-// 도보경로: 네이버 지도 웹(새 탭)에서 출발지·목적지 찍어 보여줌 (앱/임베드 X)
+// 경로: 네이버 지도 웹(새 탭)에서 출발지·목적지 찍어 보여줌 (앱/임베드 X)
 async function openMapRoute(name) {
   const c = placeDetails[name] || {};
-  if (c.lat && c.lng) { window.open(naverRouteUrl(name, c.lng, c.lat), '_blank', 'noopener'); return; }
+  if (c.lat && c.lng) { window.open(naverRouteUrl(name, c.lng, c.lat, routeIsCar(name)), '_blank', 'noopener'); return; }
   // 좌표 미보유: 빈 새 탭 먼저 열어 클릭 제스처 유지 → 좌표 조회 후 경로로 이동
   const w = window.open('about:blank', '_blank');
   await fetchPlaceDetail(name);
   const cc = placeDetails[name] || {};
-  const url = naverRouteUrl(name, cc.lng, cc.lat);
+  const url = naverRouteUrl(name, cc.lng, cc.lat, routeIsCar(name));
   if (w && !w.closed) w.location.href = url;
   else window.open(url, '_blank', 'noopener');
 }
