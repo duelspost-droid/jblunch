@@ -12,6 +12,50 @@ const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SH = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" };
 
+// ── 추천 방식 프리셋 메타 (배치 generate_lunch.py / analyze 와 동일) ──
+// UI는 profiles_meta 액션으로 이 목록을 받아 단일 출처로 사용한다.
+const REC_PROFILES = [
+  { key: "walk_tight", label: "도보 최우선", radii: [300, 500], minCand: 6, walkMax: 99, extraMax: 8, allowFar: "no",
+    desc: "걸어서 3~6분 거리(약 300~500m)만. 가게가 매우 가까운 곳만 추천하고 거리 미달 시에도 범위를 넓히지 않아요. 초밀집 도심 사무실에 적합." },
+  { key: "walk", label: "도보 위주", radii: [700, 1000], minCand: 8, walkMax: 99, extraMax: 12, allowFar: "no",
+    desc: "걸어서 갈 수 있는 약 700m~1km. 모든 거리를 도보로 표기하고 먼 유명 맛집은 넣지 않아요. 일반 도심 위치에 적합." },
+  { key: "auto", label: "근거리 자동 (권장)", radii: [600, 1500, 3000, 5000], minCand: 12, walkMax: 14, extraMax: 20, allowFar: "sparse",
+    desc: "기본 600m에서 시작해 가까운 가게가 12곳 미만이면 1.5km→3km→5km로 자동 확대해요. 도보 14분을 넘으면 '차로 N분·Nkm'로 표기. 근처 가게가 충분하면 가까운 순으로 고정하고, 부족할 때만 조금 먼 유명 맛집을 허용합니다. 대부분의 위치에 가장 무난해요." },
+  { key: "town", label: "동네 (도보+동네)", radii: [1500, 3000], minCand: 10, walkMax: 12, extraMax: 20, allowFar: "sparse",
+    desc: "동네 범위(약 1.5~3km)를 기본으로. 도보·차량을 자연스럽게 섞어 추천. 가게가 적당히 흩어진 주택가·소도시 중심에 적합." },
+  { key: "drive_near", label: "차량 근교", radii: [2000, 5000], minCand: 8, walkMax: 6, extraMax: 30, allowFar: "sparse",
+    desc: "차로 이동 전제(약 2~5km). 도보 6분 넘으면 차로 거리로 표기. 차로 금방 닿는 근교 맛집까지 포함해요." },
+  { key: "drive", label: "차량 권역", radii: [3000, 6000, 9000], minCand: 8, walkMax: 5, extraMax: 40, allowFar: "sparse",
+    desc: "차로 다니는 넓은 권역(약 3~9km). 거의 모든 거리를 차로 N분·km로 표기. 가게가 드문 외곽·시골 캠퍼스에 적합." },
+  { key: "wide", label: "광역 (시·도)", radii: [5000, 10000, 15000], minCand: 6, walkMax: 4, extraMax: 60, allowFar: "always",
+    desc: "시·도 단위의 광역(약 5~15km). 가게가 매우 드문 지역에서 멀어도 알려진 맛집까지 폭넓게 추천해요." },
+  { key: "city", label: "도심 밀집", radii: [500, 1000, 1500], minCand: 15, walkMax: 12, extraMax: 12, allowFar: "sparse",
+    desc: "가게가 빽빽한 도심·번화가용. 좁은 범위에서 더 많이(15곳) 모아 촘촘하게 추천해요." },
+  { key: "custom", label: "맞춤 (고급)", radii: [600, 1500, 3000], minCand: 12, walkMax: 14, extraMax: 20, allowFar: "sparse",
+    desc: "탐색 반경·도보 표기 기준·추가추천 거리·먼곳 허용 정책을 위치별로 직접 숫자로 조절해요. (기본값은 '근거리 자동'과 동일)" },
+];
+const REC_KEYS = REC_PROFILES.map((p) => p.key);
+// 커스텀 파라미터 정제(허용 범위로 클램프) — 잘못된 입력 방어
+function sanitizeCustom(c: unknown): Record<string, unknown> {
+  const o = (c && typeof c === "object") ? c as Record<string, unknown> : {};
+  const clampNum = (v: unknown, lo: number, hi: number, def: number) => {
+    const n = Number(v); return isFinite(n) && n > 0 ? Math.min(hi, Math.max(lo, Math.round(n))) : def;
+  };
+  let radii: number[] = Array.isArray(o.radii)
+    ? (o.radii as unknown[]).map((x) => Number(x)).filter((n) => isFinite(n) && n >= 100 && n <= 50000)
+    : [];
+  if (!radii.length) radii = [600, 1500, 3000];
+  radii = [...new Set(radii)].sort((a, b) => a - b).slice(0, 5);
+  const allow = ["sparse", "no", "always"].includes(String(o.allowFar)) ? String(o.allowFar) : "sparse";
+  return {
+    radii,
+    minCand: clampNum(o.minCand, 1, 40, 12),
+    walkMax: clampNum(o.walkMax, 1, 120, 14),
+    extraMax: clampNum(o.extraMax, 1, 120, 20),
+    allowFar: allow,
+  };
+}
+
 const PBKDF2_ITER = 120000;
 const SESSION_HOURS = 8;
 const LOCK_WINDOW_MIN = 15;
@@ -246,6 +290,23 @@ Deno.serve(async (req) => {
       return json({ ok: true, results });
     }
 
+    // ── 추천 방식: 프리셋 메타 제공 (UI 단일 출처) ──────────────
+    if (action === "profiles_meta") {
+      return json({ ok: true, profiles: REC_PROFILES });
+    }
+    // ── 추천 방식 전체 일괄 적용 ────────────────────────────────
+    if (action === "loc_set_all_profile") {
+      const p = (body.rec_profile || "").toString();
+      if (!REC_KEYS.includes(p)) return json({ error: "알 수 없는 추천 방식이에요." }, 400);
+      const rec_custom = p === "custom" ? sanitizeCustom(body.rec_custom) : null;
+      const r = await fetch(`${SB_URL}/rest/v1/app_locations?key=neq.__none__`, {
+        method: "PATCH", headers: SH, body: JSON.stringify({ rec_profile: p, rec_custom }),
+      });
+      if (!r.ok) return json({ error: "일괄 적용 실패: " + (await r.text()) }, 500);
+      await logAdmin("loc_set_all_profile", ip, p, ua);
+      return json({ ok: true });
+    }
+
     // ── 기준 위치 관리 ──────────────────────────────────────────
     if (action === "loc_list") {
       const r = await fetch(`${SB_URL}/rest/v1/app_locations?select=*&order=sort.asc`, { headers: SH });
@@ -266,9 +327,9 @@ Deno.serve(async (req) => {
       }
       const key = "loc_" + randHex(5);
       const subtitle = (body.subtitle || "").toString().trim() || `${name} 근처 · 맛집 추천`;
-      const REC = ["auto", "walk", "drive", "city"];
-      const rec_profile = REC.includes((body.rec_profile || "").toString()) ? body.rec_profile : "auto";
-      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100, rec_profile };
+      const rec_profile = REC_KEYS.includes((body.rec_profile || "").toString()) ? body.rec_profile : "auto";
+      const rec_custom = rec_profile === "custom" ? sanitizeCustom(body.rec_custom) : null;
+      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100, rec_profile, rec_custom };
       const ins = await fetch(`${SB_URL}/rest/v1/app_locations`, {
         method: "POST", headers: { ...SH, Prefer: "return=representation" }, body: JSON.stringify(row),
       });
@@ -284,7 +345,10 @@ Deno.serve(async (req) => {
       if (body.short != null) { const v = body.short.toString().trim(); if (v) patch.short = v; }
       if (body.region != null) { const v = body.region.toString().trim(); if (v) patch.region = v; }
       if (body.subtitle != null) patch.subtitle = body.subtitle.toString().trim();
-      if (body.rec_profile != null && ["auto", "walk", "drive", "city"].includes(body.rec_profile.toString())) patch.rec_profile = body.rec_profile.toString();
+      if (body.rec_profile != null && REC_KEYS.includes(body.rec_profile.toString())) {
+        patch.rec_profile = body.rec_profile.toString();
+        patch.rec_custom = patch.rec_profile === "custom" ? sanitizeCustom(body.rec_custom) : null;
+      }
       const lat = Number(body.lat), lng = Number(body.lng);
       if (isFinite(lat) && isFinite(lng) && lat && lng) { patch.lat = lat; patch.lng = lng; }
       if (!Object.keys(patch).length) return json({ error: "변경할 내용이 없어요." }, 400);

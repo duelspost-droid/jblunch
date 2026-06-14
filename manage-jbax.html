@@ -120,6 +120,36 @@
   .rec-select:focus { outline: none; border-color: #0a3d7a; }
   .rec-desc { font-size: 0.72rem; color: #8794a6; margin-bottom: 8px; line-height: 1.4; }
   .lr-rec { font-size: 0.66rem; font-weight: 800; color: #5a4b9e; background: #efeafc; border-radius: 6px; padding: 2px 6px; }
+  /* 탭 네비게이션 */
+  .tabs-nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; background: #fff; border: 1px solid #eaeef4; border-radius: 14px; padding: 6px; }
+  .tab-btn { flex: 1; min-width: 96px; border: none; background: none; border-radius: 9px; padding: 10px 8px; font-size: 0.84rem; font-weight: 700; color: #6b7a90; cursor: pointer; font-family: inherit; transition: background .12s, color .12s; }
+  .tab-btn:hover { background: #f4f7fb; }
+  .tab-btn.on { background: #0a3d7a; color: #fff; }
+  .tab-pane { display: none; }
+  .tab-pane.on { display: block; }
+  /* 추천 방식 탭 */
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  @media (max-width: 640px) { .rec-grid { grid-template-columns: 1fr; } }
+  .rec-card { border: 1.5px solid #eef1f6; border-radius: 12px; padding: 12px 14px; background: #f9fbfd; }
+  .rec-card.rec-reco { border-color: #b9d2f0; background: #f2f8ff; }
+  .rec-card h4 { font-size: 0.9rem; font-weight: 800; color: #0a3d7a; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .rec-card .rec-tag { font-size: 0.62rem; font-weight: 800; color: #1565c0; background: #e3edfb; border-radius: 5px; padding: 1px 6px; }
+  .rec-card .rec-card-desc { font-size: 0.76rem; color: #5a6678; line-height: 1.5; margin-bottom: 7px; }
+  .rec-card .rec-stat { font-size: 0.68rem; color: #8794a6; line-height: 1.5; }
+  .rec-card .rec-stat b { color: #4a5a72; }
+  .bulk-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .bulk-row .rec-select { margin-bottom: 0; flex: 1; min-width: 180px; }
+  /* 커스텀 파라미터 편집기 */
+  .custom-editor { border: 1.5px dashed #d4d0ec; background: #faf9ff; border-radius: 11px; padding: 12px; margin: 8px 0; }
+  .custom-editor .ce-title { font-size: 0.8rem; font-weight: 800; color: #5a4b9e; margin-bottom: 8px; }
+  .custom-editor .ce-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .custom-editor label { font-size: 0.7rem; font-weight: 700; color: #6b7a90; margin-bottom: 3px; }
+  .custom-editor input, .custom-editor select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 7px 9px; font-size: 0.8rem; font-family: inherit; }
+  .custom-editor input:focus, .custom-editor select:focus { outline: none; border-color: #5a4b9e; }
+  .custom-editor .ce-hint { font-size: 0.68rem; color: #9aa6b5; margin-top: 2px; }
+  .rec-loc-row { display: flex; align-items: center; gap: 10px; background: #f7f9fc; border: 1px solid #eef1f6; border-radius: 11px; padding: 10px 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .rec-loc-row .rl-name { font-weight: 700; font-size: 0.86rem; color: #1a2a44; flex: 1; min-width: 120px; }
+  .rec-loc-row .rec-select { margin-bottom: 0; width: auto; min-width: 160px; }
   /* 좌표 검색 */
   .geo-search { margin-bottom: 8px; }
   .geo-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -237,8 +267,18 @@
     <button class="btn" style="width:100%" onclick="login()">로그인</button>
   </div>
 
-  <!-- 로그 + 비번변경 (로그인 후) -->
+  <!-- 로그인 후 패널 (탭) -->
   <div id="panel" class="hidden">
+    <div class="tabs-nav">
+      <button class="tab-btn on" data-tab="dash" onclick="showAdminTab('dash')">📊 대시보드</button>
+      <button class="tab-btn" data-tab="loc" onclick="showAdminTab('loc')">📍 위치 관리</button>
+      <button class="tab-btn" data-tab="rec" onclick="showAdminTab('rec')">🎯 추천 방식</button>
+      <button class="tab-btn" data-tab="sug" onclick="showAdminTab('sug')">💡 기능 제안</button>
+      <button class="tab-btn" data-tab="set" onclick="showAdminTab('set')">⚙️ 설정</button>
+    </div>
+
+    <!-- ── 탭: 대시보드 ── -->
+    <div class="tab-pane on" id="tab-dash">
     <div class="card">
       <div class="card-head">
         <h2>👥 방문자 통계</h2>
@@ -292,7 +332,10 @@
       <div class="logs" id="logs"></div>
       <div class="pager" id="pager"></div>
     </div>
+    </div><!-- /tab-dash -->
 
+    <!-- ── 탭: 위치 관리 ── -->
+    <div class="tab-pane" id="tab-loc">
     <div class="card">
       <div class="card-head">
         <h2>📍 기준 위치 관리</h2>
@@ -317,18 +360,49 @@
         </div>
         <input type="text" id="nl-region" placeholder="지역 (검색하면 자동 입력 · 직접 수정 가능)">
         <label class="rec-label">추천 방식</label>
-        <select id="nl-profile" class="rec-select" onchange="document.getElementById('nl-profile-desc').textContent=REC_DESC[this.value]">
-          <option value="auto">자동 (권장) — 근처 우선, 부족하면 자동으로 넓게</option>
-          <option value="walk">도보 위주 — 걸어갈 수 있는 가까운 곳만</option>
-          <option value="drive">차량 권역 — 차로 이동 전제, 넓은 범위</option>
-          <option value="city">도심 밀집 — 가게 많은 도심, 좁고 촘촘하게</option>
-        </select>
-        <div class="rec-desc" id="nl-profile-desc">근처를 우선 추천하고, 가까운 가게가 적으면 자동으로 범위를 넓혀요. 대부분의 위치에 권장.</div>
+        <select id="nl-profile" class="rec-select" onchange="onAddProfileChange()"></select>
+        <div class="rec-desc" id="nl-profile-desc"></div>
+        <div id="nl-custom"></div>
         <div class="msg" id="loc-msg"></div>
         <button class="btn" onclick="addLocation()">위치 추가</button>
       </div>
     </div>
+    </div><!-- /tab-loc -->
 
+    <!-- ── 탭: 추천 방식 ── -->
+    <div class="tab-pane" id="tab-rec">
+    <div class="card">
+      <h2 style="margin-bottom:6px">🎯 추천 방식이란?</h2>
+      <p style="font-size:0.8rem;color:#6b7a90;line-height:1.55;margin-bottom:14px">
+        위치마다 "어느 범위에서, 어떤 거리 기준으로 맛집을 고를지" 정하는 설정이에요.
+        도심·외곽 등 위치 특성에 맞게 고르면 추천 품질이 크게 좋아집니다. 아래에서 각 방식을 확인하세요.</p>
+      <div class="rec-grid" id="rec-info"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:10px">⚡ 전체 일괄 적용</h2>
+      <p style="font-size:0.78rem;color:#8794a6;margin-bottom:10px">선택한 방식을 <b>모든 위치</b>에 한 번에 적용해요.</p>
+      <div class="bulk-row">
+        <select id="bulk-profile" class="rec-select" onchange="onBulkProfileChange()"></select>
+        <button class="btn" onclick="applyBulkProfile()">모든 위치에 적용</button>
+      </div>
+      <div class="rec-desc" id="bulk-desc"></div>
+      <div id="bulk-custom"></div>
+      <div class="msg" id="bulk-msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>📍 위치별 개별 지정</h2>
+        <button class="btn gray" onclick="loadRecLocs()">↻ 새로고침</button>
+      </div>
+      <p style="font-size:0.78rem;color:#8794a6;margin-bottom:10px">각 위치의 추천 방식을 따로 정해요. 바꾸면 바로 저장됩니다.</p>
+      <div id="rec-loc-list"></div>
+    </div>
+    </div><!-- /tab-rec -->
+
+    <!-- ── 탭: 기능 제안 ── -->
+    <div class="tab-pane" id="tab-sug">
     <div class="card">
       <div class="card-head">
         <h2>💡 기능 제안 관리</h2>
@@ -336,7 +410,10 @@
       </div>
       <div id="sug-list" class="sug-list"><div style="color:#8794a6;font-size:0.82rem">불러오는 중…</div></div>
     </div>
+    </div><!-- /tab-sug -->
 
+    <!-- ── 탭: 설정 ── -->
+    <div class="tab-pane" id="tab-set">
     <div class="card">
       <h2 style="margin-bottom:14px">🔑 비밀번호 변경</h2>
       <label>현재 비밀번호</label>
@@ -348,6 +425,7 @@
       <div class="msg" id="pw-msg"></div>
       <button class="btn" onclick="changePw()">비밀번호 변경</button>
     </div>
+    </div><!-- /tab-set -->
   </div>
 </div>
 
@@ -580,9 +658,15 @@ function render(data){
   renderChart(v.daily || []);
   // 통계 + 로그 목록(현재 필터 기준)
   refreshLogView();
-  loadLocList();      // 기준 위치 목록
+  // 추천 방식 메타 로드 후 셀렉트·설명 초기화
+  loadProfilesMeta().then(() => {
+    const add = document.getElementById('nl-profile');
+    if (add) { add.innerHTML = recSelectHtml('auto'); onAddProfileChange(); }
+    const bulk = document.getElementById('bulk-profile');
+    if (bulk) { bulk.innerHTML = recSelectHtml('auto'); onBulkProfileChange(); }
+    loadLocList();      // 기준 위치 목록(추천 방식 라벨 표시)
+  });
   loadSuggestions();  // 기능 제안 목록
-
 }
 
 // 방문 추이 막대그래프 (의존성 없는 인라인 SVG)
@@ -689,18 +773,147 @@ async function changePw(){
   msg.className='msg ok'; msg.textContent='✅ 비밀번호가 변경되었습니다. (다른 기기는 재로그인 필요)';
 }
 
-// ── 기준 위치 관리 ────────────────────────────────────────────
-const REC_LABELS = { auto:'자동', walk:'도보 위주', drive:'차량 권역', city:'도심 밀집' };
-const REC_DESC = {
-  auto:  '근처를 우선 추천하고, 가까운 가게가 적으면 자동으로 범위를 넓혀요. 대부분의 위치에 권장.',
-  walk:  '걸어서 갈 수 있는 가까운 곳만 추천해요. 도심 사무실 등에 적합.',
-  drive: '차로 이동을 전제로 넓은 범위에서 추천하고, 거리를 "차로 N분"으로 표기해요. 외곽·시골에 적합.',
-  city:  '가게가 밀집한 도심에서 좁고 촘촘하게 추천해요.',
-};
-function recSelectHtml(id, cur){
-  return ['auto','walk','drive','city'].map(k =>
-    `<option value="${k}" ${(cur||'auto')===k?'selected':''}>${REC_LABELS[k]} — ${REC_DESC[k].split('.')[0]}</option>`).join('');
+// ── 추천 방식 메타 (admin profiles_meta로 로드, 단일 출처) ───────
+let PROFILES_META = [];
+const ALLOWFAR_LABEL = { sparse:'부족할 때만', no:'항상 근처만', always:'항상 허용' };
+function metaByKey(k){ return PROFILES_META.find(p => p.key === k) || PROFILES_META.find(p => p.key === 'auto') || {}; }
+function recLabel(k){ return (metaByKey(k).label) || k || '자동'; }
+function recDesc(k){ return (metaByKey(k).desc) || ''; }
+async function loadProfilesMeta(){
+  if (PROFILES_META.length) return PROFILES_META;
+  const { ok, data } = await adminCall({ action:'profiles_meta', token: curToken });
+  if (ok && Array.isArray(data.profiles)) PROFILES_META = data.profiles;
+  return PROFILES_META;
 }
+function recSelectHtml(cur){
+  return PROFILES_META.map(p =>
+    `<option value="${p.key}" ${(cur||'auto')===p.key?'selected':''}>${esc(p.label)}</option>`).join('');
+}
+// 커스텀 파라미터 편집기 (prefix별 고유 id) — cur=custom 객체 또는 null(기본값)
+function customEditorHtml(prefix, cur){
+  const c = cur || {};
+  const radii = Array.isArray(c.radii)&&c.radii.length ? c.radii.join(',') : '600,1500,3000';
+  const af = c.allowFar || 'sparse';
+  return `<div class="custom-editor">
+    <div class="ce-title">🛠 맞춤 설정</div>
+    <div class="ce-grid">
+      <div><label>탐색 반경 (m, 쉼표로 단계)</label><input id="${prefix}-radii" value="${esc(radii)}"><div class="ce-hint">가까운 순서로 넓혀가며 탐색</div></div>
+      <div><label>목표 후보 수</label><input id="${prefix}-mincand" type="number" min="1" value="${c.minCand||12}"></div>
+      <div><label>도보 표기 상한 (분)</label><input id="${prefix}-walkmax" type="number" min="1" value="${c.walkMax||14}"><div class="ce-hint">초과 시 '차로 N분·km'</div></div>
+      <div><label>추가추천 거리 상한 (분)</label><input id="${prefix}-extramax" type="number" min="1" value="${c.extraMax||20}"></div>
+      <div><label>먼 곳 허용</label><select id="${prefix}-allowfar">
+        <option value="sparse" ${af==='sparse'?'selected':''}>부족할 때만</option>
+        <option value="no" ${af==='no'?'selected':''}>항상 근처만</option>
+        <option value="always" ${af==='always'?'selected':''}>항상 허용</option></select></div>
+    </div></div>`;
+}
+function readCustomEditor(prefix){
+  const g = id => document.getElementById(prefix+'-'+id);
+  const radii = (g('radii').value||'').split(',').map(s=>parseInt(s.trim())).filter(n=>n>0);
+  return {
+    radii: radii.length ? radii : [600,1500,3000],
+    minCand: parseInt(g('mincand').value)||12,
+    walkMax: parseInt(g('walkmax').value)||14,
+    extraMax: parseInt(g('extramax').value)||20,
+    allowFar: g('allowfar').value || 'sparse',
+  };
+}
+// custom 편집기 토글 컨테이너 채우기
+function syncCustomBox(boxId, profileKey, cur){
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  box.innerHTML = profileKey==='custom' ? customEditorHtml(boxId, cur) : '';
+}
+
+// ── 추천 방식 탭 ──────────────────────────────────────────────
+function recStatLine(p){
+  const r = (p.radii||[]).join('m → ')+'m';
+  return `반경 <b>${r}</b> · 도보표기 <b>~${p.walkMax}분</b> · 추가추천 <b>~${p.extraMax}분</b> · 먼곳 <b>${ALLOWFAR_LABEL[p.allowFar]||p.allowFar}</b>`;
+}
+function renderRecInfo(){
+  const el = document.getElementById('rec-info');
+  if (!el) return;
+  el.innerHTML = PROFILES_META.map(p => {
+    const reco = p.key==='auto';
+    return `<div class="rec-card ${reco?'rec-reco':''}">
+      <h4>${esc(p.label)} ${reco?'<span class="rec-tag">권장</span>':''}</h4>
+      <div class="rec-card-desc">${esc(p.desc||'')}</div>
+      <div class="rec-stat">${p.key==='custom'?'위치별로 값을 직접 지정':recStatLine(p)}</div>
+    </div>`;
+  }).join('');
+}
+function onBulkProfileChange(){
+  const k = document.getElementById('bulk-profile').value;
+  document.getElementById('bulk-desc').textContent = recDesc(k);
+  syncCustomBox('bulk-custom', k, null);
+}
+async function applyBulkProfile(){
+  const msg = document.getElementById('bulk-msg');
+  const k = document.getElementById('bulk-profile').value;
+  if(!confirm(`모든 위치의 추천 방식을 '${recLabel(k)}'(으)로 바꿀까요?`)) return;
+  const payload = { action:'loc_set_all_profile', token: curToken, rec_profile: k };
+  if(k==='custom') payload.rec_custom = readCustomEditor('bulk-custom');
+  msg.className='msg'; msg.textContent='적용 중…';
+  const { ok, data } = await adminCall(payload);
+  if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'적용 실패'); return; }
+  msg.className='msg ok'; msg.textContent='✅ 모든 위치에 적용했어요.';
+  loadRecLocs(); loadLocList();
+}
+async function loadRecLocs(){
+  const wrap = document.getElementById('rec-loc-list');
+  if(!wrap) return;
+  wrap.innerHTML = '<div style="color:#8794a6;font-size:0.82rem">불러오는 중…</div>';
+  const { ok, data } = await adminCall({ action:'loc_list', token: curToken });
+  if(!ok){ wrap.innerHTML='<div style="color:#c0394b;font-size:0.82rem">불러오지 못했어요.</div>'; return; }
+  const locs = data.locations || [];
+  window._recLocs = {};
+  wrap.innerHTML = locs.map(l => {
+    window._recLocs[l.key] = l;
+    return `<div class="rec-loc-row" id="recrow-${esc(l.key)}">
+      <span class="rl-name">${esc(l.name)}</span>
+      <select class="rec-select" onchange="onRecLocChange('${esc(l.key)}',this.value)">${recSelectHtml(l.rec_profile)}</select>
+    </div>
+    <div id="reccustom-${esc(l.key)}"></div>`;
+  }).join('') || '<div style="color:#8794a6;font-size:0.82rem">위치가 없어요.</div>';
+}
+async function onRecLocChange(key, val){
+  const l = (window._recLocs||{})[key] || {};
+  if(val==='custom'){
+    // 커스텀 편집기 노출 + 저장 버튼
+    const box = document.getElementById('reccustom-'+key);
+    box.innerHTML = customEditorHtml('reccustom-'+key, l.rec_custom) +
+      `<button class="btn" style="margin:4px 0 10px" onclick="saveRecLoc('${key}')">맞춤값 저장</button>`;
+    return;
+  }
+  document.getElementById('reccustom-'+key).innerHTML='';
+  const { ok, data } = await adminCall({ action:'loc_update', token: curToken, key, rec_profile: val });
+  if(!ok){ alert('변경 실패: '+(data.error||'')); return; }
+  if(window._recLocs[key]) window._recLocs[key].rec_profile = val;
+  loadLocList();
+}
+async function saveRecLoc(key){
+  const custom = readCustomEditor('reccustom-'+key);
+  const { ok, data } = await adminCall({ action:'loc_update', token: curToken, key, rec_profile:'custom', rec_custom: custom });
+  if(!ok){ alert('저장 실패: '+(data.error||'')); return; }
+  if(window._recLocs[key]){ window._recLocs[key].rec_profile='custom'; window._recLocs[key].rec_custom=custom; }
+  loadLocList();
+}
+// 추가 폼 추천 방식 변경
+function onAddProfileChange(){
+  const k = document.getElementById('nl-profile').value;
+  document.getElementById('nl-profile-desc').textContent = recDesc(k);
+  syncCustomBox('nl-custom', k, null);
+}
+
+// 탭 전환
+function showAdminTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('on', p.id==='tab-'+tab));
+  if(tab==='rec'){ renderRecInfo(); loadRecLocs(); }
+  if(tab==='sug') loadSuggestions();
+}
+
+// ── 기준 위치 관리 ────────────────────────────────────────────
 async function loadLocList(){
   const wrap = document.getElementById('loc-list');
   if(!wrap) return;
@@ -709,7 +922,6 @@ async function loadLocList(){
   if(!ok){ wrap.innerHTML = '<div style="color:#c0394b;font-size:0.82rem">목록을 불러오지 못했어요.</div>'; return; }
   const locs = data.locations || [];
   window._locs = {};
-  const RECN = REC_LABELS;
   wrap.innerHTML = locs.map(l => {
     window._locs[l.key] = l;
     const off = l.enabled === false;
@@ -721,7 +933,7 @@ async function loadLocList(){
     return `
     <div class="loc-row${off?' off':''}" id="lrow-${esc(l.key)}">
       <div class="lr-main">
-        <div class="lr-name">${esc(l.name)} ${badge} <span class="lr-rec">${esc(RECN[l.rec_profile||'auto']||'자동')}</span></div>
+        <div class="lr-name">${esc(l.name)} ${badge} <span class="lr-rec">${esc(recLabel(l.rec_profile||'auto'))}</span></div>
         <div class="lr-meta">${esc(l.short||'')} · ${esc(l.region||'')} · ${(+l.lat).toFixed(4)}, ${(+l.lng).toFixed(4)}</div>
       </div>
       <div class="lr-btns">
@@ -759,7 +971,8 @@ function editLoc(key){
       <input id="le-region-${key}" class="le-full" value="${esc(l.region||'')}" placeholder="지역">
     </div>
     <label class="rec-label">추천 방식</label>
-    <select id="le-profile-${key}" class="rec-select">${recSelectHtml('le-profile-'+key, l.rec_profile)}</select>
+    <select id="le-profile-${key}" class="rec-select" onchange="syncCustomBox('le-custom-${key}', this.value, _locs['${key}']&&_locs['${key}'].rec_custom)">${recSelectHtml(l.rec_profile)}</select>
+    <div id="le-custom-${key}"></div>
     <div class="le-coord" id="le-coord-${key}">📍 좌표: ${(+l.lat).toFixed(5)}, ${(+l.lng).toFixed(5)} <span style="color:#8794a6">(바꾸려면 아래에서 검색)</span></div>
     <div class="geo-search-row">
       <input id="le-search-${key}" placeholder="좌표 다시 검색 (장소명/주소)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEditGeo('${key}');}">
@@ -771,6 +984,8 @@ function editLoc(key){
       <button class="btn" onclick="saveLoc('${key}')">저장</button>
       <button class="btn gray" onclick="document.getElementById('ledit-${key}').style.display='none'">취소</button>
     </div>`;
+  // 현재 방식이 맞춤이면 편집기 즉시 표시
+  syncCustomBox('le-custom-'+key, l.rec_profile||'auto', l.rec_custom);
 }
 async function searchEditGeo(key){
   const q = document.getElementById('le-search-'+key).value.trim();
@@ -802,6 +1017,7 @@ async function saveLoc(key){
     short: document.getElementById('le-short-'+key).value.trim(),
     region: document.getElementById('le-region-'+key).value.trim(),
     rec_profile: document.getElementById('le-profile-'+key).value };
+  if(payload.rec_profile==='custom') payload.rec_custom = readCustomEditor('le-custom-'+key);
   if(_editCoord[key]){ payload.lat = _editCoord[key].lat; payload.lng = _editCoord[key].lng; }
   msg.className='msg'; msg.textContent='저장 중…';
   const { ok, data } = await adminCall(payload);
@@ -850,13 +1066,16 @@ async function addLocation(){
   if(!name || !region){ msg.className='msg err'; msg.textContent='이름과 지역은 필수예요.'; return; }
   if(!pickedGeo){ msg.className='msg err'; msg.textContent='먼저 장소를 검색해서 좌표를 선택해주세요.'; return; }
   const rec_profile = document.getElementById('nl-profile').value;
+  const payload = { action:'loc_add', token: curToken, name, short, region, lat: pickedGeo.lat, lng: pickedGeo.lng, rec_profile };
+  if(rec_profile==='custom') payload.rec_custom = readCustomEditor('nl-custom');
   msg.className='msg'; msg.textContent='추가 중…';
-  const { ok, data } = await adminCall({ action:'loc_add', token: curToken, name, short, region, lat: pickedGeo.lat, lng: pickedGeo.lng, rec_profile });
+  const { ok, data } = await adminCall(payload);
   if(!ok){ msg.className='msg err'; msg.textContent='⚠️ '+(data.error||'추가 실패'); return; }
   msg.className='msg ok'; msg.textContent=`✅ '${name}' 추가됨 (홈 위치 선택기에 바로 노출돼요)`;
   ['nl-name','nl-short','nl-region','nl-search'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('geo-picked').style.display='none';
   document.getElementById('geo-results').innerHTML='';
+  document.getElementById('nl-custom').innerHTML='';
   pickedGeo = null;
   loadLocList();
 }

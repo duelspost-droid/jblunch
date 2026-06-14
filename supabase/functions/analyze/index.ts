@@ -27,12 +27,32 @@ const NON_FOOD = ["병원", "약국", "은행", "학원", "부동산", "미용",
 // ── 추천 방식 프리셋 (배치 generate_lunch.py와 동일 개념) ────────
 type Profile = { label: string; radii: number[]; minCand: number; walkMax: number; extraMax: number; allowFar: "sparse" | "no" | "always" };
 const PROFILES: Record<string, Profile> = {
-  auto:  { label: "자동 (권장)", radii: [600, 1500, 3000, 5000], minCand: 12, walkMax: 14, extraMax: 20, allowFar: "sparse" },
-  walk:  { label: "도보 위주",   radii: [700, 1000],             minCand: 8,  walkMax: 99, extraMax: 12, allowFar: "no" },
-  drive: { label: "차량 권역",   radii: [2000, 5000, 9000],      minCand: 10, walkMax: 6,  extraMax: 40, allowFar: "sparse" },
-  city:  { label: "도심 밀집",   radii: [500, 1000, 1500],       minCand: 15, walkMax: 12, extraMax: 12, allowFar: "sparse" },
+  walk_tight: { label: "도보 최우선",   radii: [300, 500],              minCand: 6,  walkMax: 99, extraMax: 8,  allowFar: "no" },
+  walk:       { label: "도보 위주",     radii: [700, 1000],             minCand: 8,  walkMax: 99, extraMax: 12, allowFar: "no" },
+  auto:       { label: "근거리 자동 (권장)", radii: [600, 1500, 3000, 5000], minCand: 12, walkMax: 14, extraMax: 20, allowFar: "sparse" },
+  town:       { label: "동네 (도보+동네)", radii: [1500, 3000],            minCand: 10, walkMax: 12, extraMax: 20, allowFar: "sparse" },
+  drive_near: { label: "차량 근교",     radii: [2000, 5000],            minCand: 8,  walkMax: 6,  extraMax: 30, allowFar: "sparse" },
+  drive:      { label: "차량 권역",     radii: [3000, 6000, 9000],      minCand: 8,  walkMax: 5,  extraMax: 40, allowFar: "sparse" },
+  wide:       { label: "광역 (시·도)",  radii: [5000, 10000, 15000],    minCand: 6,  walkMax: 4,  extraMax: 60, allowFar: "always" },
+  city:       { label: "도심 밀집",     radii: [500, 1000, 1500],       minCand: 15, walkMax: 12, extraMax: 12, allowFar: "sparse" },
 };
-function getProfile(key: string): Profile { return PROFILES[key] || PROFILES.auto; }
+// 프리셋 키 → 파라미터. 'custom'이면 위치의 커스텀 객체를 기본값에 병합.
+function getProfile(key: string, custom?: Record<string, unknown> | null): Profile {
+  if (key === "custom" && custom && typeof custom === "object") {
+    const base = PROFILES.auto;
+    const radii = Array.isArray(custom.radii) && custom.radii.length ? (custom.radii as number[]).map(Number).filter((n) => n > 0) : base.radii;
+    const allow = ["sparse", "no", "always"].includes(String(custom.allowFar)) ? custom.allowFar as Profile["allowFar"] : base.allowFar;
+    return {
+      label: "맞춤",
+      radii: radii.length ? radii : base.radii,
+      minCand: Number(custom.minCand) > 0 ? Number(custom.minCand) : base.minCand,
+      walkMax: Number(custom.walkMax) > 0 ? Number(custom.walkMax) : base.walkMax,
+      extraMax: Number(custom.extraMax) > 0 ? Number(custom.extraMax) : base.extraMax,
+      allowFar: allow,
+    };
+  }
+  return PROFILES[key] || PROFILES.auto;
+}
 
 // 거리(m) → 표기 [라벨, 도보분]. 도보 상한 초과면 차로/거리로 자동 전환
 function fmtDist(meters: number, prof: Profile): [string, number] {
@@ -229,7 +249,7 @@ Deno.serve(async (req) => {
     const lng = Number(body.lng) || JB_LNG;
     const region = (body.region || "여의도").toString().trim() || "여의도";
     const place = (body.place || "JB빌딩").toString().trim() || "JB빌딩";
-    const prof = getProfile((body.profile || "auto").toString());
+    const prof = getProfile((body.profile || "auto").toString(), body.custom || null);
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return json({ error: "API key not set" }, 500);

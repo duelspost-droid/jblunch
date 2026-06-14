@@ -45,13 +45,29 @@ REGION_QUERIES = ["여의도 맛집", "여의나루 맛집", "여의도 점심",
 #  extra_max  : extras(추가추천) 허용 거리 상한(분)
 #  allow_far  : 'sparse'=후보 부족할 때만 먼 유명맛집 허용 / 'no'=항상 근처만 / 'always'=항상 허용(③)
 PROFILES = {
-    "auto":  {"label": "자동 (권장)",   "radii": [600, 1500, 3000, 5000], "min_cand": 12, "walk_max": 14, "extra_max": 20, "allow_far": "sparse"},
-    "walk":  {"label": "도보 위주",     "radii": [700, 1000],             "min_cand": 8,  "walk_max": 99, "extra_max": 12, "allow_far": "no"},
-    "drive": {"label": "차량 권역",     "radii": [2000, 5000, 9000],      "min_cand": 10, "walk_max": 6,  "extra_max": 40, "allow_far": "sparse"},
-    "city":  {"label": "도심 밀집",     "radii": [500, 1000, 1500],       "min_cand": 15, "walk_max": 12, "extra_max": 12, "allow_far": "sparse"},
+    "walk_tight": {"label": "도보 최우선",   "radii": [300, 500],              "min_cand": 6,  "walk_max": 99, "extra_max": 8,  "allow_far": "no"},
+    "walk":       {"label": "도보 위주",     "radii": [700, 1000],             "min_cand": 8,  "walk_max": 99, "extra_max": 12, "allow_far": "no"},
+    "auto":       {"label": "근거리 자동 (권장)", "radii": [600, 1500, 3000, 5000], "min_cand": 12, "walk_max": 14, "extra_max": 20, "allow_far": "sparse"},
+    "town":       {"label": "동네 (도보+동네)", "radii": [1500, 3000],            "min_cand": 10, "walk_max": 12, "extra_max": 20, "allow_far": "sparse"},
+    "drive_near": {"label": "차량 근교",     "radii": [2000, 5000],            "min_cand": 8,  "walk_max": 6,  "extra_max": 30, "allow_far": "sparse"},
+    "drive":      {"label": "차량 권역",     "radii": [3000, 6000, 9000],      "min_cand": 8,  "walk_max": 5,  "extra_max": 40, "allow_far": "sparse"},
+    "wide":       {"label": "광역 (시·도)",  "radii": [5000, 10000, 15000],    "min_cand": 6,  "walk_max": 4,  "extra_max": 60, "allow_far": "always"},
+    "city":       {"label": "도심 밀집",     "radii": [500, 1000, 1500],       "min_cand": 15, "walk_max": 12, "extra_max": 12, "allow_far": "sparse"},
 }
-def get_profile(key):
-    return PROFILES.get(key or "auto", PROFILES["auto"])
+_PROFILE_DEFAULT = PROFILES["auto"]
+def get_profile(key, custom=None):
+    """프리셋 키 → 파라미터. 'custom'이면 위치의 rec_custom(JSON)을 기본값에 병합."""
+    if key == "custom" and isinstance(custom, dict):
+        merged = dict(_PROFILE_DEFAULT)
+        merged["label"] = "맞춤"
+        for f in ("radii", "min_cand", "walk_max", "extra_max", "allow_far"):
+            if custom.get(f) not in (None, "", []):
+                merged[f] = custom[f]
+        # radii가 문자열/단일값으로 와도 방어
+        if not isinstance(merged.get("radii"), list) or not merged["radii"]:
+            merged["radii"] = list(_PROFILE_DEFAULT["radii"])
+        return merged
+    return PROFILES.get(key or "auto", _PROFILE_DEFAULT)
 
 PROFILE = PROFILES["auto"]   # 현재 위치의 추천 방식 (set_origin에서 전환)
 
@@ -59,14 +75,14 @@ _coords_cache = {}
 _candidates_cache = None
 
 
-def set_origin(lat, lng, region, place, profile="auto"):
+def set_origin(lat, lng, region, place, profile="auto", custom=None):
     """현재 처리할 위치로 전역 컨텍스트 전환 + 위치 종속 캐시 초기화."""
     global ORIGIN_LAT, ORIGIN_LNG, REGION, PLACE_NAME, REGION_QUERIES, PROFILE
     global _coords_cache, _candidates_cache
     ORIGIN_LAT, ORIGIN_LNG = lat, lng
     REGION = region
     PLACE_NAME = place
-    PROFILE = get_profile(profile)
+    PROFILE = get_profile(profile, custom)
     REGION_QUERIES = [f"{region} 맛집", f"{region} 점심", f"{region} 한식",
                       f"{region} 일식", f"{region} 술집"]
     _coords_cache = {}       # 좌표 캐시는 거리 기준점이 바뀌면 무효
@@ -89,7 +105,7 @@ def fetch_locations():
     fallback = [{"key": "jb", "name": "JB빌딩", "region": "여의도",
                  "lat": JB_LAT, "lng": JB_LNG, "auto": True, "rec_profile": "auto"}]
     try:
-        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto,rec_profile&enabled=not.eq.false&order=sort.asc"
+        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto,rec_profile,rec_custom&enabled=not.eq.false&order=sort.asc"
         req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
         with urllib.request.urlopen(req, timeout=8) as r:
             rows = json.loads(r.read())
@@ -99,7 +115,8 @@ def fetch_locations():
                 out.append({"key": l["key"], "name": l.get("name") or l["key"],
                             "region": l.get("region") or "", "short": l.get("short") or l.get("name"),
                             "lat": float(l["lat"]), "lng": float(l["lng"]), "auto": bool(l.get("auto")),
-                            "rec_profile": l.get("rec_profile") or "auto"})
+                            "rec_profile": l.get("rec_profile") or "auto",
+                            "rec_custom": l.get("rec_custom")})
             except (KeyError, ValueError, TypeError):
                 continue
         return out or fallback
@@ -1062,7 +1079,7 @@ def process_location(client, loc, today, date_compact, kakao_key, naver_id, nave
     path = "history.json" if is_jb else os.path.join("data", f"history-{loc['key']}.json")
     set_origin(loc["lat"], loc["lng"], loc.get("region") or "여의도",
                loc.get("short") or loc.get("name") or loc["key"],
-               loc.get("rec_profile") or "auto")
+               loc.get("rec_profile") or "auto", loc.get("rec_custom"))
     print(f"\n=== 📍 [{loc['name']}] 추천 생성 (방식={PROFILE['label']}) → {path} ===")
 
     recent = get_recent_names(path, days=3)
