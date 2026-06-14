@@ -785,9 +785,10 @@ async function loadProfilesMeta(){
   if (ok && Array.isArray(data.profiles)) PROFILES_META = data.profiles;
   return PROFILES_META;
 }
+function recShort(k){ return (recDesc(k).split('.')[0] || '').trim(); }
 function recSelectHtml(cur){
   return PROFILES_META.map(p =>
-    `<option value="${p.key}" ${(cur||'auto')===p.key?'selected':''}>${esc(p.label)}</option>`).join('');
+    `<option value="${p.key}" ${(cur||'auto')===p.key?'selected':''}>${esc(p.label)} — ${esc((p.desc||'').split('.')[0])}</option>`).join('');
 }
 // 커스텀 파라미터 편집기 (prefix별 고유 id) — cur=custom 객체 또는 null(기본값)
 function customEditorHtml(prefix, cur){
@@ -873,11 +874,13 @@ async function loadRecLocs(){
       <span class="rl-name">${esc(l.name)}</span>
       <select class="rec-select" onchange="onRecLocChange('${esc(l.key)}',this.value)">${recSelectHtml(l.rec_profile)}</select>
     </div>
+    <div class="rec-desc" id="recdesc-${esc(l.key)}" style="margin:-2px 2px 8px">${esc(recDesc(l.rec_profile||'auto'))}</div>
     <div id="reccustom-${esc(l.key)}"></div>`;
   }).join('') || '<div style="color:#8794a6;font-size:0.82rem">위치가 없어요.</div>';
 }
 async function onRecLocChange(key, val){
   const l = (window._recLocs||{})[key] || {};
+  const dsc = document.getElementById('recdesc-'+key); if(dsc) dsc.textContent = recDesc(val);
   if(val==='custom'){
     // 커스텀 편집기 노출 + 저장 버튼
     const box = document.getElementById('reccustom-'+key);
@@ -971,7 +974,8 @@ function editLoc(key){
       <input id="le-region-${key}" class="le-full" value="${esc(l.region||'')}" placeholder="지역">
     </div>
     <label class="rec-label">추천 방식</label>
-    <select id="le-profile-${key}" class="rec-select" onchange="syncCustomBox('le-custom-${key}', this.value, _locs['${key}']&&_locs['${key}'].rec_custom)">${recSelectHtml(l.rec_profile)}</select>
+    <select id="le-profile-${key}" class="rec-select" onchange="document.getElementById('le-pdesc-${key}').textContent=recDesc(this.value); syncCustomBox('le-custom-${key}', this.value, _locs['${key}']&&_locs['${key}'].rec_custom)">${recSelectHtml(l.rec_profile)}</select>
+    <div class="rec-desc" id="le-pdesc-${key}">${esc(recDesc(l.rec_profile||'auto'))}</div>
     <div id="le-custom-${key}"></div>
     <div class="le-coord" id="le-coord-${key}">📍 좌표: ${(+l.lat).toFixed(5)}, ${(+l.lng).toFixed(5)} <span style="color:#8794a6">(바꾸려면 아래에서 검색)</span></div>
     <div class="geo-search-row">
