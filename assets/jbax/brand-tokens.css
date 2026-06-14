@@ -1,0 +1,43 @@
+:root {
+  --jbax-navy: #061A40;
+  --jbax-blue: #155BFF;
+  --jbax-cyan: #00B8D9;
+  --jbax-gold: #F6B23C;
+  --jbax-bg: #F6F9FE;
+  --jbax-line: #D8E1EF;
+  --jbax-text: #061A40;
+}
+
+.jbax-brand-section {
+  width: 100%;
+  background: var(--jbax-bg);
+  padding: clamp(20px, 3vw, 48px);
+  font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--jbax-text);
+}
+
+.jbax-dashboard-frame {
+  max-width: 1536px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--jbax-line);
+  box-shadow: 0 24px 80px rgba(6, 26, 64, 0.10);
+  overflow: hidden;
+}
+
+.jbax-dashboard-frame img,
+.jbax-dashboard-frame object {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 768px) {
+  .jbax-brand-section {
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .jbax-dashboard-frame {
+    min-width: 920px;
+  }
+}
