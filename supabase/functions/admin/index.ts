@@ -294,6 +294,29 @@ Deno.serve(async (req) => {
     if (action === "profiles_meta") {
       return json({ ok: true, profiles: REC_PROFILES });
     }
+
+    // ── 추천 다양성 설정 (B 회피강화 / C 분산강제 / A 풀섞기 / D 날짜로테이션) ──
+    if (action === "diversity_get") {
+      const r = await fetch(`${SB_URL}/rest/v1/app_settings?id=eq.1&select=diversity`, { headers: SH });
+      const rows = r.ok ? await r.json() : [];
+      const def = { avoid: true, spread: true, pool: false, rotate: false, recent_days: 5 };
+      return json({ ok: true, diversity: { ...def, ...((rows[0] && rows[0].diversity) || {}) } });
+    }
+    if (action === "diversity_set") {
+      const d = (body.diversity && typeof body.diversity === "object") ? body.diversity as Record<string, unknown> : {};
+      const rd = Math.max(0, Math.min(14, Math.round(Number(d.recent_days)) || 0));
+      const div = {
+        avoid: !!d.avoid, spread: !!d.spread, pool: !!d.pool, rotate: !!d.rotate, recent_days: rd,
+      };
+      const r = await fetch(`${SB_URL}/rest/v1/app_settings?on_conflict=id`, {
+        method: "POST",
+        headers: { ...SH, Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ id: 1, diversity: div, updated_at: new Date().toISOString() }),
+      });
+      if (!r.ok) return json({ error: "저장 실패: " + (await r.text()) }, 500);
+      await logAdmin("diversity_set", ip, JSON.stringify(div), ua);
+      return json({ ok: true, diversity: div });
+    }
     // ── 추천 방식 전체 일괄 적용 ────────────────────────────────
     if (action === "loc_set_all_profile") {
       const p = (body.rec_profile || "").toString();

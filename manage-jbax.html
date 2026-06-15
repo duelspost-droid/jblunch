@@ -242,6 +242,15 @@
     tbody td[colspan] { justify-content: center; }
     tbody td[colspan]::before { content: ''; }
   }
+  /* 추천 다양성 */
+  .div-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-top: 1px solid #f1f4f8; cursor: pointer; }
+  .div-row:first-of-type { border-top: none; }
+  .div-row input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+  .div-row b { font-size: 0.86rem; color: #1a2330; }
+  .div-row small { color: #8794a6; font-size: 0.74rem; }
+  .div-days { margin-top: 12px; font-size: 0.84rem; color: #44566b; font-weight: 600; }
+  .div-days input { width: 58px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; font-size: 0.86rem; text-align: center; }
+  .div-days small { color: #aab4c0; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -371,6 +380,21 @@
 
     <!-- ── 탭: 추천 방식 ── -->
     <div class="tab-pane" id="tab-rec">
+    <div class="card">
+      <h2 style="margin-bottom:6px">🎲 추천 다양성</h2>
+      <p style="font-size:0.8rem;color:#6b7a90;line-height:1.55;margin-bottom:12px">
+        기본 추천이 매번 비슷하게 나오지 않도록 조절해요. <b>B·C 권장</b> (전 위치 공통 적용).</p>
+      <label class="div-row"><input type="checkbox" id="div-avoid"><span><b>B. 최근 추천 회피 강화</b><br><small>최근 추천한 곳을 목록에 있어도 반드시 제외</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-spread"><span><b>C. 거리대 분산 강제</b><br><small>가까운 곳만 반복하지 않고 거리대를 다양화</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-pool"><span><b>A. 후보 풀 무작위 섞기</b><br><small>매번 다른 조합 유도 (거리가 약간 멀어질 수 있음)</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-rotate"><span><b>D. 날짜 로테이션</b><br><small>같은 후보 풀이라도 날짜별로 다른 선택</small></span></label>
+      <div class="div-days">최근 회피 기간 <input type="number" id="div-days" min="0" max="14"> 일 <small>(0=회피 안 함)</small></div>
+      <div class="row" style="margin-top:12px;align-items:center;gap:10px">
+        <button class="btn" onclick="saveDiversity()">저장</button>
+        <span class="msg" id="div-msg"></span>
+      </div>
+    </div>
+
     <div class="card">
       <h2 style="margin-bottom:6px">🎯 추천 방식이란?</h2>
       <p style="font-size:0.8rem;color:#6b7a90;line-height:1.55;margin-bottom:14px">
@@ -667,6 +691,31 @@ function render(data){
     loadLocList();      // 기준 위치 목록(추천 방식 라벨 표시)
   });
   loadSuggestions();  // 기능 제안 목록
+  loadDiversity();    // 추천 다양성 설정
+}
+
+// ── 추천 다양성 설정 ──────────────────────────────────────────
+async function loadDiversity(){
+  const { ok, data } = await adminCall({ action:'diversity_get', token: curToken });
+  if(!ok || !data.diversity) return;
+  const d = data.diversity;
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.checked=!!val; };
+  set('div-avoid', d.avoid); set('div-spread', d.spread); set('div-pool', d.pool); set('div-rotate', d.rotate);
+  const days=document.getElementById('div-days'); if(days) days.value = (d.recent_days ?? 5);
+}
+async function saveDiversity(){
+  const msg=document.getElementById('div-msg');
+  const diversity = {
+    avoid: document.getElementById('div-avoid').checked,
+    spread: document.getElementById('div-spread').checked,
+    pool: document.getElementById('div-pool').checked,
+    rotate: document.getElementById('div-rotate').checked,
+    recent_days: Math.max(0, Math.min(14, parseInt(document.getElementById('div-days').value)||0)),
+  };
+  msg.className='msg'; msg.textContent='저장 중…';
+  const { ok, data } = await adminCall({ action:'diversity_set', diversity, token: curToken });
+  if(ok){ msg.className='msg ok'; msg.textContent='✅ 저장됨 (다음 배치부터 적용)'; }
+  else { msg.className='msg err'; msg.textContent='⚠️ '+((data&&data.error)||'저장 실패'); }
 }
 
 // 방문 추이 막대그래프 (의존성 없는 인라인 SVG)

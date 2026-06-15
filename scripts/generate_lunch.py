@@ -7,6 +7,7 @@ GitHub Actions에서 매일 오전 11시(KST) 자동 실행
 import anthropic
 import json
 import math
+import random
 import re
 import os
 import sys
@@ -123,6 +124,34 @@ def fetch_locations():
     except Exception as e:
         print(f"⚠️  위치 목록 조회 실패 → JB빌딩만 처리: {e}")
         return fallback
+
+
+# ── 추천 다양성 설정 (관리자페이지에서 토글) ───────────────────
+# avoid(B)=최근 추천 강하게 제외 / spread(C)=거리대 분산 강제 /
+# pool(A)=후보 무작위 섞기 / rotate(D)=날짜 시드 로테이션 / recent_days=회피 기간
+DIVERSITY = {"avoid": True, "spread": True, "pool": False, "rotate": False, "recent_days": 5}
+
+
+def fetch_diversity():
+    """app_settings(공개 SELECT)에서 다양성 설정 로드. 실패 시 기본값(B+C on)."""
+    try:
+        url = f"{SB_URL}/rest/v1/app_settings?id=eq.1&select=diversity"
+        req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            rows = json.loads(r.read())
+        d = (rows[0].get("diversity") if rows else {}) or {}
+        out = dict(DIVERSITY)
+        for k in ("avoid", "spread", "pool", "rotate"):
+            if k in d:
+                out[k] = bool(d[k])
+        try:
+            out["recent_days"] = max(0, min(14, int(d.get("recent_days", out["recent_days"]))))
+        except (TypeError, ValueError):
+            pass
+        return out
+    except Exception as e:
+        print(f"⚠️  다양성 설정 조회 실패 → 기본값 사용: {e}")
+        return dict(DIVERSITY)
 
 
 def parse_minutes(distance):
@@ -921,6 +950,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 
     # 하이브리드: 근처 실제 음식점 후보 목록 (적응형 반경)
     candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
+    if DIVERSITY["pool"] and candidates:   # A: 후보 풀을 무작위로 섞어 매번 다른 조합 유도
+        candidates = list(candidates)
+        random.shuffle(candidates)
     # ③ 후보 충분도·프로파일에 따라 '먼 곳 추가' 허용 여부를 다르게 안내
     allow_far = PROFILE["allow_far"]
     far_ok = (allow_far == "always") or (allow_far == "sparse" and _cand_sparse)
@@ -940,16 +972,24 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     # 위치 기준 문구 (프롬프트 머리말)
     origin_desc = f"{REGION} {PLACE_NAME}".strip()
 
-    # 다양성: 최근 추천한 곳은 겹치지 않게 + 거리대 분산(프로파일·후보 충분도 반영)
+    # 다양성: B=회피 강화 / C=거리대 분산 강제 (관리자 설정 DIVERSITY)
     avoid_line = ""
     if recent_names:
-        avoid_line = f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.\n"
-    if far_ok:
-        band_line = ("restaurants 5곳은 위 목록에서 가까운 순으로 골라줘(거리대를 억지로 분산하지 말 것). "
-                     "음식 종류는 최대한 겹치지 않게.")
+        if DIVERSITY["avoid"]:   # B: 최근 추천 강하게 제외
+            avoid_line = (f"\n🚫 최근 추천한 곳({', '.join(recent_names)})은 위 목록에 있어도 "
+                          f"반드시 제외하고, 새로운 가게로만 5곳을 골라줘. 최근 추천한 곳을 다시 넣지 마.\n")
+        else:
+            avoid_line = f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.\n"
+    spread_txt = ("restaurants 5곳은 가까운 곳 위주로 하되 거리대를 다양하게(가장 가까운 2곳 + 중간 2곳 + 조금 먼 1곳), "
+                  "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
+    near_txt = ("restaurants 5곳은 위 목록에서 가까운 순으로 골라줘(거리대를 억지로 분산하지 말 것). "
+                "음식 종류는 최대한 겹치지 않게.")
+    if DIVERSITY["spread"]:       # C: 항상 거리대 분산 강제
+        band_line = spread_txt
+    elif far_ok:
+        band_line = near_txt
     else:
-        band_line = ("restaurants 5곳은 거리대를 다양하게(가까운 곳 위주, 가장 가까운 2곳 + 중간 2곳 + 조금 먼 1곳), "
-                     "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
+        band_line = spread_txt
     # extras 허용 거리(분) — 프로파일별
     ex_max = PROFILE["extra_max"]
 
@@ -1082,7 +1122,7 @@ def process_location(client, loc, today, date_compact, kakao_key, naver_id, nave
                loc.get("rec_profile") or "auto", loc.get("rec_custom"))
     print(f"\n=== 📍 [{loc['name']}] 추천 생성 (방식={PROFILE['label']}) → {path} ===")
 
-    recent = get_recent_names(path, days=3)
+    recent = get_recent_names(path, days=DIVERSITY["recent_days"]) if DIVERSITY["recent_days"] > 0 else []
     if recent:
         print(f"🔁 최근 추천 {len(recent)}곳 회피: {', '.join(recent[:8])}…")
     weather = fetch_weather(loc.get("region"))
@@ -1140,6 +1180,13 @@ def main():
     locations = fetch_locations()
     locations.sort(key=lambda l: (l["key"] != "jb",))  # jb 우선
     print(f"📍 배치 대상 위치 {len(locations)}곳: {', '.join(l['name'] for l in locations)}")
+
+    global DIVERSITY
+    DIVERSITY = fetch_diversity()
+    _on = [k for k in ('avoid','spread','pool','rotate') if DIVERSITY[k]]
+    print(f"🎲 추천 다양성: {', '.join(_on) or '없음'} (회피 {DIVERSITY['recent_days']}일)")
+    if DIVERSITY["rotate"]:
+        random.seed(today)   # 날짜 시드 → 같은 풀이라도 날짜별 다른 선택
 
     # JB금융 뉴스·주가는 전 위치 공통 → 1회만 수집해 모든 위치에 공유
     print("\n📰 JB금융 뉴스·주가 수집 중 (전 위치 공통)...")
