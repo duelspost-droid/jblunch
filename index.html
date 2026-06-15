@@ -1844,6 +1844,8 @@ async function generateRecommend(text, meal, saveHist) {
     restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
     extras = Array.isArray(data.extras) ? data.extras : [];
     kind = data.kind || 'condition';
+    var placeFound = (kind === 'place') ? (data.found !== false) : true;
+    var wantedName = data.wanted || text;
     if (data.error) errMsg = data.message || (data.error === 'rate_limited' ? 'AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요.' : '');
     ok = !!(restaurants && restaurants.length);
   } catch (e) { ok = false; }
@@ -1857,11 +1859,16 @@ async function generateRecommend(text, meal, saveHist) {
     if (btn) btn.disabled = false;
 
     if (ok) {
-      const label = !text ? `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`
-        : (kind === 'place' ? `🔎 "${text}" · 정보와 비슷한 곳` : `🔎 "${text}" 맞춤 추천`);
-      customResult = { label, comment, restaurants, extras, kind };
+      let label, headComment = comment;
+      if (!text) label = `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
+      else if (kind === 'place' && !placeFound) {
+        label = `🔎 "${wantedName}" — 근처에서 못 찾았어요`;
+        headComment = `${wantedName}을(를) 이 근처에서 찾지 못했어요. 대신 비슷한 분위기의 가까운 곳을 보여드릴게요.`;
+      }
+      else label = (kind === 'place') ? `🔎 "${text}" · 정보와 비슷한 곳` : `🔎 "${text}" 맞춤 추천`;
+      customResult = { label, comment: headComment, restaurants, extras, kind };
       cachePlaces([...(restaurants||[]), ...(extras||[])]);
-      answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
+      answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(headComment)}`;
       answerEl.classList.add('show');
       renderCustomGroup();
       if (saveHist && text) addHistory(text);

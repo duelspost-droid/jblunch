@@ -183,6 +183,39 @@ async function kakaoPlace(name: string, key: string, region: string): Promise<[n
   }
 }
 
+// 검색어와 찾은 가게 이름이 실제로 관련 있는지(같은 브랜드/상호인지) 느슨하게 판정
+function nameRelated(query: string, name: string): boolean {
+  const core = (s: string) => s.replace(/\s/g, "").toLowerCase()
+    .replace(/(커피|카페|coffee|점|지점|본점|여의도|서울)/g, "");
+  const a = core(query), b = core(name);
+  if (!a || !b) return false;
+  if (b.includes(a) || a.includes(b)) return true;
+  for (let len = Math.min(a.length, 4); len >= 2; len--) {   // 앞 2~4글자 공통이면 같은 브랜드로 간주
+    if (b.includes(a.slice(0, len))) return true;
+  }
+  return false;
+}
+
+// 상호명/브랜드(부분명 포함, 카페·디저트 등 전 카테고리) → 위치 기준 가장 가까운 실제 지점
+async function findPlace(query: string, key: string, lat: number, lng: number, region: string):
+  Promise<{ name: string; cuisine: string; distM: number; lat: number; lng: number } | null> {
+  if (!key || !query) return null;
+  for (const q of [`${query} ${region}`, query]) {
+    try {
+      const r = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&x=${lng}&y=${lat}&radius=20000&sort=distance&size=5`,
+        { headers: { Authorization: `KakaoAK ${key}` } });
+      if (!r.ok) continue;
+      const docs = (await r.json()).documents || [];
+      if (!docs.length) continue;
+      const d = docs[0];
+      const cat = (d.category_name || "").replace("음식점 > ", "").split(" > ").pop() || "";
+      return { name: d.place_name || query, cuisine: cat, distM: Number(d.distance || 0), lat: Number(d.y), lng: Number(d.x) };
+    } catch { /* 다음 쿼리 */ }
+  }
+  return null;
+}
+
 async function naverPlace(name: string, id: string, secret: string, region: string): Promise<[number, number, string] | null> {
   try {
     const q = encodeURIComponent(`${cleanName(name)} ${region}`);
@@ -340,19 +373,22 @@ Deno.serve(async (req) => {
 
     const inputLine = text
       ? `\n사용자 입력: "${text}"
-이 입력이 [A] 특정 가게 상호명(예: 성민촌, 스타벅스 여의도점)인지, [B] 조건/취향(예: 얼큰한거, 회식, 어제 과음, 가볍게)인지 먼저 판단해줘.
+이 입력이 [A] 특정 가게/브랜드 이름인지, [B] 조건/취향인지 먼저 판단해줘.
+[A] 판단 기준(아주 폭넓게): 가게 상호명(예: 성민촌), 프랜차이즈·체인·카페·디저트 브랜드(예: 스타벅스, 메가커피, 컴포즈, 빽다방, 투썸, 맥도날드)는 물론, 줄임말·부분명(예: "메가"→메가커피, "스벅"→스타벅스, "맥날"→맥도날드)도 모두 [A] 상호명이야. 음식 종류가 아니라 '특정 가게/브랜드'를 가리키면 무조건 [A].
+[A]면 그 브랜드의 정식 상호로 복원해서(예: "메가"→"메가커피") restaurants[0].name에 넣어. 그게 카페·디저트라도, 식사 가능 여부와 무관하게 사용자가 말한 그 가게를 넣어야 해.
+[B] 판단 기준: 음식 종류·맛·상황·기분 등 조건(예: 얼큰한거, 회식, 어제 과음, 가볍게).
 참고 해석(B일 때): "와인"=와인바·와인 페어링 / "임원"·"접대"·"상사"=격식 있는 고급 식당(프라이빗 룸) / "회식"=단체 회식.`
       : `\n조건 입력 없음 → 오늘 ${meal} 무난한 추천(kind="condition").`;
 
     const prompt = `너는 ${region} ${place} 근처 맛집 큐레이터야.${inputLine}
 ${candBlock}
 규칙:
-- [A] 상호명이면 kind="place": restaurants[0]=사용자가 말한 바로 그 가게(정확한 상호, ${region}(${place}) 인근 실제 가게), restaurants[1~4]=그 가게와 비슷한(같은 종류·분위기) 근처 맛집 4곳. comment=그 가게가 어떤 곳인지 1~2문장. extras=빈 배열 [].
+- [A] 상호명이면 kind="place", place_name=사용자가 가리킨 가게의 정식 상호(예: "스벅"→"스타벅스", "매머드 커피"→"매머드커피", "메가"→"메가커피"). 절대 다른 가게 이름으로 바꾸지 마. restaurants[0]=그 가게, restaurants[1~4]=그 가게와 비슷한(같은 종류·분위기) 근처 맛집 4곳. comment=그 가게가 어떤 곳인지 1~2문장. extras=빈 배열 [].
 - [B] 조건/취향이면 kind="condition": restaurants 5곳=그 조건에 맞는 ${MEAL_DESC[meal]}(가까운 곳 우선, 음식 종류 다양). extras=추가 2곳(1곳 tag="근처유명", 1곳 tag="검색유명", 둘 다 약 ${prof.extraMax}분 이내 실제 가게, restaurants와 겹치지 않게). comment=추천 컨셉 1~2문장.
 - 공통: 실제 존재하는 ${region}(${place} 인근) 가게로, 시간대(${meal})에 어울리게. ${nearRule}
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분). extras는 tag 추가.
 - 반드시 JSON만 출력:
-{"kind":"place|condition","comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
+{"kind":"place|condition","place_name":"(place일 때만 정식 상호, 아니면 \"\")","comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
 
     // Claude 호출 — rate limit(429) 시 짧게 1회 재시도
     const callClaude = () => fetch("https://api.anthropic.com/v1/messages", {
@@ -407,6 +443,31 @@ ${candBlock}
     });
     nearExtras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
     parsed.kind = (parsed.kind === "place") ? "place" : "condition";   // 의도 분기
+
+    // 상호명(place)이면 Kakao 실검색으로 그 가게가 실제로 근처에 있는지 판정.
+    //  - 있으면 restaurants[0]을 실제 지점(이름·종류·거리)으로 교체하고 found=true
+    //  - 없으면 found=false → 프론트가 "근처에서 못 찾음, 비슷한 곳" 안내
+    if (parsed.kind === "place" && text) {
+      const wanted = String(parsed.place_name || text).trim();
+      const hit = await findPlace(wanted, kakaoKey, lat, lng, region)
+        || (wanted !== text ? await findPlace(text, kakaoKey, lat, lng, region) : null);
+      if (hit && (nameRelated(wanted, hit.name) || nameRelated(text, hit.name))) {
+        const r0 = restaurants[0] || (restaurants[0] = {});
+        r0.name = hit.name;
+        if (hit.cuisine) r0.cuisine = hit.cuisine;
+        if (hit.distM) r0.distance = `도보 ${Math.max(1, Math.round(hit.distM / 67))}분`;
+        r0.verified = true;
+        r0.id = `custom-${stamp}-1`;
+        parsed.found = true;
+      } else {
+        // 그 가게는 근처에 없음 → 존재하지 않는 0번(요청 가게)은 빼고, AI가 준 비슷한 곳들만 대안으로
+        parsed.found = false;
+        parsed.wanted = wanted;
+        parsed.restaurants = restaurants.slice(1);
+        parsed.restaurants.forEach((r: Record<string, unknown>, i: number) => { r.id = `custom-${stamp}-${i + 1}`; });
+      }
+    }
+
     parsed.query = text || "";
     parsed.extras = (parsed.kind === "place") ? [] : nearExtras;       // 상호명이면 extras 없음
 
