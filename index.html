@@ -1832,7 +1832,7 @@ async function generateRecommend(text, meal, saveHist) {
     if (i < steps.length) { progText.textContent = steps[i].t; fill.style.width = steps[i].w + '%'; i++; }
   }, 400);
 
-  let comment = '', restaurants = null, extras = [], ok = false, errMsg = '';
+  let comment = '', restaurants = null, extras = [], ok = false, errMsg = '', kind = 'condition';
   try {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
@@ -1843,6 +1843,7 @@ async function generateRecommend(text, meal, saveHist) {
     comment = data.comment || '';
     restaurants = Array.isArray(data.restaurants) ? data.restaurants : null;
     extras = Array.isArray(data.extras) ? data.extras : [];
+    kind = data.kind || 'condition';
     if (data.error) errMsg = data.message || (data.error === 'rate_limited' ? 'AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요.' : '');
     ok = !!(restaurants && restaurants.length);
   } catch (e) { ok = false; }
@@ -1856,8 +1857,9 @@ async function generateRecommend(text, meal, saveHist) {
     if (btn) btn.disabled = false;
 
     if (ok) {
-      const label = text ? `🔎 "${text}" 맞춤 추천` : `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`;
-      customResult = { label, comment, restaurants, extras };
+      const label = !text ? `${MEAL_EMOJI[meal]} 오늘의 ${meal} 추천`
+        : (kind === 'place' ? `🔎 "${text}" · 정보와 비슷한 곳` : `🔎 "${text}" 맞춤 추천`);
+      customResult = { label, comment, restaurants, extras, kind };
       cachePlaces([...(restaurants||[]), ...(extras||[])]);
       answerEl.innerHTML = `<div class="pa-head">${escHtml(label)}</div>${escHtml(comment)}`;
       answerEl.classList.add('show');

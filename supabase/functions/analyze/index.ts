@@ -338,25 +338,21 @@ Deno.serve(async (req) => {
       ? `이 지역은 가까운 가게가 많지 않아요. 위 목록을 우선 쓰되, 목록에 없어도 실제 영업 중인 ${region} 인근 알려진 가게를 추가해도 됩니다. 다소 멀어도 괜찮아요.`
       : `반드시 위 목록 안에서, 가까운 순서대로 골라줘. 목록에 없는 멀리 떨어진 유명 맛집은 넣지 마.`;
 
-    const condLine = text
-      ? `\n사용자가 입력한 오늘의 컨디션/취향: "${text}" — 이걸 최우선으로 반영해줘.
-참고 해석: "와인"=와인바·와인 페어링 좋은 곳 / "임원"·"접대"·"상사"=임원 모시거나 접대하기 좋은 격식 있는 고급 식당(프라이빗 룸 선호) / "회식"=단체 회식 좋은 곳.`
-      : "";
+    const inputLine = text
+      ? `\n사용자 입력: "${text}"
+이 입력이 [A] 특정 가게 상호명(예: 성민촌, 스타벅스 여의도점)인지, [B] 조건/취향(예: 얼큰한거, 회식, 어제 과음, 가볍게)인지 먼저 판단해줘.
+참고 해석(B일 때): "와인"=와인바·와인 페어링 / "임원"·"접대"·"상사"=격식 있는 고급 식당(프라이빗 룸) / "회식"=단체 회식.`
+      : `\n조건 입력 없음 → 오늘 ${meal} 무난한 추천(kind="condition").`;
 
-    const prompt = `너는 ${region} ${place} 근처 맛집 큐레이터야.
-사용자에게 오늘 ${meal} 자리로 갈 만한, ${MEAL_DESC[meal]} 5곳을 추천해줘.${condLine}
+    const prompt = `너는 ${region} ${place} 근처 맛집 큐레이터야.${inputLine}
 ${candBlock}
 규칙:
-- 실제 존재하는 ${region}(${place} 인근) 가게로, 시간대(${meal})에 어울리게 골라. ${nearRule}
-- restaurants: 추천 맛집 5곳 (가까운 곳 우선, 음식 종류 최대한 다양하게).
-- extras: 추가 추천 2곳 — 아래 형식 그대로 2개 (둘 다 반드시 약 ${prof.extraMax}분 이내의 실제 가게):
-  · 1곳은 tag="근처유명" — 약 ${prof.extraMax}분 이내의 ${region} 유명 맛집
-  · 1곳은 tag="검색유명" — 웹에서 평이 좋은 유명 맛집이되 약 ${prof.extraMax}분 이내
-  · extras는 restaurants 5곳과 겹치지 않게.
-- comment: 추천 컨셉을 설명하는 친근한 존댓말 1~2문장.
-- 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분).
+- [A] 상호명이면 kind="place": restaurants[0]=사용자가 말한 바로 그 가게(정확한 상호, ${region}(${place}) 인근 실제 가게), restaurants[1~4]=그 가게와 비슷한(같은 종류·분위기) 근처 맛집 4곳. comment=그 가게가 어떤 곳인지 1~2문장. extras=빈 배열 [].
+- [B] 조건/취향이면 kind="condition": restaurants 5곳=그 조건에 맞는 ${MEAL_DESC[meal]}(가까운 곳 우선, 음식 종류 다양). extras=추가 2곳(1곳 tag="근처유명", 1곳 tag="검색유명", 둘 다 약 ${prof.extraMax}분 이내 실제 가게, restaurants와 겹치지 않게). comment=추천 컨셉 1~2문장.
+- 공통: 실제 존재하는 ${region}(${place} 인근) 가게로, 시간대(${meal})에 어울리게. ${nearRule}
+- 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분). extras는 tag 추가.
 - 반드시 JSON만 출력:
-{"comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
+{"kind":"place|condition","comment":"...","restaurants":[{"name":"","cuisine":"","feature":"","price":"","distance":""}, ...5개],"extras":[{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"근처유명"},{"name":"","cuisine":"","feature":"","price":"","distance":"","tag":"검색유명"}]}`;
 
     // Claude 호출 — rate limit(429) 시 짧게 1회 재시도
     const callClaude = () => fetch("https://api.anthropic.com/v1/messages", {
@@ -410,7 +406,9 @@ ${candBlock}
       return r.verified === true && m !== null && m <= prof.extraMax;
     });
     nearExtras.forEach((r, i) => { r.id = `custom-${stamp}-x${i + 1}`; });
-    parsed.extras = nearExtras;
+    parsed.kind = (parsed.kind === "place") ? "place" : "condition";   // 의도 분기
+    parsed.query = text || "";
+    parsed.extras = (parsed.kind === "place") ? [] : nearExtras;       // 상호명이면 extras 없음
 
     return json(parsed, 200);
   } catch (e) {
