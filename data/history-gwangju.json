@@ -1,6 +1,1015 @@
 {
   "recommendations": [
     {
+      "date": "2026-06-22",
+      "comment": "흐린 날씨에 주가 하락으로 마음도 무거울 때, 든든한 국물 요리와 친숙한 맛으로 위로받으세요.",
+      "message": "흐린 날씨에는 따뜻한 국물 요리나 소화하기 좋은 김밥을 추천드립니다. 오늘은 추박사자취생김밥, 영도할매꼬마김밥, 곤트란쉐리에 등에서 편하게 식사하시기 바랍니다. JB금융그룹의 미래에셋자산운용이 연금 부문 1위를 기록한 만큼, 신뢰 기반의 금융 서비스로 더욱 발전하는 그룹이 되도록 함께하겠습니다.",
+      "weather": "잔뜩 흐림 21°C (최저 18° / 최고 21°)",
+      "news": [
+        {
+          "title": "미래에셋자산운용 연금 1위…4041만 건 빅데이터가 선택한 연금 브랜드",
+          "link": "https://www.pinpointnews.co.kr/news/articleView.html?idxno=461849",
+          "focus": true
+        },
+        {
+          "title": "[Who Is ?] 김종윤 나이스평가정보 대표이사",
+          "link": "https://www.businesspost.co.kr/BP?command=article_view&num=440389",
+          "focus": false
+        },
+        {
+          "title": "금융은 이제 신뢰 경쟁…브랜드 가치가 캐피탈 승부 가른다",
+          "link": "https://www.pinpointnews.co.kr/news/articleView.html?idxno=461848",
+          "focus": false
+        }
+      ],
+      "restaurants": [
+        {
+          "name": "추박사자취생김밥",
+          "cuisine": "분식",
+          "feature": "신선한 재료 · 계란말이 풍성 · 저렴한 가격",
+          "price": "저렴",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20260622-1",
+          "verified": true
+        },
+        {
+          "name": "곤트란쉐리에 롯데백화점광주점",
+          "cuisine": "간식/베이커리",
+          "feature": "프리미엠 크로와상 · 부드러운 식감 · 가벼운 한 끼",
+          "price": "보통",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20260622-2",
+          "verified": true
+        },
+        {
+          "name": "영도할매꼬마김밥",
+          "cuisine": "분식",
+          "feature": "따뜻한 국물 · 정겨운 맛 · 가성비 좋음",
+          "price": "저렴",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20260622-3",
+          "verified": true
+        },
+        {
+          "name": "스피드치킨",
+          "cuisine": "치킨",
+          "feature": "바삭한 식감 · 든든한 양 · 믿을 수 있는 맛",
+          "price": "보통",
+          "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+          "id": "20260622-4",
+          "verified": true
+        },
+        {
+          "name": "홍월",
+          "cuisine": "중식",
+          "feature": "따뜻한 국물 · 얼큰한 맛 · 입맛 돋우기",
+          "price": "저렴",
+          "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+          "id": "20260622-5",
+          "verified": true
+        }
+      ],
+      "extras": [
+        {
+          "name": "미도인 충장로",
+          "cuisine": "한식/양식",
+          "feature": "스테이크 덮밥 · 생면 파스타 · 점심 한정 메뉴",
+          "price": "보통",
+          "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+          "tag": "근처유명",
+          "id": "20260622-x1",
+          "verified": true
+        },
+        {
+          "name": "샤브향 충장점",
+          "cuisine": "샤브/火鍋",
+          "feature": "월남쌈 · 신선한 육질 · 셀프바 충실",
+          "price": "보통",
+          "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+          "tag": "검색유명",
+          "id": "20260622-x2",
+          "verified": true
+        }
+      ],
+      "by_condition": {
+        "해장 필요": [
+          {
+            "name": "홍월",
+            "cuisine": "중식",
+            "feature": "얼큰한 국물 · 위장에 부담 적음",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-해장-1",
+            "verified": true
+          },
+          {
+            "name": "금탑소머리국밥",
+            "cuisine": "한식",
+            "feature": "진한 국물 · 푸짐한 양",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-해장-2",
+            "verified": true
+          },
+          {
+            "name": "가정식추어탕뷔페",
+            "cuisine": "한식",
+            "feature": "보양식 · 매콤한 추어탕",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-해장-3",
+            "verified": true
+          },
+          {
+            "name": "샤브향 충장점",
+            "cuisine": "샤브",
+            "feature": "신선한 육질 · 맑은 국물",
+            "price": "보통",
+            "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+            "id": "20260622-해장-4",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "다양한 메뉴 · 가성비 좋음",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-해장-5",
+            "verified": true
+          }
+        ],
+        "매콤하게": [
+          {
+            "name": "홍월",
+            "cuisine": "중식",
+            "feature": "얼큰한 맛 · 마비감 좋은",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-매콤-1",
+            "verified": true
+          },
+          {
+            "name": "금탑소머리국밥",
+            "cuisine": "한식",
+            "feature": "매운맛 선택 가능",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-매콤-2",
+            "verified": true
+          },
+          {
+            "name": "가정식추어탕뷔페",
+            "cuisine": "한식",
+            "feature": "고추의 맛 · 얼큰함",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-매콤-3",
+            "verified": true
+          },
+          {
+            "name": "따띠삼겹 광주북동점",
+            "cuisine": "한식/고기",
+            "feature": "양념 고기 · 매콤한 맛",
+            "price": "보통",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-매콤-4",
+            "verified": true
+          },
+          {
+            "name": "샤브향 충장점",
+            "cuisine": "샤브",
+            "feature": "매운 육수 선택 가능",
+            "price": "보통",
+            "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+            "id": "20260622-매콤-5",
+            "verified": true
+          }
+        ],
+        "가볍게": [
+          {
+            "name": "곤트란쉐리에 롯데백화점광주점",
+            "cuisine": "베이커리",
+            "feature": "가벼운 크로와상 · 간식용",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-가볍-1",
+            "verified": true
+          },
+          {
+            "name": "크리스피크림도넛 롯데백광주점",
+            "cuisine": "간식",
+            "feature": "달콤한 도넛 · 가벼운",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오)",
+            "id": "20260622-가볍-2",
+            "verified": true
+          },
+          {
+            "name": "추박사자취생김밥",
+            "cuisine": "분식",
+            "feature": "가볍고 깔끔한 · 김밥",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-가볍-3",
+            "verified": true
+          },
+          {
+            "name": "이삭토스트 광주롯데점",
+            "cuisine": "간식",
+            "feature": "간단한 토스트 · 음료",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-가볍-4",
+            "verified": true
+          },
+          {
+            "name": "사랑해베이글 광주대인점",
+            "cuisine": "간식",
+            "feature": "쫀득한 베이글 · 가벼움",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-가볍-5",
+            "verified": true
+          }
+        ],
+        "든든하게": [
+          {
+            "name": "영도할매꼬마김밥",
+            "cuisine": "분식",
+            "feature": "따뜻한 국물 · 든든한 양",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-든든-1",
+            "verified": true
+          },
+          {
+            "name": "스피드치킨",
+            "cuisine": "치킨",
+            "feature": "바삭하고 푸짐한 · 든든함",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-든든-2",
+            "verified": true
+          },
+          {
+            "name": "금탑소머리국밥",
+            "cuisine": "한식",
+            "feature": "푸짐한 곱창 · 진한 국물",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-든든-3",
+            "verified": true
+          },
+          {
+            "name": "가정식추어탕뷔페",
+            "cuisine": "한식",
+            "feature": "보양식 · 푸짐한 양",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-든든-4",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "한정식 + 스테이크 · 풀먹음",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-든든-5",
+            "verified": true
+          }
+        ],
+        "일식": [
+          {
+            "name": "간코 롯데백화점 광주점",
+            "cuisine": "일식",
+            "feature": "정통 일식 · 신선한 재료",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-일식-1",
+            "verified": true
+          },
+          {
+            "name": "메이쇼",
+            "cuisine": "일식",
+            "feature": "고급 일식 · 정갈한 맛",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-일식-2",
+            "verified": true
+          },
+          {
+            "name": "백소정 충장로점",
+            "cuisine": "일식",
+            "feature": "숙성 초밥 · 오마카세 경험",
+            "price": "비쌈",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-일식-3",
+            "verified": true
+          },
+          {
+            "name": "정참치&초밥",
+            "cuisine": "일식",
+            "feature": "신선한 초밥 · 참치 전문",
+            "price": "보통",
+            "distance": "도보 1분 (카카오)",
+            "id": "20260622-일식-4",
+            "verified": true
+          },
+          {
+            "name": "샤브향 충장점",
+            "cuisine": "기타",
+            "feature": "월남요리 · 쌀국수 등",
+            "price": "보통",
+            "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+            "id": "20260622-일식-5",
+            "verified": true
+          }
+        ],
+        "한식": [
+          {
+            "name": "영도할매꼬마김밥",
+            "cuisine": "분식",
+            "feature": "따뜻한 국물 · 어머니 맛",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-한식-1",
+            "verified": true
+          },
+          {
+            "name": "금탑소머리국밥",
+            "cuisine": "한식",
+            "feature": "국밥 전문 · 깔끔한 맛",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-한식-2",
+            "verified": true
+          },
+          {
+            "name": "가정식추어탕뷔페",
+            "cuisine": "한식",
+            "feature": "토종 보양식 · 정갈한",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-한식-3",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "정갈한 한상 · 스테이크",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-한식-4",
+            "verified": true
+          },
+          {
+            "name": "한금식당",
+            "cuisine": "한식",
+            "feature": "남도 밥상 · 친근한 맛",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-한식-5",
+            "verified": true
+          }
+        ],
+        "고기": [
+          {
+            "name": "따띠삼겹 광주북동점",
+            "cuisine": "한식/고기",
+            "feature": "양념 삼겹살 · 맛있는 고기",
+            "price": "보통",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-고기-1",
+            "verified": true
+          },
+          {
+            "name": "인생설곰탕꽃삼겹 대인점",
+            "cuisine": "고기",
+            "feature": "꽃삼겹 · 곰탕",
+            "price": "보통",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-고기-2",
+            "verified": true
+          },
+          {
+            "name": "스피드치킨",
+            "cuisine": "치킨",
+            "feature": "바삭한 치킨 · 다리살",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-고기-3",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "스테이크 덮밥 · 고급 고기",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-고기-4",
+            "verified": true
+          },
+          {
+            "name": "샤브향 충장점",
+            "cuisine": "샤브",
+            "feature": "신선한 육질 · 부위선택",
+            "price": "보통",
+            "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+            "id": "20260622-고기-5",
+            "verified": true
+          }
+        ],
+        "혼밥": [
+          {
+            "name": "추박사자취생김밥",
+            "cuisine": "분식",
+            "feature": "카운터석 · 빠른 주문",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-혼밥-1",
+            "verified": true
+          },
+          {
+            "name": "영도할매꼬마김밥",
+            "cuisine": "분식",
+            "feature": "간단 주문 · 혼밥 용이",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260622-혼밥-2",
+            "verified": true
+          },
+          {
+            "name": "스피드치킨",
+            "cuisine": "치킨",
+            "feature": "빠른 서빙 · 혼밥 무난",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-혼밥-3",
+            "verified": true
+          },
+          {
+            "name": "이삭토스트 광주롯데점",
+            "cuisine": "간식",
+            "feature": "가볍고 빠른 · 혼밥용",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-혼밥-4",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "칸막이석 · 혼밥 추천",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-혼밥-5",
+            "verified": true
+          }
+        ],
+        "와인": [
+          {
+            "name": "클로이키친",
+            "cuisine": "양식",
+            "feature": "와인 페어링 · 프렌치",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-와인-1",
+            "verified": true
+          },
+          {
+            "name": "랍스터바 광주롯데백화점 지점",
+            "cuisine": "양식",
+            "feature": "고급 양식 · 와인과 어울림",
+            "price": "비쌈",
+            "distance": "도보 1분 (카카오)",
+            "id": "20260622-와인-2",
+            "verified": true
+          },
+          {
+            "name": "메이쇼",
+            "cuisine": "일식",
+            "feature": "정교한 일식 · 와인 호매",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-와인-3",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "양식 스테이크 · 와인용",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-와인-4",
+            "verified": true
+          },
+          {
+            "name": "백소정 충장로점",
+            "cuisine": "일식",
+            "feature": "프리미엄 초밥 · 와인쌍",
+            "price": "비쌈",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-와인-5",
+            "verified": true
+          }
+        ],
+        "임원": [
+          {
+            "name": "랍스터바 광주롯데백화점 지점",
+            "cuisine": "양식",
+            "feature": "고급스러운 · 접대 가능",
+            "price": "비쌈",
+            "distance": "도보 1분 (카카오)",
+            "id": "20260622-임원-1",
+            "verified": true
+          },
+          {
+            "name": "클로이키친",
+            "cuisine": "양식",
+            "feature": "프렌치 · 조용한 분위기",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260622-임원-2",
+            "verified": true
+          },
+          {
+            "name": "메이쇼",
+            "cuisine": "일식",
+            "feature": "고급 일식 · 프라이빗함",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오)",
+            "id": "20260622-임원-3",
+            "verified": true
+          },
+          {
+            "name": "백소정 충장로점",
+            "cuisine": "일식",
+            "feature": "숙성초밥 · 오마카세 · 격식",
+            "price": "비쌈",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-임원-4",
+            "verified": true
+          },
+          {
+            "name": "미도인 충장로",
+            "cuisine": "한식/양식",
+            "feature": "한정식 · 세련된 식사",
+            "price": "보통",
+            "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+            "id": "20260622-임원-5",
+            "verified": true
+          }
+        ]
+      },
+      "meals": {
+        "저녁": {
+          "restaurants": [
+            {
+              "name": "추박사자취생김밥 롯데백화점광주점",
+              "cuisine": "분식",
+              "feature": "계란말이 통통한 김밥 · 신선하고 친근한 맛",
+              "price": "저렴",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20260622-D-1",
+              "verified": true
+            },
+            {
+              "name": "바칼 롯데백화점 광주점",
+              "cuisine": "한식",
+              "feature": "소문난 한우 구이 · 고급스러운 분위기",
+              "price": "비쌈",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20260622-D-2",
+              "verified": true
+            },
+            {
+              "name": "클로이키친",
+              "cuisine": "양식",
+              "feature": "신선한 재료 양식 · 감성적인 플레이팅",
+              "price": "보통",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260622-D-3",
+              "verified": true
+            },
+            {
+              "name": "금탑소머리국밥",
+              "cuisine": "한식",
+              "feature": "진한 국물 · 아침부터 저녁까지 든든함",
+              "price": "저렴",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260622-D-4",
+              "verified": true
+            },
+            {
+              "name": "백소정 충장로점",
+              "cuisine": "일식",
+              "feature": "신선한 회 · 정성스러운 오마카세 경험",
+              "price": "비쌈",
+              "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+              "id": "20260622-D-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "인생설곰탕꽃삼겹 대인점",
+              "cuisine": "한식",
+              "feature": "깊은 국물의 곰탕 · 회식 단골 맛집",
+              "price": "보통",
+              "distance": "도보 2분 (카카오)",
+              "tag": "근처유명",
+              "id": "20260622-D-x1",
+              "verified": true
+            },
+            {
+              "name": "광주소맥방",
+              "cuisine": "술집",
+              "feature": "소주와 맥주의 완벽 조합 · 작은 안주부터 푸짐한 메뉴",
+              "price": "보통",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "tag": "검색유명",
+              "id": "20260622-D-x2",
+              "verified": true
+            }
+          ],
+          "by_condition": {
+            "해장 필요": [
+              {
+                "name": "금탑소머리국밥",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-해장-1",
+                "verified": true
+              },
+              {
+                "name": "인생설곰탕꽃삼겹 대인점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-해장-2",
+                "verified": true
+              },
+              {
+                "name": "가정식추어탕뷔페",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-해장-3",
+                "verified": true
+              },
+              {
+                "name": "나산식당",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-해장-4",
+                "verified": true
+              },
+              {
+                "name": "한금식당",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-해장-5",
+                "verified": true
+              }
+            ],
+            "매콤하게": [
+              {
+                "name": "따띠삼겹 광주북동점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-매콤-1",
+                "verified": true
+              },
+              {
+                "name": "가정식추어탕뷔페",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-매콤-2",
+                "verified": true
+              },
+              {
+                "name": "나산식당",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-매콤-3",
+                "verified": true
+              },
+              {
+                "name": "홍월",
+                "cuisine": "중식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-매콤-4",
+                "verified": true
+              },
+              {
+                "name": "한금식당",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-매콤-5",
+                "verified": true
+              }
+            ],
+            "가볍게": [
+              {
+                "name": "추박사자취생김밥 롯데백화점광주점",
+                "cuisine": "분식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-가볍-1",
+                "verified": true
+              },
+              {
+                "name": "곤트란쉐리에 롯데백화점광주점",
+                "cuisine": "간식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-가볍-2",
+                "verified": true
+              },
+              {
+                "name": "이삭토스트 광주롯데점",
+                "cuisine": "간식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-가볍-3",
+                "verified": true
+              },
+              {
+                "name": "사랑해베이글 광주대인점",
+                "cuisine": "간식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-가볍-4",
+                "verified": true
+              },
+              {
+                "name": "김밥OK",
+                "cuisine": "분식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-가볍-5",
+                "verified": true
+              }
+            ],
+            "든든하게": [
+              {
+                "name": "바칼 롯데백화점 광주점",
+                "cuisine": "한식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-든든-1",
+                "verified": true
+              },
+              {
+                "name": "금탑소머리국밥",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-든든-2",
+                "verified": true
+              },
+              {
+                "name": "인생설곰탕꽃삼겹 대인점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-든든-3",
+                "verified": true
+              },
+              {
+                "name": "따띠삼겹 광주북동점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-든든-4",
+                "verified": true
+              },
+              {
+                "name": "가정식추어탕뷔페",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-든든-5",
+                "verified": true
+              }
+            ],
+            "일식": [
+              {
+                "name": "메이쇼",
+                "cuisine": "일식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-일식-1",
+                "verified": true
+              },
+              {
+                "name": "백소정 충장로점",
+                "cuisine": "일식",
+                "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+                "id": "20260622-D-일식-2",
+                "verified": true
+              },
+              {
+                "name": "정참치&초밥",
+                "cuisine": "일식",
+                "distance": "도보 1분 (카카오)",
+                "id": "20260622-D-일식-3",
+                "verified": true
+              },
+              {
+                "name": "간코 롯데백화점 광주점",
+                "cuisine": "일식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-일식-4",
+                "verified": true
+              },
+              {
+                "name": "스피드치킨",
+                "cuisine": "치킨",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-일식-5",
+                "verified": true
+              }
+            ],
+            "한식": [
+              {
+                "name": "바칼 롯데백화점 광주점",
+                "cuisine": "한식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-한식-1",
+                "verified": true
+              },
+              {
+                "name": "금탑소머리국밥",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-한식-2",
+                "verified": true
+              },
+              {
+                "name": "인생설곰탕꽃삼겹 대인점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-한식-3",
+                "verified": true
+              },
+              {
+                "name": "나산식당",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-한식-4",
+                "verified": true
+              },
+              {
+                "name": "따띠삼겹 광주북동점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-한식-5",
+                "verified": true
+              }
+            ],
+            "고기": [
+              {
+                "name": "바칼 롯데백화점 광주점",
+                "cuisine": "한식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-고기-1",
+                "verified": true
+              },
+              {
+                "name": "따띠삼겹 광주북동점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-고기-2",
+                "verified": true
+              },
+              {
+                "name": "인생설곰탕꽃삼겹 대인점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-고기-3",
+                "verified": true
+              },
+              {
+                "name": "랍스터바 광주롯데백화점 지점",
+                "cuisine": "양식",
+                "distance": "도보 1분 (카카오)",
+                "id": "20260622-D-고기-4",
+                "verified": true
+              },
+              {
+                "name": "클로이키친",
+                "cuisine": "양식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-고기-5",
+                "verified": true
+              }
+            ],
+            "혼밥": [
+              {
+                "name": "추박사자취생김밥 롯데백화점광주점",
+                "cuisine": "분식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-혼밥-1",
+                "verified": true
+              },
+              {
+                "name": "금탑소머리국밥",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-혼밥-2",
+                "verified": true
+              },
+              {
+                "name": "이삭토스트 광주롯데점",
+                "cuisine": "간식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-혼밥-3",
+                "verified": true
+              },
+              {
+                "name": "김밥OK",
+                "cuisine": "분식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-혼밥-4",
+                "verified": true
+              },
+              {
+                "name": "홀인원김밥",
+                "cuisine": "분식",
+                "distance": "도보 3분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-혼밥-5",
+                "verified": true
+              }
+            ],
+            "와인": [
+              {
+                "name": "클로이키친",
+                "cuisine": "양식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-와인-1",
+                "verified": true
+              },
+              {
+                "name": "랍스터바 광주롯데백화점 지점",
+                "cuisine": "양식",
+                "distance": "도보 1분 (카카오)",
+                "id": "20260622-D-와인-2",
+                "verified": true
+              },
+              {
+                "name": "백소정 충장로점",
+                "cuisine": "일식",
+                "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+                "id": "20260622-D-와인-3",
+                "verified": true
+              },
+              {
+                "name": "메이쇼",
+                "cuisine": "일식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-와인-4",
+                "verified": true
+              },
+              {
+                "name": "광주소맥방",
+                "cuisine": "술집",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260622-D-와인-5",
+                "verified": true
+              }
+            ],
+            "임원": [
+              {
+                "name": "바칼 롯데백화점 광주점",
+                "cuisine": "한식",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260622-D-임원-1",
+                "verified": true
+              },
+              {
+                "name": "백소정 충장로점",
+                "cuisine": "일식",
+                "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+                "id": "20260622-D-임원-2",
+                "verified": true
+              },
+              {
+                "name": "클로이키친",
+                "cuisine": "양식",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260622-D-임원-3",
+                "verified": true
+              },
+              {
+                "name": "랍스터바 광주롯데백화점 지점",
+                "cuisine": "양식",
+                "distance": "도보 1분 (카카오)",
+                "id": "20260622-D-임원-4",
+                "verified": true
+              },
+              {
+                "name": "인생설곰탕꽃삼겹 대인점",
+                "cuisine": "한식",
+                "distance": "도보 2분 (카카오)",
+                "id": "20260622-D-임원-5",
+                "verified": true
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "date": "2026-06-19",
       "comment": "흐린 날씨 속 회사 악재, 따뜻한 국물과 든든한 한끼로 마음 챙기기 좋은 날입니다.",
       "message": "흐린 날씨에 따뜻한 국물 음식이 어울리는 날씀입니다. 롯데백화점 광주점의 도토리편백집이나 가정식추어탕뷔페, 또는 클로이키친을 추천드립니다. 한편 당사 광주은행이 고향사랑기부서비스를 새롭게 제공하고 있으니 관심 있으시면 참고하시기 바랍니다.",
