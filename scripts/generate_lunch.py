@@ -784,32 +784,59 @@ def get_recent_names(history_path="history.json", days=3, limit=24):
     return names[:limit]
 
 
-def extract_json(text):
-    """응답 텍스트에서 JSON 블록 추출."""
-    # ```json ... ``` 블록
-    match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # 중괄호 깊이 기반으로 JSON 블록 추출
-    start = text.find('{')
-    if start == -1:
-        return None
+def _balanced_json(text, start):
+    """text[start]의 '{'부터 균형 잡힌 객체 문자열 반환. 문자열 리터럴 안의 중괄호/이스케이프는 무시.
+    중간에 끝나면(잘림 등) None."""
     depth = 0
-    for i, c in enumerate(text[start:], start):
-        if c == '{':
+    in_str = False
+    esc = False
+    for j in range(start, len(text)):
+        c = text[j]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
             depth += 1
-        elif c == '}':
+        elif c == "}":
             depth -= 1
             if depth == 0:
-                try:
-                    return json.loads(text[start:i+1])
-                except json.JSONDecodeError:
-                    break
+                return text[start:j + 1]
     return None
+
+
+def extract_json(text):
+    """응답에서 JSON 객체 추출. 프로즈·웹검색 요약·코드펜스·후행 텍스트·문자열 안 중괄호에 강건.
+    여러 후보 객체 중 'restaurants' 배열을 가진 것을 우선 채택(술집 등 웹검색 응답 안정화)."""
+    if not text:
+        return None
+    objs = []
+    for i, c in enumerate(text):
+        if c != "{":
+            continue
+        seg = _balanced_json(text, i)
+        if not seg:
+            continue
+        try:
+            obj = json.loads(seg)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            objs.append(obj)
+    if not objs:
+        return None
+    # restaurants(리스트) 보유 → 그중 가장 많은 것 우선
+    def score(o):
+        rs = o.get("restaurants")
+        ok = isinstance(rs, list)
+        return (1 if ok else 0, len(rs) if ok else 0, len(o))
+    objs.sort(key=score, reverse=True)
+    return objs[0]
 
 
 def update_history(new_entry, history_path="history.json"):
@@ -1028,10 +1055,20 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     print(f"🔍 [{meal}] 생성 중...")
     # 점심(날씨/신선도)·술집(실존 가게명 확보)은 웹검색 사용.
     # 저녁은 컨디션 10종으로 토큰이 커 지식 기반(rate limit 회피).
-    text = call_claude(client, prompt, use_web=(meal in ("점심", "술집")))
+    use_web = meal in ("점심", "술집")
+    text = call_claude(client, prompt, use_web=use_web)
     entry = extract_json(text) if text else None
     if not entry:
-        print(f"❌ [{meal}] JSON 파싱 실패")
+        # 술집 등 웹검색 응답이 프로즈만 내거나 형식이 틀어진 경우 1회 재시도(JSON 강제)
+        print(f"⚠️ [{meal}] JSON 파싱 실패 — 재시도(JSON 강제)")
+        retry_prompt = prompt + (
+            "\n\n[중요] 설명 문장 없이, 위 형식의 JSON 객체 하나만 ```json 코드블록 안에 출력해줘. "
+            "restaurants 배열(5곳)은 반드시 포함."
+        )
+        text = call_claude(client, retry_prompt, use_web=use_web)
+        entry = extract_json(text) if text else None
+    if not entry:
+        print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후)")
         return None, text
 
     # id 보정
