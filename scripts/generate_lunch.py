@@ -1059,16 +1059,19 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     text = call_claude(client, prompt, use_web=use_web)
     entry = extract_json(text) if text else None
     if not entry:
-        # 술집 등 웹검색 응답이 프로즈만 내거나 형식이 틀어진 경우 1회 재시도(JSON 강제)
-        print(f"⚠️ [{meal}] JSON 파싱 실패 — 재시도(JSON 강제)")
+        # 원인: 술집을 web search로 강제하면 (특히 시골) 모델이 JSON 대신 프로즈만 내고 end_turn.
+        #  → 재시도는 web search를 끄고(지식기반: JSON을 안정적으로 출력) 희박하면 후보로 채우게 함.
+        snippet = (text or "").strip().replace("\n", " ")[:300]
+        print(f"⚠️ [{meal}] JSON 파싱 실패 — 재시도(웹검색 끄고 JSON 강제). 원응답≈ {snippet!r}")
         retry_prompt = prompt + (
             "\n\n[중요] 설명 문장 없이, 위 형식의 JSON 객체 하나만 ```json 코드블록 안에 출력해줘. "
-            "restaurants 배열(5곳)은 반드시 포함."
+            "restaurants 배열(5곳)은 반드시 포함. 적당한 곳이 적으면 위 후보 목록이나 인근 가게로라도 5곳을 채워줘."
         )
-        text = call_claude(client, retry_prompt, use_web=use_web)
+        text = call_claude(client, retry_prompt, use_web=False)
         entry = extract_json(text) if text else None
     if not entry:
-        print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후)")
+        snippet = (text or "").strip().replace("\n", " ")[:300]
+        print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후). 원응답≈ {snippet!r}")
         return None, text
 
     # id 보정
