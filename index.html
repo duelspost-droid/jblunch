@@ -156,6 +156,7 @@
   .qna-a::before { content: 'A '; font-weight: 900; color: #2f855a; }
   .qna-date { font-size: 0.68rem; color: #a0acbd; margin-top: 6px; }
   .qna-date-q { margin-top: 4px; color: #8aa0bd; }
+  .qna-pending { margin-top: 8px; padding: 7px 10px; background: #fff7ed; border: 1px dashed #f0c98a; border-radius: 9px; font-size: 0.78rem; color: #b5762a; }
 
   .content { padding: 14px; max-width: 640px; margin: 0 auto; }
   .section { display: none; }
@@ -914,7 +915,7 @@
       <button class="btn-save" onclick="submitSuggest()">제출하기</button>
     </div>
     <div class="sug-qna" id="sug-qna">
-      <div class="sug-qna-title">💬 답변된 제안</div>
+      <div class="sug-qna-title">💬 받은 제안</div>
       <div id="sug-qna-list" class="sug-qna-list"></div>
     </div>
   </div>
@@ -2319,16 +2320,20 @@ async function loadSuggestQna() {
     });
     const data = await res.json();
     const list = (data && data.qna) || [];
-    if (!list.length) { wrap.innerHTML = '<div class="sug-qna-empty">아직 답변된 제안이 없어요.</div>'; return; }
+    if (!list.length) { wrap.innerHTML = '<div class="sug-qna-empty">아직 등록된 제안이 없어요.</div>'; return; }
     const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const fmtD = d => d ? new Date(d).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : '';
-    wrap.innerHTML = list.map(q => `
+    wrap.innerHTML = list.map(q => {
+      const answered = !!(q.admin_reply && String(q.admin_reply).trim());
+      return `
       <div class="qna-item">
         <div class="qna-q">${esc(q.content)}</div>
         ${q.created_at ? `<div class="qna-date qna-date-q">🗓️ ${fmtD(q.created_at)} 제안</div>` : ''}
-        <div class="qna-a">${esc(q.admin_reply)}</div>
-        ${q.replied_at ? `<div class="qna-date">💬 ${fmtD(q.replied_at)} 답변</div>` : ''}
-      </div>`).join('');
+        ${answered
+          ? `<div class="qna-a">${esc(q.admin_reply)}</div>${q.replied_at ? `<div class="qna-date">💬 ${fmtD(q.replied_at)} 답변</div>` : ''}`
+          : `<div class="qna-pending">🕓 답변 준비 중이에요</div>`}
+      </div>`;
+    }).join('');
   } catch (e) {
     wrap.innerHTML = '<div class="sug-qna-empty">목록을 불러오지 못했어요.</div>';
   }

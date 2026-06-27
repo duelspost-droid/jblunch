@@ -241,10 +241,10 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    // ── 공개 Q&A 조회 (인증 불필요): 답변완료된 것만, 민감정보 제외 ──
+    // ── 공개 제안 목록 (인증 불필요): 답변완료 + 대기중 모두. 민감정보(contact·ip)는 select 에서 제외 ──
     if (action === "suggestion_public") {
       const r = await fetch(
-        `${SB_URL}/rest/v1/suggestions?select=id,content,admin_reply,created_at,replied_at&status=eq.answered&order=replied_at.desc&limit=50`,
+        `${SB_URL}/rest/v1/suggestions?select=id,content,admin_reply,status,created_at,replied_at&order=created_at.desc&limit=50`,
         { headers: SH },
       );
       return json({ ok: true, qna: r.ok ? await r.json() : [] });
