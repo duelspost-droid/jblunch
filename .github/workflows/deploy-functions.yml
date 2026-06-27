@@ -3,6 +3,7 @@ name: Deploy Edge Functions
 # 목적: supabase/functions 변경 시 자동 배포 → 프론트엔드와 함수 버전 어긋남(예: "unknown action") 방지.
 # 필요한 GitHub Secret:
 #   SUPABASE_ACCESS_TOKEN  (Supabase 대시보드 → Account → Access Tokens, sbp_...)
+#   미설정 시: 빨강 실패 대신 "건너뜀"(green)으로 종료 — 수동 배포 모드.
 # project-ref 는 아래 env 로 고정.
 
 on:
@@ -19,8 +20,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # 토큰 없으면(미설정) 조용히 스킵하지 않고 명확히 실패하도록 — 단, 토큰 미설정 환경에선 job 자체를 건너뛴다.
-    if: ${{ true }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,8 +30,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
-            echo "❌ SUPABASE_ACCESS_TOKEN 시크릿이 없습니다. Settings → Secrets 에 추가하세요."
-            exit 1
+            echo "⏭️ SUPABASE_ACCESS_TOKEN 미설정 — 함수 배포 건너뜀(수동 배포 모드). 자동배포하려면 Settings → Secrets 에 추가하세요."
+            exit 0
           fi
           # 함수 디렉터리마다 배포 (admin, analyze, places-search, stock, track …)
           for dir in supabase/functions/*/; do
