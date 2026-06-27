@@ -2672,26 +2672,6 @@ function renderStats() {
   const avg = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : '-';
 
   // 끼니별(점심/저녁/술집) 리뷰 수 + 평균 별점 — 현재 위치 기준
-  const MEAL_DEFS = [['점심','🍚'], ['저녁','🌙'], ['술집','🍺']];
-  const mealStats = MEAL_DEFS.map(([m, emoji]) => {
-    const cs = allComments.filter(c => c.meal === m);
-    const rs = cs.map(c => c.rating).filter(Boolean);
-    const av = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0;
-    return { m, emoji, cnt: cs.length, avg: av, rated: rs.length > 0 };
-  });
-  const mealStatsHtml = allComments.length ? `
-    <div class="meal-stats-title">🍽️ 끼니별 리뷰</div>
-    <div class="meal-stats">
-      ${mealStats.map(s => `
-        <div class="meal-stat${s.cnt ? '' : ' ms-empty'}">
-          <div class="ms-head"><span class="ms-emo">${s.emoji}</span> ${s.m}</div>
-          <div class="ms-cnt">${s.cnt}<small> 건</small></div>
-          <div class="ms-avg">${s.rated
-            ? `<span class="ms-stars">${'⭐'.repeat(Math.round(s.avg))}</span> ${s.avg.toFixed(1)}`
-            : `<span class="ms-none">평가 없음</span>`}</div>
-        </div>`).join('')}
-    </div>` : '';
-
   // 리뷰가 있는 모든 맛집 (HISTORY_DATA에 없어도 — 직접검색·주변검색 포함)
   // statMealFilter 적용: '전체'면 모든 리뷰, 아니면 해당 끼니 리뷰만 집계/노출
   const mealOf = (cms) => statMealFilter === '전체'
@@ -2746,7 +2726,6 @@ function renderStats() {
       <div class="stat-card"><div class="stat-num">${allComments.length}</div><div class="stat-label">총 리뷰 수</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">평균 별점</div></div>
     </div>
-    ${mealStatsHtml}
     ${searchHtml}
     ${mealStatsHtml()}
     <div class="top-list">
