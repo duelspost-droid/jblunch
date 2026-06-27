@@ -474,19 +474,25 @@ ${candBlock}
     if (!resp.ok) {
       const err = await resp.text();
       const rateLimited = resp.status === 429 || err.includes("rate_limit");
+      console.error("analyze: claude error", resp.status, err);   // 원문은 서버 로그로만 (클라이언트엔 노출 X)
       return json({
         error: rateLimited ? "rate_limited" : "claude error",
         message: rateLimited ? "AI 요청이 잠시 몰렸어요. 30초 후 다시 시도해주세요." : "추천 생성 오류",
-        detail: err,
       }, rateLimited ? 429 : 502);
     }
 
     const data = await resp.json();
     const content = data.content?.[0]?.text ?? "";
     const match = content.match(/\{[\s\S]*\}/);
-    if (!match) return json({ error: "parse failed", raw: content }, 502);
+    if (!match) return json({ error: "parse failed" }, 502);
 
-    const parsed = JSON.parse(match[0]);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch (_e) {
+      console.error("analyze: JSON parse 실패");
+      return json({ error: "parse failed" }, 502);
+    }
     const stamp = Date.now();
     const restaurants: Record<string, unknown>[] = parsed.restaurants || [];
     const extras: Record<string, unknown>[] = Array.isArray(parsed.extras) ? parsed.extras : [];

@@ -566,7 +566,7 @@ function clearLogSearch(){
   refreshLogView();
 }
 
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// esc()는 아래(따옴표 이스케이프 포함 버전)로 단일 정의 — 중복 선언 제거.
 
 // User-Agent → 기기/브라우저 추출
 function parseUA(ua){

@@ -6,7 +6,7 @@
 
 ## 사이트 & 저장소
 - **사이트**: https://duelspost-droid.github.io/jblunch/
-- **커스텀 도메인**: http://lunch.jbax.co.kr/ (SSL 발급 대기 중 — state=new, 도메인 토글 금지)
+- **커스텀 도메인**: https://lunch.jbax.co.kr/ (SSL 활성 — 정상 서비스 중. github.io는 이 도메인으로 301 리다이렉트)
 - **관리자**: https://duelspost-droid.github.io/jblunch/manage-jbax.html (비번 `021600`, 로그인 후 변경 권장)
 - **앱 다운로드**: /app-download.html (Android APK, 자체 업데이트)
 - **저장소**: https://github.com/duelspost-droid/jblunch

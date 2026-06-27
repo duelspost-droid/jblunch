@@ -1212,10 +1212,12 @@ async function changeLocation(key) {
   customResult = null;
   placeDetails = {};
   placeIntros = {};   // 소개는 위치(지역)별로 다름 → 위치 전환 시 비움
+  commentsState = {};                                                  // 이전 위치 리뷰가 통계/카드에 잠깐 노출되지 않게 즉시 비움
+  nearbyLoaded = false; searchedPlaces = []; placeSearchQ = ''; placeOrigin = '';  // '내 주변 맛집'도 위치별 → 초기화
   try { localStorage.removeItem('placeDetails'); localStorage.removeItem('placeIntros'); } catch(e) {}
   track('location_change', LOC().name);
   await loadLocHistory(key);   // 비-JB: 배치 데이터 우선 로드(없으면 실시간 fallback)
-  loadComments();     // 위치별 리뷰 재로드
+  await loadComments();     // 위치별 리뷰 재로드 (await: 렌더 전에 완료되도록)
   renderHistory();    // 추천 영역 재구성 (배치 있으면 배치 / 없으면 실시간)
   renderStats();
 }
@@ -2064,7 +2066,12 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function escAttr(s) {
-  return String(s).replace(/'/g,"\\'");
+  // 인라인 onclick="fn('${escAttr(x)}')" 의 JS 문자열 + HTML 속성 두 맥락 모두 안전하게.
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\')                 // 역슬래시 먼저 — JS 문자열 이스케이프 보호
+    .replace(/'/g, "\\'")                    // 홑따옴표 → JS 문자열 탈출 차단
+    .replace(/"/g, '&quot;')                 // 큰따옴표 → HTML 속성 경계 탈출 차단
+    .replace(/[\r\n  ]/g, ' ');    // 개행 제거 → JS 문자열 깨짐 방지
 }
 
 // ── 리뷰 모달 ─────────────────────────────────────────────────

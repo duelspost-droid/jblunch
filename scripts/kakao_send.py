@@ -86,10 +86,14 @@ def main():
         print("⚠️  KAKAO_REFRESH_TOKEN 미설정 — 카카오 발송 생략")
         return
 
-    # history.json에서 오늘 추천 로드
-    with open("history.json", encoding="utf-8") as f:
-        history = json.load(f)
-    if not history["recommendations"]:
+    # history.json에서 오늘 추천 로드 (없거나 손상 시: 1차 실패가 2차 오류로 가려지지 않게 정상 종료)
+    try:
+        with open("history.json", encoding="utf-8") as f:
+            history = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+        print(f"⚠️  history.json 없음/손상 — 카카오 발송 생략: {e}")
+        return
+    if not history.get("recommendations"):
         print("⚠️  추천 데이터 없음")
         return
     entry = sorted(history["recommendations"], key=lambda x: x["date"], reverse=True)[0]

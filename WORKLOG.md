@@ -250,8 +250,7 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 - [x] `app-download.html` 다운로드 안내 페이지.
 
 ### 진행 중
-- [ ] **커스텀 도메인 `lunch.jbax.co.kr` SSL** — Let's Encrypt 발급 대기(state=new).
-      도메인 토글 시 백오프 리셋되므로 **건드리지 말고 대기**(1시간마다 자동 점검). DNS는 정상.
+- [x] **커스텀 도메인 `lunch.jbax.co.kr` SSL** — 발급 완료, https 정상 서비스 중. (duelspost-droid.github.io는 이 도메인으로 301 리다이렉트)
 
 ---
 
