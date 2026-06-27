@@ -828,6 +828,21 @@
   @media (max-width: 600px) {
     input, textarea, select { font-size: 16px !important; }
   }
+  /* 끼니별 리뷰 통계 (Phase 3) */
+  .meal-stats { display: grid; gap: 6px; margin: 4px 0 12px; }
+  .ms-row { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid #e2e8f0;
+            border-radius: 10px; font-size: 0.8rem; font-weight: 600; color: #0a3d7a; cursor: pointer;
+            background: #fff; transition: background 0.13s, border-color 0.13s; }
+  .ms-row:hover { background: #f1f6fd; }
+  .ms-row.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
+  .ms-row.dim { color: #a0aec0; cursor: default; background: #fafbfc; }
+  .ms-row .ms-meal { min-width: 58px; }
+  .ms-row .ms-sub { color: #718096; font-weight: 500; }
+  .ms-row.on .ms-sub { color: #cfe0f5; }
+  .meal-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+  .meal-chip { padding: 5px 12px; border: 1px solid #cbd5e0; border-radius: 999px; font-size: 0.76rem;
+               font-weight: 600; color: #4a5568; background: #fff; cursor: pointer; }
+  .meal-chip.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
 </style>
 </head>
 <body>
@@ -1236,7 +1251,7 @@ function init() {
   loadComments();
   loadStock();
   track('visit');
-  refreshHistoryForApp();   // 앱(번들)에서 최신 추천 갱신
+  (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(refreshHistoryForApp);  // 전체 이력 지연 하이드레이션(웹/앱)
   setupDailyNotification();  // 앱: 매일 점심 추천 알림 예약
   checkAppUpdate();          // 앱: 새 버전 확인
   // 관리자 페이지는 별도. #admin 접근 시 리다이렉트
@@ -1304,13 +1319,18 @@ async function setupDailyNotification() {
 async function refreshHistoryForApp() {
   const isApp = !!(window.Capacitor) || location.protocol === 'capacitor:'
              || location.protocol === 'file:' || location.hostname === 'localhost';
-  if (!isApp) return;   // 일반 웹은 배포 시점 데이터가 이미 최신
+  // index.html에는 최근 N일만 인라인 → 전체 이력을 런타임에 지연 하이드레이션.
+  // 웹은 같은-오리진 상대경로(캐시 친화), 앱(file/capacitor)은 GitHub raw 절대경로.
+  const url = isApp
+    ? 'https://raw.githubusercontent.com/duelspost-droid/jblunch/master/history.json'
+    : './history.json';
   try {
-    const r = await fetch('https://raw.githubusercontent.com/duelspost-droid/jblunch/master/history.json', { cache: 'no-store' });
+    const r = await fetch(url);
     if (!r.ok) return;
     const data = await r.json();
     const recs = Array.isArray(data) ? data : (data.recommendations || []);
-    if (recs.length) {
+    // 인라인(최근 N일)보다 많을 때만 교체 → 과거 이력/리뷰목록 보강
+    if (recs.length > HISTORY_DATA.length) {
       HISTORY_DATA.splice(0, HISTORY_DATA.length, ...recs);
       renderHistory(); renderStats();
     }
@@ -1635,7 +1655,7 @@ function renderHistory() {
         <button class="pref-chip" data-cond="임원" onclick="selectCond(this)">👔 임원</button>
       </div>
       <div class="pref-input-row">
-        <input class="pref-input" id="pref-text" placeholder="직접 입력 (예: 어제 과음했어 / 얼큰한거 / 빨리 먹고싶어)"
+        <input class="pref-input" id="pref-text" placeholder="메뉴·음식·조건 입력 (예: 냉면 / 마라탕 / 어제 과음했어)"
                maxlength="40" onkeydown="if(event.key==='Enter')applyFreeText()">
         <button class="pref-submit" id="pref-btn" onclick="applyFreeText()">추천</button>
       </div>
@@ -2586,6 +2606,58 @@ function allRestaurants() {
   return out;
 }
 
+// ── 끼니별 리뷰 통계 (Phase 3) ────────────────────────────────
+let statMealFilter = '전체';   // '전체' | '점심' | '저녁' | '술집'
+
+// commentsState(가게명→리뷰[])에서 끼니별 집계
+function mealStats() {
+  const meals = ['점심', '저녁', '술집'];
+  return meals.map(m => {
+    const perR = {};
+    let count = 0, sum = 0, n = 0;
+    Object.entries(commentsState).forEach(([name, cms]) => {
+      (cms || []).forEach(c => {
+        if ((c.meal || '') !== m) return;
+        count++;
+        const o = (perR[name] || (perR[name] = { sum: 0, n: 0, cnt: 0 }));
+        o.cnt++;
+        if (c.rating) { o.sum += c.rating; o.n++; sum += c.rating; n++; }
+      });
+    });
+    let top = null, best = -1;
+    Object.entries(perR).forEach(([name, o]) => {
+      const score = (o.n ? o.sum / o.n : 0) + o.cnt * 0.1;   // 평점 + 횟수 가중
+      if (score > best) { best = score; top = name; }
+    });
+    return { meal: m, count, avg: n ? sum / n : 0, top };
+  });
+}
+
+function mealStatsHtml() {
+  const icon = { '점심': '🍚', '저녁': '🌙', '술집': '🍺' };
+  const rows = mealStats().map(s => {
+    if (!s.count) {
+      return `<div class="ms-row dim"><span class="ms-meal">${icon[s.meal]} ${s.meal}</span><span class="ms-sub">아직 리뷰 없음</span></div>`;
+    }
+    const on = statMealFilter === s.meal ? ' on' : '';
+    return `<div class="ms-row${on}" onclick="filterByMeal('${s.meal}')">
+        <span class="ms-meal">${icon[s.meal]} ${s.meal}</span>
+        <span>리뷰 ${s.count} · ★${s.avg.toFixed(1)}</span>
+        ${s.top ? `<span class="ms-sub">· 1위 ${escHtml(s.top)}</span>` : ''}
+      </div>`;
+  }).join('');
+  const chips = ['전체', '점심', '저녁', '술집'].map(m =>
+    `<span class="meal-chip${statMealFilter === m ? ' on' : ''}" onclick="filterByMeal('${m}')">${m}</span>`
+  ).join('');
+  return `<div class="meal-stats">${rows}</div><div class="meal-chips">${chips}</div>`;
+}
+
+function filterByMeal(m) {
+  // 같은 끼니 재클릭 → 전체 해제. '전체' 클릭 → 전체.
+  statMealFilter = (m === '전체' || statMealFilter === m) ? '전체' : m;
+  renderStats();
+}
+
 function renderStats() {
   const allR = allRestaurants();
   const byName = {};
@@ -2618,10 +2690,14 @@ function renderStats() {
     </div>` : '';
 
   // 리뷰가 있는 모든 맛집 (HISTORY_DATA에 없어도 — 직접검색·주변검색 포함)
+  // statMealFilter 적용: '전체'면 모든 리뷰, 아니면 해당 끼니 리뷰만 집계/노출
+  const mealOf = (cms) => statMealFilter === '전체'
+    ? (cms || [])
+    : (cms || []).filter(c => (c.meal || '') === statMealFilter);
   const topList = Object.keys(commentsState)
-    .filter(name => (commentsState[name] || []).length)
-    .map(name => {
-      const cms = commentsState[name];
+    .map(name => ({ name, cms: mealOf(commentsState[name]) }))
+    .filter(x => x.cms.length)
+    .map(({ name, cms }) => {
       const rs = cms.map(c => c.rating).filter(Boolean);
       const av = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0;
       const base = byName[name] || placeDetails[name] || {};
@@ -2669,8 +2745,9 @@ function renderStats() {
     </div>
     ${mealStatsHtml}
     ${searchHtml}
+    ${mealStatsHtml()}
     <div class="top-list">
-      <h3>⭐ 리뷰 맛집 (평균 별점순) · 눌러서 리뷰 보기</h3>
+      <h3>⭐ 리뷰 맛집${statMealFilter !== '전체' ? ` · ${statMealFilter}` : ''} (평균 별점순) · 눌러서 리뷰 보기</h3>
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
         <div class="top-rank">${i+1}</div>
         <div class="top-info">

@@ -20,6 +20,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 
+# 순수 헬퍼는 lunch_utils 로 분리 (전역 상태·외부 의존 없음). 같은 scripts/ 폴더라 import 가능.
+from lunch_utils import parse_minutes, clean_name, haversine_m, extract_json
+
 SB_URL = "https://nrdapzgtibbusvoaceuh.supabase.co"
 SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFwemd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM"
 
@@ -106,7 +109,7 @@ def fetch_locations():
     fallback = [{"key": "jb", "name": "JB빌딩", "region": "여의도",
                  "lat": JB_LAT, "lng": JB_LNG, "auto": True, "rec_profile": "auto"}]
     try:
-        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto,rec_profile,rec_custom&enabled=not.eq.false&order=sort.asc"
+        url = f"{SB_URL}/rest/v1/app_locations?select=key,name,short,region,lat,lng,auto,rec_profile,rec_custom,diversity&enabled=not.eq.false&order=sort.asc"
         req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
         with urllib.request.urlopen(req, timeout=8) as r:
             rows = json.loads(r.read())
@@ -117,7 +120,8 @@ def fetch_locations():
                             "region": l.get("region") or "", "short": l.get("short") or l.get("name"),
                             "lat": float(l["lat"]), "lng": float(l["lng"]), "auto": bool(l.get("auto")),
                             "rec_profile": l.get("rec_profile") or "auto",
-                            "rec_custom": l.get("rec_custom")})
+                            "rec_custom": l.get("rec_custom"),
+                            "diversity": l.get("diversity")})
             except (KeyError, ValueError, TypeError):
                 continue
         return out or fallback
@@ -129,7 +133,8 @@ def fetch_locations():
 # ── 추천 다양성 설정 (관리자페이지에서 토글) ───────────────────
 # avoid(B)=최근 추천 강하게 제외 / spread(C)=거리대 분산 강제 /
 # pool(A)=후보 무작위 섞기 / rotate(D)=날짜 시드 로테이션 / recent_days=회피 기간
-DIVERSITY = {"avoid": True, "spread": True, "pool": False, "rotate": False, "recent_days": 5}
+DIVERSITY = {"avoid": True, "spread": True, "pool": True, "rotate": True, "recent_days": 7,
+             "dedup_branch": True, "cuisine_vary": True, "cand_max": 45, "radius_boost": 1.0}
 
 
 def fetch_diversity():
@@ -141,11 +146,19 @@ def fetch_diversity():
             rows = json.loads(r.read())
         d = (rows[0].get("diversity") if rows else {}) or {}
         out = dict(DIVERSITY)
-        for k in ("avoid", "spread", "pool", "rotate"):
+        for k in ("avoid", "spread", "pool", "rotate", "dedup_branch", "cuisine_vary"):
             if k in d:
                 out[k] = bool(d[k])
         try:
             out["recent_days"] = max(0, min(14, int(d.get("recent_days", out["recent_days"]))))
+        except (TypeError, ValueError):
+            pass
+        try:
+            out["cand_max"] = max(15, min(150, int(d.get("cand_max", out["cand_max"]))))
+        except (TypeError, ValueError):
+            pass
+        try:
+            out["radius_boost"] = max(1.0, min(4.0, float(d.get("radius_boost", out["radius_boost"]))))
         except (TypeError, ValueError):
             pass
         return out
@@ -154,29 +167,47 @@ def fetch_diversity():
         return dict(DIVERSITY)
 
 
-def parse_minutes(distance):
-    """'도보 7분 (카카오) / 6분 (네이버)' → 최소 분. 미확인이면 None."""
-    nums = re.findall(r"(\d+)\s*분", str(distance or ""))
-    return min(int(n) for n in nums) if nums else None
+# parse_minutes / clean_name / haversine_m → lunch_utils 로 이동(상단 import)
+_BASE_DIVERSITY = dict(DIVERSITY)   # 전역 기본 (배치 시작 시 fetch_diversity로 채움)
 
 
-def clean_name(name):
-    """가게명에서 괄호 안 주소·층수, 대시로 붙인 메뉴 접미사 제거 → 지도 검색 정확도 향상.
-    예: '로바(더현대서울 6층)' → '로바', '소몽 - 고등어덮밥' → '소몽'"""
-    cleaned = re.sub(r"\s*[\(\[\{].*?[\)\]\}]\s*", " ", name)
-    # ' - 메뉴', ' — 메뉴', ' · 메뉴' 같은 구분자 뒤 부가설명 제거
-    cleaned = re.split(r"\s+[-–—·:]\s+", cleaned)[0]
-    return cleaned.strip() or name.strip()
+def effective_diversity(loc):
+    """위치별 다양성 = 전역 기본 + 위치 override(loc['diversity']). override 없으면 전역 그대로."""
+    base = dict(_BASE_DIVERSITY)
+    ov = loc.get("diversity")
+    if isinstance(ov, dict):
+        for k in ("avoid", "spread", "pool", "rotate", "dedup_branch", "cuisine_vary"):
+            if k in ov:
+                base[k] = bool(ov[k])
+        for k, lo, hi, cast in (("recent_days", 0, 14, int), ("cand_max", 15, 150, int), ("radius_boost", 1.0, 4.0, float)):
+            if ov.get(k) is not None:
+                try:
+                    base[k] = max(lo, min(hi, cast(ov[k])))
+                except (TypeError, ValueError):
+                    pass
+    return base
 
 
-def haversine_m(lat1, lng1, lat2, lng2):
-    """두 좌표 간 직선거리(미터)."""
-    R = 6371000
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lng2 - lng1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * R * math.asin(math.sqrt(a))
+# 지점/지역 접미사 (중복 판정용 정규화)
+_BRANCH_SUFFIX_RE = re.compile(r"\s+\S*(?:점|지점|본점|직영점)$")
+_REGION_TOKENS = ("여의도", "여의나루", "IFC몰", "IFC", "파이낸스", "더현대서울", "더현대")
+
+
+def norm_name(name):
+    """중복 판정용 정규화 — clean_name + 끝의 지점명/지역 토큰 제거.
+    예: '독도참치앤전복 여의도점'→'독도참치앤전복', '미도인 파이낸스 여의도점'→'미도인'."""
+    s = clean_name(name)
+    for _ in range(3):
+        m = _BRANCH_SUFFIX_RE.search(s)        # ' 여의도점' / ' IFC몰점' / ' 직영점' 등
+        if m:
+            s = s[:m.start()].strip()
+            continue
+        toks = s.split()
+        if len(toks) > 1 and toks[-1] in _REGION_TOKENS:   # 끝의 지역 토큰
+            s = " ".join(toks[:-1]).strip()
+            continue
+        break
+    return s or clean_name(name)
 
 
 # 음식점이 아닌 카테고리 키워드 (검증에서 제외)
@@ -263,9 +294,12 @@ def fetch_nearby_candidates(kakao_key, naver_id=None, naver_secret=None, max_cou
     global _candidates_cache, _cand_sparse
     if _candidates_cache is not None:
         return _candidates_cache
+    boost = float(DIVERSITY.get("radius_boost", 1.0) or 1.0)        # 후보풀 넓히기: 반경 배율
+    cap = int(DIVERSITY.get("cand_max", max_count) or max_count)    # 후보풀 넓히기: 최대 후보 수
     merged, seen = [], set()
-    used_radius = PROFILE["radii"][0]
-    for radius in PROFILE["radii"]:
+    used_radius = int(PROFILE["radii"][0] * boost)
+    for base_radius in PROFILE["radii"]:
+        radius = int(base_radius * boost)
         used_radius = radius
         cand = fetch_kakao_candidates(kakao_key, radius) + fetch_naver_candidates(naver_id, naver_secret, radius)
         cand.sort(key=lambda c: c[1])   # 거리 가까운 순
@@ -277,7 +311,7 @@ def fetch_nearby_candidates(kakao_key, naver_id=None, naver_secret=None, max_cou
             seen.add(key)
             label, _wm = fmt_dist(meters)
             merged.append(f"{name}({cat}, {label})" if cat else f"{name}({label})")
-            if len(merged) >= max_count:
+            if len(merged) >= cap:
                 break
         if len(merged) >= PROFILE["min_cand"]:
             break   # 충분히 모임 → 반경 확대 중단
@@ -696,8 +730,11 @@ def call_claude(client, prompt, use_web=True):
     tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}] if use_web else []
 
     for iteration in range(10):
-        # Rate limit 재시도 (최대 3회, 지수 백오프)
-        for attempt in range(3):
+        # 일시적 오류 자동 재시도 (rate limit / 과부하 529 / 연결·타임아웃) — 지수 백오프 + 지터
+        MAX_ATTEMPTS = 5
+        response = None
+        for attempt in range(MAX_ATTEMPTS):
+            wait = 0
             try:
                 kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=8000, messages=messages)
                 if tools:
@@ -705,11 +742,20 @@ def call_claude(client, prompt, use_web=True):
                 response = client.messages.create(**kwargs)
                 break
             except anthropic.RateLimitError:
-                wait = 65 * (attempt + 1)
-                print(f"  ⏳ Rate limit — {wait}초 후 재시도 ({attempt+1}/3)...")
+                wait = 65 * (attempt + 1) + random.uniform(0, 10)
+                print(f"  ⏳ Rate limit — {wait:.0f}초 후 재시도 ({attempt+1}/{MAX_ATTEMPTS})...")
+            except anthropic.APIError as e:
+                status = getattr(e, "status_code", None)
+                # 재시도 무의미한 4xx(429 제외)는 즉시 중단
+                if status is not None and 400 <= status < 500 and status != 429:
+                    print(f"  ❌ 재시도 불가 오류({status}): {e}")
+                    return None
+                wait = min(60, 5 * (2 ** attempt)) + random.uniform(0, 5)
+                print(f"  ⏳ 일시 오류({status or type(e).__name__}) — {wait:.0f}초 후 재시도 ({attempt+1}/{MAX_ATTEMPTS})...")
+            if attempt < MAX_ATTEMPTS - 1:
                 time.sleep(wait)
-        else:
-            print("❌ Rate limit 재시도 초과")
+        if response is None:
+            print(f"❌ API 재시도 {MAX_ATTEMPTS}회 초과 — 호출 포기")
             return None
 
         print(f"  [iteration {iteration + 1}] stop_reason={response.stop_reason}")
@@ -771,6 +817,7 @@ def get_recent_names(history_path="history.json", days=3, limit=24):
     recs = sorted(history.get("recommendations", []),
                   key=lambda x: x.get("date", ""), reverse=True)[:days]
     names = []
+    seen = set()
     for day in recs:
         buckets = [day.get("restaurants", []), day.get("extras", [])]
         for m in (day.get("meals") or {}).values():
@@ -779,64 +826,18 @@ def get_recent_names(history_path="history.json", days=3, limit=24):
         for b in buckets:
             for r in b:
                 nm = r.get("name")
-                if nm and nm not in names:
-                    names.append(nm)
+                if not nm:
+                    continue
+                # dedup_branch: 접미사('여의도점/직영점/IFC몰점') 무시 → 같은 집 변형도 중복 제외
+                key = norm_name(nm) if DIVERSITY.get("dedup_branch", True) else nm.strip()
+                if key and key not in seen:
+                    seen.add(key)
+                    names.append(key)
     return names[:limit]
 
 
-def _balanced_json(text, start):
-    """text[start]의 '{'부터 균형 잡힌 객체 문자열 반환. 문자열 리터럴 안의 중괄호/이스케이프는 무시.
-    중간에 끝나면(잘림 등) None."""
-    depth = 0
-    in_str = False
-    esc = False
-    for j in range(start, len(text)):
-        c = text[j]
-        if in_str:
-            if esc:
-                esc = False
-            elif c == "\\":
-                esc = True
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c == "{":
-            depth += 1
-        elif c == "}":
-            depth -= 1
-            if depth == 0:
-                return text[start:j + 1]
-    return None
-
-
-def extract_json(text):
-    """응답에서 JSON 객체 추출. 프로즈·웹검색 요약·코드펜스·후행 텍스트·문자열 안 중괄호에 강건.
-    여러 후보 객체 중 'restaurants' 배열을 가진 것을 우선 채택(술집 등 웹검색 응답 안정화)."""
-    if not text:
-        return None
-    objs = []
-    for i, c in enumerate(text):
-        if c != "{":
-            continue
-        seg = _balanced_json(text, i)
-        if not seg:
-            continue
-        try:
-            obj = json.loads(seg)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(obj, dict):
-            objs.append(obj)
-    if not objs:
-        return None
-    # restaurants(리스트) 보유 → 그중 가장 많은 것 우선
-    def score(o):
-        rs = o.get("restaurants")
-        ok = isinstance(rs, list)
-        return (1 if ok else 0, len(rs) if ok else 0, len(o))
-    objs.sort(key=score, reverse=True)
-    return objs[0]
+# _balanced_json / extract_json → lunch_utils 로 이동(상단 import).
+# (술집 등 웹검색 응답에 강건한 'restaurants 우선' 버전을 lunch_utils 에 정본화)
 
 
 def update_history(new_entry, history_path="history.json"):
@@ -935,12 +936,17 @@ def send_email(restaurants, today, full_text, comment="", weather="", news=None,
         print(f"⚠️  이메일 발송 실패: {e}")
 
 
+RECENT_INLINE_DAYS = 14  # index.html에는 최근 N일만 인라인 (나머지는 런타임에 history.json 지연 로드)
+
+
 def update_index_html(history, html_path="index.html"):
-    """index.html의 HISTORY_DATA 교체."""
+    """index.html의 HISTORY_DATA 교체 (최근 RECENT_INLINE_DAYS일만 인라인 — 본문서 비대화 방지)."""
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    new_data = json.dumps(history["recommendations"], ensure_ascii=False)
+    # recommendations는 newest-first(insert(0)) → 앞에서 N개가 최근 N일
+    inline = history["recommendations"][:RECENT_INLINE_DAYS]
+    new_data = json.dumps(inline, ensure_ascii=False)
     html_new = re.sub(
         r"const HISTORY_DATA = \[.*?\];",
         f"const HISTORY_DATA = {new_data};",
@@ -1002,11 +1008,15 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     # 다양성: B=회피 강화 / C=거리대 분산 강제 (관리자 설정 DIVERSITY)
     avoid_line = ""
     if recent_names:
+        branch_txt = " 가게명 뒤 지점명('여의도점' 등)만 다른 같은 가게도 다시 넣지 마." if DIVERSITY.get("dedup_branch", True) else ""
+        cuisine_txt = " 또한 최근 며칠과 음식 종류(cuisine)가 한쪽으로 쏠리지 않게 다양한 종류로 섞어줘." if DIVERSITY.get("cuisine_vary", True) else ""
         if DIVERSITY["avoid"]:   # B: 최근 추천 강하게 제외
             avoid_line = (f"\n🚫 최근 추천한 곳({', '.join(recent_names)})은 위 목록에 있어도 "
-                          f"반드시 제외하고, 새로운 가게로만 5곳을 골라줘. 최근 추천한 곳을 다시 넣지 마.\n")
+                          f"반드시 제외하고, 새로운 가게로만 5곳을 골라줘. 최근 추천한 곳을 다시 넣지 마."
+                          f"{branch_txt}{cuisine_txt}\n")
         else:
-            avoid_line = f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.\n"
+            cz = " 음식 종류도 최근과 다르게 섞어줘." if DIVERSITY.get("cuisine_vary", True) else ""
+            avoid_line = (f"\n⚠️ 최근 며칠간 추천한 곳({', '.join(recent_names)})은 가급적 빼고 새로운 가게로 골라줘.{cz}\n")
     spread_txt = ("restaurants 5곳은 가까운 곳 위주로 하되 거리대를 다양하게(가장 가까운 2곳 + 중간 2곳 + 조금 먼 1곳), "
                   "음식 종류도 겹치지 않게. 무조건 제일 가까운 곳만 반복하지 말 것.")
     near_txt = ("restaurants 5곳은 위 목록에서 가까운 순으로 골라줘(거리대를 억지로 분산하지 말 것). "
@@ -1157,6 +1167,12 @@ def process_location(client, loc, today, date_compact, kakao_key, naver_id, nave
     JB빌딩(key=jb)은 index.html 갱신 + 이메일까지, 그 외는 data/history-{key}.json만."""
     is_jb = loc["key"] == "jb"
     path = "history.json" if is_jb else os.path.join("data", f"history-{loc['key']}.json")
+    global DIVERSITY
+    DIVERSITY = effective_diversity(loc)   # 위치별 override (없으면 전역 기본)
+    if isinstance(loc.get("diversity"), dict):
+        print(f"   🎲 [{loc['name']}] 위치 전용 다양성 적용")
+    if DIVERSITY["rotate"]:
+        random.seed(f"{today}-{loc['key']}")   # 위치·날짜 시드
     set_origin(loc["lat"], loc["lng"], loc.get("region") or "여의도",
                loc.get("short") or loc.get("name") or loc["key"],
                loc.get("rec_profile") or "auto", loc.get("rec_custom"))
@@ -1169,17 +1185,33 @@ def process_location(client, loc, today, date_compact, kakao_key, naver_id, nave
     headlines = " / ".join(n["title"] for n in news[:3]) if news else ""
     mood_ctx = build_mood_ctx(weather, stock, headlines)
 
-    lunch, lunch_text = generate_meal(client, today, date_compact, "점심", True,
-                                      kakao_key, naver_id, naver_secret, recent, mood_ctx)
+    # 끼니 생성 — None(레이트리밋/JSON실패) 시 90초 후 1회 재시도 + 누락 명시.
+    # 술집은 항상 마지막이라 분당 토큰 한도에 가장 잘 걸려 조용히 누락되던 문제 보강.
+    missing = []
+
+    def gen_meal(meal, with_cond):
+        m, txt = generate_meal(client, today, date_compact, meal, with_cond,
+                               kakao_key, naver_id, naver_secret, recent, mood_ctx)
+        if not m:
+            print(f"⚠️ [{loc['name']}] {meal} 1차 생성 실패 — 90초 후 1회 재시도")
+            time.sleep(90)   # 분당 토큰 창 초기화 대기
+            m, txt = generate_meal(client, today, date_compact, meal, with_cond,
+                                   kakao_key, naver_id, naver_secret, recent, mood_ctx)
+            if not m:
+                print(f"❌ [{loc['name']}] {meal} 재시도도 실패 — 이 끼니 누락")
+                missing.append(meal)
+        return m, txt
+
+    lunch, lunch_text = gen_meal("점심", True)
     if not lunch:
         print(f"❌ [{loc['name']}] 점심 생성 실패 — 이 위치 건너뜀")
         return False
     time.sleep(70)  # rate limit(10k tokens/min) 회피
-    dinner, _ = generate_meal(client, today, date_compact, "저녁", True,
-                              kakao_key, naver_id, naver_secret, recent, mood_ctx)
+    dinner, _ = gen_meal("저녁", True)
     time.sleep(70)
-    bar, _ = generate_meal(client, today, date_compact, "술집", False,
-                           kakao_key, naver_id, naver_secret, recent, mood_ctx)
+    bar, _ = gen_meal("술집", False)
+    if missing:
+        print(f"⚠️ [{loc['name']}] 누락 끼니: {', '.join(missing)} (점심은 정상)")
 
     daily_msg = generate_daily_message(client, weather, news, lunch.get("restaurants", []))
     new_entry = build_entry(today, lunch, dinner, bar, daily_msg, weather, news)
@@ -1221,12 +1253,11 @@ def main():
     locations.sort(key=lambda l: (l["key"] != "jb",))  # jb 우선
     print(f"📍 배치 대상 위치 {len(locations)}곳: {', '.join(l['name'] for l in locations)}")
 
-    global DIVERSITY
-    DIVERSITY = fetch_diversity()
+    global DIVERSITY, _BASE_DIVERSITY
+    _BASE_DIVERSITY = fetch_diversity()
+    DIVERSITY = dict(_BASE_DIVERSITY)
     _on = [k for k in ('avoid','spread','pool','rotate') if DIVERSITY[k]]
-    print(f"🎲 추천 다양성: {', '.join(_on) or '없음'} (회피 {DIVERSITY['recent_days']}일)")
-    if DIVERSITY["rotate"]:
-        random.seed(today)   # 날짜 시드 → 같은 풀이라도 날짜별 다른 선택
+    print(f"🎲 추천 다양성(전역 기본): {', '.join(_on) or '없음'} (회피 {DIVERSITY['recent_days']}일) · 위치별 override 가능")
 
     # JB금융 뉴스·주가는 전 위치 공통 → 1회만 수집해 모든 위치에 공유
     print("\n📰 JB금융 뉴스·주가 수집 중 (전 위치 공통)...")

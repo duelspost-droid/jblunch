@@ -6,3 +6,10 @@ deploy-error.log
 netlify.command
 push.command
 supabase/.temp/
+
+# Python
+__pycache__/
+*.pyc
+
+# 작업 산출물(패치) — 레포에 커밋하지 않음
+*.patch

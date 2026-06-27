@@ -56,6 +56,20 @@ function sanitizeCustom(c: unknown): Record<string, unknown> {
   };
 }
 
+// 위치별 다양성 override 정규화 (전역 diversity_set와 동일 규칙). null → 전역 따름.
+function sanitizeDiversity(d: unknown): Record<string, unknown> | null {
+  if (!d || typeof d !== "object") return null;
+  const o = d as Record<string, unknown>;
+  const rd = Math.max(0, Math.min(14, Math.round(Number(o.recent_days)) || 0));
+  const cm = Math.max(15, Math.min(150, Math.round(Number(o.cand_max)) || 45));
+  const rb = Math.max(1, Math.min(4, Number(o.radius_boost) || 1));
+  return {
+    avoid: !!o.avoid, spread: !!o.spread, pool: !!o.pool, rotate: !!o.rotate,
+    dedup_branch: o.dedup_branch !== false, cuisine_vary: o.cuisine_vary !== false,
+    recent_days: rd, cand_max: cm, radius_boost: rb,
+  };
+}
+
 const PBKDF2_ITER = 120000;
 const SESSION_HOURS = 8;
 const LOCK_WINDOW_MIN = 15;
@@ -124,11 +138,20 @@ async function verifyPassword(password: string): Promise<boolean> {
 }
 
 // ── 세션 토큰(admin_sessions) ─────────────────────────────────
-async function createSession(ip: string): Promise<{ token: string; expires_at: string }> {
+async function createSession(ip: string): Promise<{ token: string; expires_at: string; persisted: boolean }> {
   const token = randHex(32);
   const expires_at = new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString();
-  await fetch(`${SB_URL}/rest/v1/admin_sessions`, { method: "POST", headers: SH, body: JSON.stringify({ token, ip, expires_at }) });
-  return { token, expires_at };
+  // 세션 쓰기 결과를 반드시 확인한다. 실패를 삼키면(=과거 버그) 토큰이 저장되지 않아
+  // 이후 모든 토큰 인증이 401 로 막히는데 로그인만 거짓 성공으로 보인다.
+  let persisted = false;
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/admin_sessions`, { method: "POST", headers: SH, body: JSON.stringify({ token, ip, expires_at }) });
+    persisted = r.ok;
+    if (!r.ok) console.error("createSession: admin_sessions insert 실패", r.status, await r.text().catch(() => ""));
+  } catch (e) {
+    console.error("createSession: admin_sessions insert 예외", String(e));
+  }
+  return { token, expires_at, persisted };
 }
 async function validSession(token: string): Promise<boolean> {
   if (!token || token.length < 32) return false;
@@ -184,7 +207,7 @@ Deno.serve(async (req) => {
       await logAdmin("admin_login", ip, "", ua);
       const sess = await createSession(ip);
       const data = await dashboard(body);
-      return json({ ok: true, token: sess.token, expiresAt: sess.expires_at, ...data });
+      return json({ ok: true, token: sess.token, expiresAt: sess.expires_at, sessionPersisted: sess.persisted, ...data });
     }
 
     // ── 비밀번호 변경: '현재 비번'으로 직접 인증 (토큰 만료/무효화와 무관) ──
@@ -299,14 +322,19 @@ Deno.serve(async (req) => {
     if (action === "diversity_get") {
       const r = await fetch(`${SB_URL}/rest/v1/app_settings?id=eq.1&select=diversity`, { headers: SH });
       const rows = r.ok ? await r.json() : [];
-      const def = { avoid: true, spread: true, pool: false, rotate: false, recent_days: 5 };
+      const def = { avoid: true, spread: true, pool: true, rotate: true, recent_days: 7,
+                    dedup_branch: true, cuisine_vary: true, cand_max: 45, radius_boost: 1.0 };
       return json({ ok: true, diversity: { ...def, ...((rows[0] && rows[0].diversity) || {}) } });
     }
     if (action === "diversity_set") {
       const d = (body.diversity && typeof body.diversity === "object") ? body.diversity as Record<string, unknown> : {};
       const rd = Math.max(0, Math.min(14, Math.round(Number(d.recent_days)) || 0));
+      const cm = Math.max(15, Math.min(150, Math.round(Number(d.cand_max)) || 45));
+      const rb = Math.max(1, Math.min(4, Number(d.radius_boost) || 1));
       const div = {
         avoid: !!d.avoid, spread: !!d.spread, pool: !!d.pool, rotate: !!d.rotate, recent_days: rd,
+        dedup_branch: d.dedup_branch !== false, cuisine_vary: d.cuisine_vary !== false,
+        cand_max: cm, radius_boost: rb,
       };
       const r = await fetch(`${SB_URL}/rest/v1/app_settings?on_conflict=id`, {
         method: "POST",
@@ -352,7 +380,8 @@ Deno.serve(async (req) => {
       const subtitle = (body.subtitle || "").toString().trim() || `${name} 근처 · 맛집 추천`;
       const rec_profile = REC_KEYS.includes((body.rec_profile || "").toString()) ? body.rec_profile : "auto";
       const rec_custom = rec_profile === "custom" ? sanitizeCustom(body.rec_custom) : null;
-      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100, rec_profile, rec_custom };
+      const diversity = body.diversity ? sanitizeDiversity(body.diversity) : null;
+      const row = { key, name, short, region, lat, lng, subtitle, auto: false, sort: 100, rec_profile, rec_custom, diversity };
       const ins = await fetch(`${SB_URL}/rest/v1/app_locations`, {
         method: "POST", headers: { ...SH, Prefer: "return=representation" }, body: JSON.stringify(row),
       });
@@ -371,6 +400,9 @@ Deno.serve(async (req) => {
       if (body.rec_profile != null && REC_KEYS.includes(body.rec_profile.toString())) {
         patch.rec_profile = body.rec_profile.toString();
         patch.rec_custom = patch.rec_profile === "custom" ? sanitizeCustom(body.rec_custom) : null;
+      }
+      if (body.diversity !== undefined) {   // null → 전역 따름 / 객체 → 위치 전용
+        patch.diversity = body.diversity ? sanitizeDiversity(body.diversity) : null;
       }
       const lat = Number(body.lat), lng = Number(body.lng);
       if (isFinite(lat) && isFinite(lng) && lat && lng) { patch.lat = lat; patch.lng = lng; }
@@ -538,6 +570,8 @@ async function dashboard(opts: Record<string, unknown> = {}) {
   const url = `${SB_URL}/rest/v1/access_logs?select=*&order=created_at.desc&limit=${limit}`;
 
   const r = await fetch(url, { headers: { ...SH, Prefer: "count=exact" } });
+  const logsOk = r.ok;   // access_logs 읽기 성공 여부 → 백엔드 헬스 신호
+  if (!r.ok) console.error("dashboard: access_logs 읽기 실패", r.status, await r.text().catch(() => ""));
   let logs: any[] = r.ok ? await r.json().catch(() => []) : [];
   if (!Array.isArray(logs)) logs = [];
   const cr = r.headers.get("content-range") || "";   // "0-N/total"
@@ -562,7 +596,7 @@ async function dashboard(opts: Record<string, unknown> = {}) {
   }
   const regions = Object.entries(regionCount).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ region: k, count: v }));
   const visits = await visitorStats();
-  return { logs, logCount: totalMatch, stats: { total: logs.length, matched: totalMatch, uniqueIPs: ipSet.size, actions: actionCount, regions }, visits };
+  return { logs, logCount: totalMatch, stats: { total: logs.length, matched: totalMatch, uniqueIPs: ipSet.size, actions: actionCount, regions }, visits, health: { access_logs: logsOk } };
 }
 
 // PostgREST count(content-range 헤더)로 visit 수 집계

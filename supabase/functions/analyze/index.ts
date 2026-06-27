@@ -116,6 +116,29 @@ async function kakaoNearby(kakaoKey: string, lat: number, lng: number, prof: Pro
   return best;
 }
 
+// 사용자 입력(메뉴·음식명·키워드)으로 Kakao "키워드 검색" → 그 메뉴를 실제 다루는 근처 가게.
+// 카테고리검색(kakaoNearby)이 못 잡는 "냉면/마라탕/돈까스" 같은 메뉴 매칭을 보강한다.
+async function kakaoMenuMatch(query: string, kakaoKey: string, lat: number, lng: number, prof: Profile): Promise<string[]> {
+  if (!kakaoKey || !query) return [];
+  const radius = Math.max(...prof.radii);   // 프로파일의 최대 반경 존중(도보전용이면 가깝게)
+  try {
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json` +
+      `?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${radius}&sort=distance&size=15`;
+    const r = await fetch(url, { headers: { Authorization: `KakaoAK ${kakaoKey}` } });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return (data.documents || [])
+      .filter((d: Record<string, string>) => ["FD6", "CE7"].includes(d.category_group_code))   // 음식점·카페만
+      .map((d: Record<string, string>) => {
+        const cat = (d.category_name || "").replace("음식점 > ", "").split(" > ").pop() || "";
+        const [label] = fmtDist(Number(d.distance || 0), prof);
+        return `${d.place_name}(${cat}, ${label})`;
+      });
+  } catch {
+    return [];
+  }
+}
+
 // 지역 인기·유명 맛집 (Naver 리뷰순 — 조금 멀어도 다양성용)
 async function naverPopular(meal: string, id: string, secret: string, region: string): Promise<string[]> {
   if (!id || !secret) return [];
@@ -149,16 +172,52 @@ async function naverPopular(meal: string, id: string, secret: string, region: st
   return out;
 }
 
+// 사용자 입력(메뉴·음식명)으로 Naver 지역검색 → 그 메뉴 관련 가게(리뷰 많은 순). Kakao 키워드와 상호보완.
+async function naverMenuMatch(query: string, id: string, secret: string, region: string): Promise<string[]> {
+  if (!id || !secret || !query) return [];
+  try {
+    const q = encodeURIComponent(`${region} ${query}`);
+    const r = await fetch(
+      `https://openapi.naver.com/v1/search/local.json?query=${q}&display=5&sort=comment`,
+      { headers: { "X-Naver-Client-Id": id, "X-Naver-Client-Secret": secret } },
+    );
+    if (!r.ok) return [];
+    const items = (await r.json()).items || [];
+    const out: string[] = [];
+    for (const it of items) {
+      const name = (it.title || "").replace(/<[^>]+>/g, "").trim();
+      if (!name) continue;
+      // 음식점/카페/주점 카테고리만 (Naver category 예: "음식점>한식>냉면")
+      if (it.category && !/음식|카페|디저트|술집|주점|바|레스토랑|호프/.test(it.category)) continue;
+      const cat = (it.category || "").split(">").pop()?.trim() || "";
+      out.push(cat ? `${name}(${cat})` : name);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 // 후보 블록 = 가까운 검증(Kakao, 적응형) + 인기 유명(Naver) — 병렬
 // 반환: { block, sparse } — sparse=근처 후보가 minCand에 못 미침(③ 분기용)
-async function fetchCandidates(meal: string, kakaoKey: string, naverId: string, naverSecret: string, lat: number, lng: number, region: string, prof: Profile): Promise<{ block: string; sparse: boolean }> {
-  const [near, popular] = await Promise.all([
+async function fetchCandidates(text: string, meal: string, kakaoKey: string, naverId: string, naverSecret: string, lat: number, lng: number, region: string, prof: Profile): Promise<{ block: string; sparse: boolean }> {
+  const [near, popular, kakaoMenu, naverMenu] = await Promise.all([
     kakaoNearby(kakaoKey, lat, lng, prof),
     naverPopular(meal, naverId, naverSecret, region),
+    text ? kakaoMenuMatch(text, kakaoKey, lat, lng, prof) : Promise.resolve([] as string[]),
+    text ? naverMenuMatch(text, naverId, naverSecret, region) : Promise.resolve([] as string[]),
   ]);
+  // 메뉴 직접검색 = Kakao(거리 정확) + Naver(리뷰순) 합치고 가게명 기준 중복 제거
+  const seenMenu = new Set<string>();
+  const menuMatch: string[] = [];
+  for (const item of [...kakaoMenu, ...naverMenu]) {
+    const nm = item.split("(")[0].trim();
+    if (nm && !seenMenu.has(nm)) { seenMenu.add(nm); menuMatch.push(item); }
+  }
   const sparse = near.length < prof.minCand;
-  if (!near.length && !popular.length) return { block: "", sparse: true };
+  if (!near.length && !popular.length && !menuMatch.length) return { block: "", sparse: true };
   let block = "\n[참고 목록 — 실제 존재하는 가게, 가까운 순]\n";
+  if (menuMatch.length) block += `· 🔎 "${text}" 직접 검색 결과(Kakao·Naver — 이 메뉴/키워드를 실제 다루는 가게, 메뉴/음식 입력이면 최우선 고려): ${menuMatch.join(", ")}\n`;
   if (near.length) block += `· 가까운 검증 맛집(거리 정확): ${near.join(", ")}\n`;
   if (popular.length) block += `· ${region} 인기·유명 맛집(조금 멀 수 있음): ${popular.join(", ")}\n`;
   return { block, sparse };
@@ -364,7 +423,7 @@ Deno.serve(async (req) => {
     }
 
     // ① 실제 후보 목록 (가까운 검증 + 인기 유명, 적응형 반경)
-    const { block: candBlock, sparse } = await fetchCandidates(meal, kakaoKey, naverId, naverSecret, lat, lng, region, prof);
+    const { block: candBlock, sparse } = await fetchCandidates(text, meal, kakaoKey, naverId, naverSecret, lat, lng, region, prof);
     // ③ 후보 충분도·프로파일 → 먼 곳 허용 여부 + 거리 분산 지시
     const farOk = prof.allowFar === "always" || (prof.allowFar === "sparse" && sparse);
     const nearRule = farOk
@@ -385,6 +444,7 @@ ${candBlock}
 규칙:
 - [A] 상호명이면 kind="place", place_name=사용자가 가리킨 가게의 정식 상호(예: "스벅"→"스타벅스", "매머드 커피"→"매머드커피", "메가"→"메가커피"). 절대 다른 가게 이름으로 바꾸지 마. restaurants[0]=그 가게, restaurants[1~4]=그 가게와 비슷한(같은 종류·분위기) 근처 맛집 4곳. comment=그 가게가 어떤 곳인지 1~2문장. extras=빈 배열 [].
 - [B] 조건/취향이면 kind="condition": restaurants 5곳=그 조건에 맞는 ${MEAL_DESC[meal]}(가까운 곳 우선, 음식 종류 다양). extras=추가 2곳(1곳 tag="근처유명", 1곳 tag="검색유명", 둘 다 약 ${prof.extraMax}분 이내 실제 가게, restaurants와 겹치지 않게). comment=추천 컨셉 1~2문장.
+  └ 사용자 입력이 특정 음식·메뉴(예: 냉면, 마라탕, 돈까스, 파스타)면, 위 '🔎 직접 검색 결과' 목록의 가게를 최우선으로 골라(그 메뉴를 실제 파는 집). 거기서 부족하면 나머지 후보로 보충하고, feature에 그 메뉴를 자연스럽게 언급해.
 - 공통: 실제 존재하는 ${region}(${place} 인근) 가게로, 시간대(${meal})에 어울리게. ${nearRule}
 - 각 가게: name, cuisine(종류), feature(특징/추천메뉴 한 줄), price(저렴/보통/비쌈), distance(도보 N분). extras는 tag 추가.
 - 반드시 JSON만 출력:

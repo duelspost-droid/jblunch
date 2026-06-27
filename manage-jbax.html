@@ -43,6 +43,11 @@
   .stats { background: linear-gradient(160deg,#f4f7fb,#eef3fa); border: 1px solid #e7eef7; border-radius: 12px; padding: 13px 15px; margin-bottom: 14px; font-size: 0.9rem; color: #1e3a5f; }
   .stats b { color: #0a3d7a; }
   .stats .act { font-size: 0.74rem; color: #8794a6; margin-top: 6px; line-height: 1.5; }
+  /* 백엔드 DB 이상 경고 배너 */
+  .db-health { background: #fff5f5; border: 1px solid #f3c2c2; color: #9b2c2c; border-radius: 12px;
+               padding: 12px 14px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.55; }
+  .db-health b { color: #742a2a; }
+  .db-health code { background: #fde8e8; padding: 1px 5px; border-radius: 5px; font-size: 0.8rem; }
   .logs { max-height: 430px; overflow: auto; border: 1px solid #eee; border-radius: 10px; }  /* ≈10행 + 헤더, 내부 스크롤 */
   table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
   th { position: sticky; top: 0; background: #0a3d7a; color: #fff; padding: 8px; text-align: left; font-weight: 600; }
@@ -278,6 +283,8 @@
 
   <!-- 로그인 후 패널 (탭) -->
   <div id="panel" class="hidden">
+    <!-- 백엔드 DB 이상 시 표시(평소 숨김) -->
+    <div id="db-health" class="db-health hidden"></div>
     <div class="tabs-nav">
       <button class="tab-btn on" data-tab="dash" onclick="showAdminTab('dash')">📊 대시보드</button>
       <button class="tab-btn" data-tab="loc" onclick="showAdminTab('loc')">📍 위치 관리</button>
@@ -387,8 +394,14 @@
       <label class="div-row"><input type="checkbox" id="div-avoid"><span><b>B. 최근 추천 회피 강화</b><br><small>최근 추천한 곳을 목록에 있어도 반드시 제외</small></span></label>
       <label class="div-row"><input type="checkbox" id="div-spread"><span><b>C. 거리대 분산 강제</b><br><small>가까운 곳만 반복하지 않고 거리대를 다양화</small></span></label>
       <label class="div-row"><input type="checkbox" id="div-pool"><span><b>A. 후보 풀 무작위 섞기</b><br><small>매번 다른 조합 유도 (거리가 약간 멀어질 수 있음)</small></span></label>
-      <label class="div-row"><input type="checkbox" id="div-rotate"><span><b>D. 날짜 로테이션</b><br><small>같은 후보 풀이라도 날짜별로 다른 선택</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-rotate"><span><b>D. 날짜 로테이션</b><br><small>같은 후보 풀이라도 날짜별로 다른 선택 (날짜 시드)</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-dedup"><span><b>E. 지점명 무시 중복제외</b><br><small>'여의도점·IFC몰점'처럼 지점명만 다른 같은 가게도 최근 추천이면 제외</small></span></label>
+      <label class="div-row"><input type="checkbox" id="div-cuisine"><span><b>F. 음식 종류 분산</b><br><small>최근 며칠과 음식 종류(cuisine)가 한쪽으로 쏠리지 않게</small></span></label>
       <div class="div-days">최근 회피 기간 <input type="number" id="div-days" min="0" max="14"> 일 <small>(0=회피 안 함)</small></div>
+      <div class="div-days">후보 풀 넓히기 — 반경
+        <select id="div-boost"><option value="1">기본 1.0×</option><option value="1.5">1.5×</option><option value="2">2.0×</option><option value="3">3.0×</option></select>
+        · 최대 후보 <input type="number" id="div-candmax" min="15" max="150"> 개
+        <br><small>반경 배율↑·후보수↑ = 풀이 넓어져 더 다양 (거리는 멀어질 수 있음)</small></div>
       <div class="row" style="margin-top:12px;align-items:center;gap:10px">
         <button class="btn" onclick="saveDiversity()">저장</button>
         <span class="msg" id="div-msg"></span>
@@ -668,6 +681,22 @@ async function loadLogs(){
 function render(data){
   // 로그 원본 저장 → 필터는 클라이언트에서 처리
   allLogs = data.logs || [];
+  // 백엔드 DB 헬스 점검: 통계가 통째로 비는 원인을 "데이터 없음"으로 오인하지 않도록
+  // 테이블 읽기/세션 쓰기 실패를 눈에 띄게 경고한다.
+  const dbBad = (data.health && data.health.access_logs === false) || data.sessionPersisted === false;
+  const hb = document.getElementById('db-health');
+  if (hb) {
+    if (dbBad) {
+      hb.className = 'db-health';
+      hb.innerHTML = '⚠️ <b>백엔드 DB 이상 감지</b> — 통계/세션 테이블에 접근하지 못했습니다. '
+        + '통계가 빈 것은 데이터가 없어서가 아니라 <code>access_logs</code>·<code>admin_sessions</code> 등 '
+        + '테이블이 사라졌거나 접근 불가일 수 있습니다. Supabase SQL Editor에서 '
+        + '<code>supabase/migrations/0001_init_schema.sql</code>를 실행해 복구하세요.';
+    } else {
+      hb.className = 'db-health hidden';
+      hb.innerHTML = '';
+    }
+  }
   // 방문자 통계 (일/월/연/전체)
   const v = data.visits || {};
   const u = v.unique || {};
@@ -701,7 +730,10 @@ async function loadDiversity(){
   const d = data.diversity;
   const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.checked=!!val; };
   set('div-avoid', d.avoid); set('div-spread', d.spread); set('div-pool', d.pool); set('div-rotate', d.rotate);
-  const days=document.getElementById('div-days'); if(days) days.value = (d.recent_days ?? 5);
+  set('div-dedup', d.dedup_branch ?? true); set('div-cuisine', d.cuisine_vary ?? true);
+  const days=document.getElementById('div-days'); if(days) days.value = (d.recent_days ?? 7);
+  const boost=document.getElementById('div-boost'); if(boost) boost.value = String(d.radius_boost ?? 1);
+  const cm=document.getElementById('div-candmax'); if(cm) cm.value = (d.cand_max ?? 45);
 }
 async function saveDiversity(){
   const msg=document.getElementById('div-msg');
@@ -710,7 +742,11 @@ async function saveDiversity(){
     spread: document.getElementById('div-spread').checked,
     pool: document.getElementById('div-pool').checked,
     rotate: document.getElementById('div-rotate').checked,
+    dedup_branch: document.getElementById('div-dedup').checked,
+    cuisine_vary: document.getElementById('div-cuisine').checked,
     recent_days: Math.max(0, Math.min(14, parseInt(document.getElementById('div-days').value)||0)),
+    radius_boost: Math.max(1, Math.min(4, parseFloat(document.getElementById('div-boost').value)||1)),
+    cand_max: Math.max(15, Math.min(150, parseInt(document.getElementById('div-candmax').value)||45)),
   };
   msg.className='msg'; msg.textContent='저장 중…';
   const { ok, data } = await adminCall({ action:'diversity_set', diversity, token: curToken });
@@ -1007,6 +1043,30 @@ async function toggleLoc(key, currentlyOff){
 }
 // 인라인 수정 폼 열기
 const _editCoord = {};
+// 위치별 다양성 override 편집기 (전역 따름 ↔ 위치 전용)
+function diversityEditorHtml(prefix, d){
+  d = d || {};
+  const cb=(id,on,label,desc)=>`<label class="div-row"><input type="checkbox" id="${prefix}-${id}" ${on?'checked':''}><span><b>${label}</b><br><small>${desc}</small></span></label>`;
+  const boostOpts=[1,1.5,2,3].map(v=>`<option value="${v}" ${(+(d.radius_boost??1))===v?'selected':''}>${v}×</option>`).join('');
+  return cb('avoid', d.avoid!==false,'B 최근 회피','최근 추천 제외')
+    + cb('spread', d.spread!==false,'C 거리 분산','거리대 다양화')
+    + cb('pool', d.pool!==false,'A 풀 섞기','매번 다른 조합')
+    + cb('rotate', d.rotate!==false,'D 날짜 로테이션','날짜·위치 시드')
+    + cb('dedup', d.dedup_branch!==false,'E 지점명 무시 중복제외','같은 가게 변형 제외')
+    + cb('cuisine', d.cuisine_vary!==false,'F 음식 종류 분산','종류 쏠림 방지')
+    + `<div class="div-days">회피 기간 <input type="number" id="${prefix}-days" min="0" max="14" value="${d.recent_days??7}"> 일</div>`
+    + `<div class="div-days">후보 풀 — 반경 <select id="${prefix}-boost">${boostOpts}</select> · 최대 후보 <input type="number" id="${prefix}-candmax" min="15" max="150" value="${d.cand_max??45}"> 개</div>`;
+}
+function readDiversityEditor(prefix){
+  const c=id=>document.getElementById(prefix+'-'+id);
+  return {
+    avoid:c('avoid').checked, spread:c('spread').checked, pool:c('pool').checked, rotate:c('rotate').checked,
+    dedup_branch:c('dedup').checked, cuisine_vary:c('cuisine').checked,
+    recent_days:Math.max(0,Math.min(14,parseInt(c('days').value)||0)),
+    radius_boost:Math.max(1,Math.min(4,parseFloat(c('boost').value)||1)),
+    cand_max:Math.max(15,Math.min(150,parseInt(c('candmax').value)||45)),
+  };
+}
 function editLoc(key){
   const l = (window._locs||{})[key];
   const box = document.getElementById('ledit-'+key);
@@ -1026,6 +1086,8 @@ function editLoc(key){
     <select id="le-profile-${key}" class="rec-select" onchange="document.getElementById('le-pdesc-${key}').textContent=recDesc(this.value); syncCustomBox('le-custom-${key}', this.value, _locs['${key}']&&_locs['${key}'].rec_custom)">${recSelectHtml(l.rec_profile)}</select>
     <div class="rec-desc" id="le-pdesc-${key}">${esc(recDesc(l.rec_profile||'auto'))}</div>
     <div id="le-custom-${key}"></div>
+    <label class="rec-label" style="margin-top:10px;display:block"><input type="checkbox" id="le-divon-${key}" ${l.diversity?'checked':''} onchange="document.getElementById('le-divbox-${key}').style.display=this.checked?'block':'none'"> 이 위치 전용 다양성 <small style="font-weight:500;color:#8794a6">(해제 시 전역 설정 따름)</small></label>
+    <div id="le-divbox-${key}" style="display:${l.diversity?'block':'none'};padding:4px 0 2px">${diversityEditorHtml('le-div-'+key, l.diversity)}</div>
     <div class="le-coord" id="le-coord-${key}">📍 좌표: ${(+l.lat).toFixed(5)}, ${(+l.lng).toFixed(5)} <span style="color:#8794a6">(바꾸려면 아래에서 검색)</span></div>
     <div class="geo-search-row">
       <input id="le-search-${key}" placeholder="좌표 다시 검색 (장소명/주소)" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEditGeo('${key}');}">
@@ -1071,6 +1133,8 @@ async function saveLoc(key){
     region: document.getElementById('le-region-'+key).value.trim(),
     rec_profile: document.getElementById('le-profile-'+key).value };
   if(payload.rec_profile==='custom') payload.rec_custom = readCustomEditor('le-custom-'+key);
+  const divon = document.getElementById('le-divon-'+key);
+  payload.diversity = (divon && divon.checked) ? readDiversityEditor('le-div-'+key) : null;
   if(_editCoord[key]){ payload.lat = _editCoord[key].lat; payload.lng = _editCoord[key].lng; }
   msg.className='msg'; msg.textContent='저장 중…';
   const { ok, data } = await adminCall(payload);
