@@ -155,6 +155,7 @@
   .qna-a { margin-top: 8px; padding: 8px 10px; background: #eef6f0; border-radius: 9px; font-size: 0.82rem; color: #2f6a46; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
   .qna-a::before { content: 'A '; font-weight: 900; color: #2f855a; }
   .qna-date { font-size: 0.68rem; color: #a0acbd; margin-top: 6px; }
+  .qna-date-q { margin-top: 4px; color: #8aa0bd; }
 
   .content { padding: 14px; max-width: 640px; margin: 0 auto; }
   .section { display: none; }
@@ -2313,11 +2314,13 @@ async function loadSuggestQna() {
     const list = (data && data.qna) || [];
     if (!list.length) { wrap.innerHTML = '<div class="sug-qna-empty">아직 답변된 제안이 없어요.</div>'; return; }
     const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const fmtD = d => d ? new Date(d).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : '';
     wrap.innerHTML = list.map(q => `
       <div class="qna-item">
         <div class="qna-q">${esc(q.content)}</div>
+        ${q.created_at ? `<div class="qna-date qna-date-q">🗓️ ${fmtD(q.created_at)} 제안</div>` : ''}
         <div class="qna-a">${esc(q.admin_reply)}</div>
-        <div class="qna-date">${new Date(q.replied_at || q.created_at).toLocaleDateString('ko-KR',{month:'long',day:'numeric'})} 답변</div>
+        ${q.replied_at ? `<div class="qna-date">💬 ${fmtD(q.replied_at)} 답변</div>` : ''}
       </div>`).join('');
   } catch (e) {
     wrap.innerHTML = '<div class="sug-qna-empty">목록을 불러오지 못했어요.</div>';

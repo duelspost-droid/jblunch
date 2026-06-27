@@ -1217,7 +1217,8 @@ async function loadSuggestions() {
     <div class="sug-item ${s.status==='answered'?'answered':''}" id="si-${s.id}">
       <div class="sug-meta">
         <span class="sug-badge ${s.status==='answered'?'answered':'pending'}">${s.status==='answered'?'답변완료':'미답변'}</span>
-        <span>${new Date(s.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+        <span>🗓️ ${new Date(s.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})} 제안</span>
+        ${s.replied_at?`<span>💬 ${new Date(s.replied_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})} 답변</span>`:''}
         ${s.ip?`<span>${esc(s.ip)}</span>`:''}
       </div>
       ${s.contact?`<div class="sug-contact">📬 ${esc(s.contact)}</div>`:''}
