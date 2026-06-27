@@ -1,0 +1,48 @@
+name: Deploy Edge Functions
+
+# 목적: supabase/functions 변경 시 자동 배포 → 프론트엔드와 함수 버전 어긋남(예: "unknown action") 방지.
+# 필요한 GitHub Secret:
+#   SUPABASE_ACCESS_TOKEN  (Supabase 대시보드 → Account → Access Tokens, sbp_...)
+# project-ref 는 아래 env 로 고정.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:      # 수동 배포도 가능
+
+env:
+  SUPABASE_PROJECT_REF: nrdapzgtibbusvoaceuh
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 토큰 없으면(미설정) 조용히 스킵하지 않고 명확히 실패하도록 — 단, 토큰 미설정 환경에선 job 자체를 건너뛴다.
+    if: ${{ true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy all edge functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "❌ SUPABASE_ACCESS_TOKEN 시크릿이 없습니다. Settings → Secrets 에 추가하세요."
+            exit 1
+          fi
+          # 함수 디렉터리마다 배포 (admin, analyze, places-search, stock, track …)
+          for dir in supabase/functions/*/; do
+            fn="$(basename "$dir")"
+            # _shared 같은 비함수 디렉터리는 건너뜀
+            case "$fn" in _*) continue;; esac
+            echo "🚀 deploy: $fn"
+            # verify_jwt 기본값(true) 유지 — 브라우저가 anon 키(유효 JWT)를 보내므로 호출 정상.
+            # (함수 자체 인증: admin=세션토큰, track=공개기록 — 게이트웨이 JWT와 별개)
+            npx --yes supabase@latest functions deploy "$fn" \
+              --project-ref "$SUPABASE_PROJECT_REF"
+          done
+          echo "✅ 전 함수 배포 완료"
