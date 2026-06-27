@@ -48,3 +48,11 @@ jobs:
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
         run: python scripts/kakao_send.py
+
+      - name: 실패 알림 (어느 단계든 실패 시 이메일 통지)
+        if: failure()
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          FAILED_CONTEXT: "Daily Lunch Recommendation"
+        run: python scripts/notify_failure.py
