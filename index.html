@@ -700,6 +700,35 @@
   }
   .batch-note b { color: #4a6285; font-weight: 700; }
 
+  /* 내 위치 근처 맛집 (홈 탭 · GPS 발견) */
+  .nearby-now-btn {
+    display: block; width: 100%; margin: -6px 0 14px; padding: 12px;
+    background: linear-gradient(100deg,#0a3d7a,#1565c0); border: none; border-radius: 12px;
+    color: #fff; font-size: 0.88rem; font-weight: 800; cursor: pointer;
+    font-family: inherit; box-shadow: 0 2px 8px rgba(10,61,122,0.22); transition: opacity .13s;
+  }
+  .nearby-now-btn:hover { opacity: 0.92; }
+  .nearby-now-btn[disabled] { opacity: 0.7; cursor: default; }
+  .home-nearby.open {
+    margin: -6px 0 14px; padding: 12px; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .hn-head { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #0a3d7a; margin-bottom: 8px; }
+  .hn-close { background: none; border: none; font-size: 1rem; color: #98a2b3; cursor: pointer; line-height: 1; }
+  .hn-empty { font-size: 0.8rem; color: #98a2b3; padding: 4px 2px; }
+  .hn-item { display: flex; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px solid #f1f4f8; }
+  .hn-item:last-child { border-bottom: none; }
+  .hn-info { flex: 1; min-width: 0; }
+  .hn-name { font-size: 0.86rem; font-weight: 700; color: #1a2a44; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hn-sub { font-size: 0.74rem; color: #8794a6; margin-top: 2px; }
+  .hn-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .hn-map, .hn-review {
+    border: 1px solid #d8e2ee; background: #fff; border-radius: 8px; padding: 6px 9px;
+    font-size: 0.74rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .hn-map { color: #2b6cb0; } .hn-review { color: #0a3d7a; }
+  .hn-map:hover, .hn-review:hover { background: #f0f5fb; }
+
   /* 컨디션 입력 */
   .pref-card {
     background: #fff;
@@ -1643,6 +1672,7 @@ function renderHistory() {
       : '🌙 점심·저녁·술집 추천은 <b>평일(월~금) 새벽 1시경</b>에 그날치를 한 번에 미리 생성해요.'}</div>`;
 
   const prefHtml = bannerHtml + `
+    <div id="home-nearby">${homeNearbyHtml()}</div>
     <div class="pref-card">
       <div class="pref-title">🙋 오늘 컨디션은? <span class="pref-hint">최대 2개 선택 가능 · 기본=해당없음</span></div>
       <div class="pref-chips">
@@ -2765,6 +2795,10 @@ let placeSearchBusy = false;
 let placeOrigin = '';      // '현위치' | 'JB빌딩'
 let myPos = null;          // {lat, lng} (한 번 받으면 캐시)
 let nearbyLoaded = false;  // 리뷰 탭 첫 진입 시 1회 자동 로드
+let homeNearby = [];       // 홈 탭 '내 위치 근처' 결과
+let homeNearbyBusy = false;
+let homeNearbyOpen = false;
+let homeNearbyOrigin = '';
 
 // 브라우저 GPS 위치 (권한 거부/실패 시 null → JB빌딩 폴백)
 function getMyPosition() {
@@ -2854,6 +2888,64 @@ function closeNearby() {
   placeSearchQ = '';
   searchedPlaces = [];
   renderStats();
+}
+
+// ── 내 위치 근처 맛집 (홈 탭 · GPS 발견, places-search 재사용) ──
+function homeNearbyHtml() {
+  if (homeNearbyBusy) return `<button class="nearby-now-btn" disabled>📍 내 위치 근처 맛집 찾는 중…</button>`;
+  if (!homeNearbyOpen) return `<button class="nearby-now-btn" onclick="loadHomeNearby()">📍 지금 내 위치 근처 맛집</button>`;
+  const head = `<div class="hn-head"><span>📍 ${escHtml(homeNearbyOrigin)} 근처 · 가까운 순</span><button class="hn-close" onclick="closeHomeNearby()">✕</button></div>`;
+  if (!homeNearby.length) return `<div class="home-nearby open">${head}<div class="hn-empty">주변 맛집을 못 찾았어요. 위치 권한을 확인해 주세요.</div></div>`;
+  const items = homeNearby.map(p => {
+    const cnt = (commentsState[p.name] || []).length;
+    return `<div class="hn-item">
+      <div class="hn-info">
+        <div class="hn-name">${emo(p.cuisine)} ${escHtml(p.name)}${cnt ? ` <span class="badge badge-review">리뷰 ${cnt}</span>` : ''}</div>
+        <div class="hn-sub">${escHtml(p.cuisine||'')} · ${distIcon(p.distance)} ${escHtml(p.distance||'')}</div>
+      </div>
+      <div class="hn-btns">
+        <button class="hn-map" onclick="openMapFromMe('${escAttr(p.name)}',${Number(p.lng)||0},${Number(p.lat)||0})">🗺️ 지도</button>
+        <button class="hn-review" onclick="openModal('${escAttr(p.name)}','')">📝 리뷰</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="home-nearby open">${head}${items}</div>`;
+}
+function paintHomeNearby() {
+  const el = document.getElementById('home-nearby');
+  if (el) el.innerHTML = homeNearbyHtml();
+}
+async function loadHomeNearby() {
+  homeNearbyBusy = true; homeNearbyOpen = true; paintHomeNearby();
+  const pos = await getMyPosition();   // GPS 허용 시 내 위치, 거부 시 선택 거점
+  const ctr = pos || { lat: LOC().lat, lng: LOC().lng };
+  homeNearbyOrigin = pos ? '현재 내 위치' : LOC().short;
+  track('home_nearby', homeNearbyOrigin);
+  try {
+    const res = await fetch(PLACES_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: ctr.lat, lng: ctr.lng })
+    });
+    const data = await res.json();
+    homeNearby = Array.isArray(data.places) ? data.places : [];
+  } catch (e) { homeNearby = []; }
+  homeNearbyBusy = false;
+  paintHomeNearby();
+}
+function closeHomeNearby() { homeNearbyOpen = false; homeNearby = []; paintHomeNearby(); }
+// 지도: 내 GPS(있으면)→가게 도보 경로, 없으면 가게 위치 검색
+function openMapFromMe(name, lng, lat) {
+  let url;
+  if (myPos && lng && lat) {
+    const start = `${myPos.lng},${myPos.lat},${encodeURIComponent('내 위치')},,`;
+    url = `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/walk`;
+  } else if (lng && lat) {
+    url = `https://map.naver.com/p/search/${encodeURIComponent(name)}?c=${lng},${lat},15,0,0,0,dh`;
+  } else {
+    url = `https://map.naver.com/p/search/${encodeURIComponent(name)}`;
+  }
+  window.open(url, '_blank', 'noopener');
 }
 
 // 이름으로 특정 가게 검색
