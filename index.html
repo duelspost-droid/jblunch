@@ -244,8 +244,6 @@
   }
   .card.card-extra { background: #faf9ff; }
   .card.card-extra .card-stripe { background: #b794f4; }
-  .card.card-nearby { background: #eefaf3; }
-  .card.card-nearby .card-stripe { background: #2f9e44; }
   .card.has-review .card-stripe { background: #f6b73c; }
   .modal-intro {
     background: #f0f5fb; border-radius: 10px; padding: 13px 15px;
@@ -702,15 +700,8 @@
   }
   .batch-note b { color: #4a6285; font-weight: 700; }
 
-  /* 내 위치 근처 맛집 (홈 탭 · 직접검색 영역의 보조 버튼) */
-  .nearby-now-btn {
-    display: block; width: 100%; margin: 8px 0 0; padding: 10px;
-    background: #eef6f0; border: 1px solid #cce8d6; border-radius: 10px;
-    color: #1a7a44; font-size: 0.82rem; font-weight: 700; cursor: pointer;
-    font-family: inherit; transition: background .13s;
-  }
-  .nearby-now-btn:hover { background: #e0f2e8; }
-  .nearby-now-btn[disabled] { opacity: 0.7; cursor: default; }
+  /* 📍 내 위치 칩 — 컨디션 칩과 동일 크기, 활성 시에만 위치 테마(초록)로 구분 */
+  .pref-chip.pref-chip-loc.on { background: #2f9e44; border-color: #2f9e44; }
 
   /* 컨디션 입력 */
   .pref-card {
@@ -1555,7 +1546,7 @@ function buildCard(r) {
         </div>
       </div>`;
     }).join('')}</div>` : '';
-  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}${r._nearby?' card-nearby':''}" id="c-${escAttr(r.name)}">
+  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
     <div class="card-stripe"></div>
     <div class="card-emoji">${emo(dCuisine)}</div>
     <div class="card-body">
@@ -1669,13 +1660,13 @@ function renderHistory() {
         <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
         <button class="pref-chip" data-cond="와인" onclick="selectCond(this)">🍷 와인</button>
         <button class="pref-chip" data-cond="임원" onclick="selectCond(this)">👔 임원</button>
+        <button class="pref-chip pref-chip-loc" data-loc="1" onclick="selectMyLocation()">📍 내 위치</button>
       </div>
       <div class="pref-input-row">
         <input class="pref-input" id="pref-text" placeholder="메뉴·음식·조건 입력 (예: 냉면 / 마라탕 / 어제 과음했어)"
                maxlength="40" onkeydown="if(event.key==='Enter')applyFreeText()">
         <button class="pref-submit" id="pref-btn" onclick="applyFreeText()">추천</button>
       </div>
-      <button class="nearby-now-btn" onclick="loadHomeNearby()">📍 또는, 지금 내 위치 근처 맛집 보기</button>
       <div class="pref-progress" id="pref-progress">
         <div class="pref-progress-label"><span class="spinner"></span><span id="pref-progress-text">분석 중…</span></div>
         <div class="pref-progress-bar"><div class="pref-progress-fill" id="pref-progress-fill"></div></div>
@@ -1717,6 +1708,7 @@ function getDefaultMeal() {
 
 let currentCond = '';   // 단일 컨디션(렌더 호환용, '': 기본)
 let currentConds = [];  // 다중 선택된 컨디션 배열 (빈 배열 = 기본=해당사항 없음)
+let locMode = false;    // 📍 내 위치 칩 활성 여부 (GPS 현재위치 기준 추천 모드)
 
 // 자유 입력 → 컨디션 키워드 매핑 (고정 도출)
 const COND_KEYWORDS = {
@@ -1854,7 +1846,7 @@ function updateMealInfo() {}
 function applyFreeText() {
   const text = document.getElementById('pref-text').value.trim();
   if (!text) return;
-  currentConds = []; syncCondChips();   // 직접입력 시 컨디션 칩 해제
+  locMode = false; currentConds = []; syncCondChips();   // 직접입력 시 컨디션·위치 칩 해제
   generateRecommend(text, currentMeal, true);
 }
 
@@ -1972,6 +1964,7 @@ function selectMeal(el) {
   currentMeal = el.dataset.meal;
   currentCond = '';
   currentConds = [];   // 끼니 바꾸면 컨디션 초기화(끼니별 사전생성 데이터가 다름)
+  locMode = false;
   customResult = null;
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
@@ -1986,6 +1979,7 @@ function selectMeal(el) {
 // 컨디션 칩 다중선택: 기본(='')은 모두 해제, 그 외는 토글
 function selectCond(el) {
   const cond = el.dataset.cond;
+  locMode = false;          // 컨디션 선택 시 내 위치 모드 해제
   customResult = null;
   const input = document.getElementById('pref-text');
   if (input) input.value = '';
@@ -2012,9 +2006,19 @@ function selectCond(el) {
 // 칩 on/off 표시 갱신 (기본은 선택 0개일 때만 on)
 function syncCondChips() {
   document.querySelectorAll('.pref-chip').forEach(c => {
+    if (c.dataset.loc) { c.classList.toggle('on', locMode); return; }   // 📍 내 위치 칩
     const cc = c.dataset.cond;
-    c.classList.toggle('on', cc === '' ? currentConds.length === 0 : currentConds.includes(cc));
+    c.classList.toggle('on', !locMode && (cc === '' ? currentConds.length === 0 : currentConds.includes(cc)));
   });
+}
+// 📍 내 위치 칩: GPS 현재위치 기준 추천을 기본처럼 카드로 표시
+function selectMyLocation() {
+  locMode = true;
+  currentConds = [];
+  currentCond = '';
+  const input = document.getElementById('pref-text'); if (input) input.value = '';
+  syncCondChips();
+  loadHomeNearby();
 }
 
 // 선택 상태에 따라 추천 갱신: 0개=기본, 1개=미리생성(없으면 백엔드), 2개↑=조합 백엔드
@@ -2892,7 +2896,7 @@ async function loadHomeNearby() {
       body: JSON.stringify({ lat: ctr.lat, lng: ctr.lng })
     });
     const data = await res.json();
-    places = Array.isArray(data.places) ? data.places.map(p => ({ ...p, _nearby: true })) : [];
+    places = Array.isArray(data.places) ? data.places : [];   // 기본 추천처럼 일반 카드로 표시
   } catch (e) {}
   if (progEl) { fill.style.width = '100%'; progText.textContent = '완료!'; }
   setTimeout(() => {
