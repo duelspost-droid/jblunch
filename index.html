@@ -244,6 +244,8 @@
   }
   .card.card-extra { background: #faf9ff; }
   .card.card-extra .card-stripe { background: #b794f4; }
+  .card.card-nearby { background: #f2f8fd; }                 /* 📍 내 위치 주변 — 은은한 파랑 */
+  .card.card-nearby .card-stripe { background: #4299e1; }
   .card.has-review .card-stripe { background: #f6b73c; }
   .modal-intro {
     background: #f0f5fb; border-radius: 10px; padding: 13px 15px;
@@ -1546,7 +1548,7 @@ function buildCard(r) {
         </div>
       </div>`;
     }).join('')}</div>` : '';
-  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}" id="c-${escAttr(r.name)}">
+  return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}${r._nearby?' card-nearby':''}" id="c-${escAttr(r.name)}">
     <div class="card-stripe"></div>
     <div class="card-emoji">${emo(dCuisine)}</div>
     <div class="card-body">
@@ -2873,47 +2875,63 @@ function closeNearby() {
   renderStats();
 }
 
-// ── 내 위치 근처 맛집 (홈 탭 · GPS → 직접검색과 동일한 카드로 렌더) ──
-async function loadHomeNearby() {
+// ── 내 위치 주변 맛집 (홈 탭 · 하이브리드: 빠른 근처목록 → 컨디션 큐레이션) ──
+function setNearbyResult(origin, restaurants, extras, comment, curating) {
+  const mark = arr => (arr || []).map(p => ({ ...p, _nearby: true }));
+  const rs = mark(restaurants), ex = mark(extras);
+  cachePlaces([...rs, ...ex]);   // 좌표·정보 캐시 → 카드·경로 버튼 동작
+  customResult = { label: `📍 ${origin}`, comment: comment || '', restaurants: rs, extras: ex, kind: 'nearby' };
   const answerEl = document.getElementById('pref-answer');
+  if (answerEl) {
+    answerEl.innerHTML = curating
+      ? `<div class="pa-head">📍 ${escHtml(origin)} · 가까운 순</div>가까운 순으로 먼저 보여드려요. <span style="color:#3182ce">맞춤 추천 준비 중…</span>`
+      : `<div class="pa-head">📍 ${escHtml(origin)} 맞춤 추천</div>${comment ? escHtml(comment) : '현재 위치 기준으로 골랐어요.'}`;
+    answerEl.classList.add('show');
+  }
+  renderCustomGroup();
+}
+async function loadHomeNearby() {
   const progEl = document.getElementById('pref-progress');
   const fill = document.getElementById('pref-progress-fill');
   const progText = document.getElementById('pref-progress-text');
-  const btn = document.getElementById('pref-btn');
+  const answerEl = document.getElementById('pref-answer');
   if (answerEl) answerEl.classList.remove('show');
-  if (btn) btn.disabled = true;
-  if (progEl) { progEl.classList.add('show'); fill.style.width = '30%'; progText.textContent = '📍 내 위치 확인 중…'; }
+  if (progEl) { progEl.classList.add('show'); fill.style.width = '20%'; progText.textContent = '📍 내 위치 확인 중…'; }
   const pos = await getMyPosition();   // 거부/실패 시 선택 거점 폴백
-  if (progEl) { fill.style.width = '70%'; progText.textContent = '주변 맛집 찾는 중…'; }
+  if (!locMode) { if (progEl) progEl.classList.remove('show'); return; }
   const ctr = pos || { lat: LOC().lat, lng: LOC().lng };
-  const origin = pos ? '현재 내 위치' : LOC().short;
+  const origin = pos ? '내 위치 주변' : `${LOC().short} 주변`;
   track('home_nearby', origin);
-  let places = [];
-  try {
-    const res = await fetch(PLACES_URL, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat: ctr.lat, lng: ctr.lng })
-    });
-    const data = await res.json();
-    places = Array.isArray(data.places) ? data.places : [];   // 기본 추천처럼 일반 카드로 표시
-  } catch (e) {}
-  if (progEl) { fill.style.width = '100%'; progText.textContent = '완료!'; }
-  setTimeout(() => {
-    if (progEl) progEl.classList.remove('show');
-    if (btn) btn.disabled = false;
-    if (!places.length) {
-      if (answerEl) { answerEl.innerHTML = `<div class="pa-head">📍 내 위치 근처</div>주변 맛집을 못 찾았어요. 위치 권한을 확인해 주세요.`; answerEl.classList.add('show'); }
-      return;
-    }
-    cachePlaces(places);   // 좌표·정보 캐시 → 카드·경로 버튼 동작
-    customResult = { label: `📍 ${origin} 근처 맛집`, comment: '', restaurants: places, extras: [], kind: 'nearby' };
-    if (answerEl) {
-      answerEl.innerHTML = `<div class="pa-head">📍 ${escHtml(origin)} 근처 맛집 · 가까운 순</div>가까운 순으로 보여드려요. 카드에서 바로 경로·리뷰를 확인하세요.`;
-      answerEl.classList.add('show');
-    }
-    renderCustomGroup();
-  }, 300);
+  if (progEl) { fill.style.width = '45%'; progText.textContent = '주변 맛집 불러오는 중…'; }
+
+  const hdr = { 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
+  // 두 호출 동시 시작: 빠른 근처목록(places-search) + 컨디션 큐레이션(analyze, GPS 좌표)
+  const fastP = fetch(PLACES_URL, { method: 'POST', headers: hdr, body: JSON.stringify({ lat: ctr.lat, lng: ctr.lng }) }).then(r => r.json()).catch(() => null);
+  const conds = currentConds.length ? currentConds.join(', ') : '';
+  const curP = fetch(ANALYZE_URL, { method: 'POST', headers: hdr, body: JSON.stringify({ text: conds, meal: currentMeal, lat: ctr.lat, lng: ctr.lng, region: LOC().region, place: '내 위치 주변', profile: 'auto', custom: null }) }).then(r => r.json()).catch(() => null);
+
+  // Phase 1: 빠른 근처목록 (~2초) — 즉각 반응
+  const fd = await fastP;
+  if (!locMode) { if (progEl) progEl.classList.remove('show'); return; }
+  const fast = (fd && Array.isArray(fd.places)) ? fd.places : [];
+  if (fast.length) {
+    if (progEl) { fill.style.width = '70%'; progText.textContent = '맞춤 추천 선별 중…'; }
+    setNearbyResult(origin, fast, [], '', true);
+  }
+
+  // Phase 2: 컨디션 큐레이션 5곳 (~15초) — 완성되면 교체
+  const cd = await curP;
+  if (progEl) { fill.style.width = '100%'; progText.textContent = '완료!'; setTimeout(() => progEl.classList.remove('show'), 300); }
+  if (!locMode) return;
+  const curated = (cd && Array.isArray(cd.restaurants)) ? cd.restaurants : [];
+  if (curated.length) {
+    setNearbyResult(origin, curated, Array.isArray(cd.extras) ? cd.extras : [], cd.comment || '', false);
+  } else if (fast.length) {
+    setNearbyResult(origin, fast, [], '', false);   // 큐레이션 실패 → 빠른목록 유지(준비중 표시 제거)
+  } else if (answerEl) {
+    answerEl.innerHTML = `<div class="pa-head">📍 ${escHtml(origin)}</div>주변 맛집을 못 찾았어요. 위치 권한을 확인해 주세요.`;
+    answerEl.classList.add('show');
+  }
 }
 
 // 이름으로 특정 가게 검색
