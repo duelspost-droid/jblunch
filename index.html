@@ -425,18 +425,7 @@
   .stat-num { font-size: 1.8rem; font-weight: 800; color: #0a3d7a; line-height: 1; }
   .stat-label { font-size: 0.72rem; color: #999; margin-top: 4px; }
 
-  /* 끼니별 리뷰 통계 */
-  .meal-stats-title { font-size: 0.78rem; font-weight: 700; color: #555; margin: 0 2px 8px; }
-  .meal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-  .meal-stat { background: #fff; border-radius: 12px; padding: 12px 8px 11px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-  .meal-stat.ms-empty { opacity: 0.55; }
-  .meal-stat .ms-head { font-size: 0.78rem; font-weight: 700; color: #0a3d7a; margin-bottom: 7px; }
-  .meal-stat .ms-emo { font-size: 1rem; }
-  .meal-stat .ms-cnt { font-size: 1.5rem; font-weight: 800; color: #0a3d7a; line-height: 1; }
-  .meal-stat .ms-cnt small { font-size: 0.6rem; font-weight: 600; color: #999; }
-  .meal-stat .ms-avg { font-size: 0.72rem; margin-top: 6px; color: #4a5568; font-weight: 600; min-height: 1em; }
-  .meal-stat .ms-stars { letter-spacing: -1px; }
-  .meal-stat .ms-none { color: #bbb; font-weight: 500; }
+  /* 끼니별 리뷰 통계 CSS는 아래 .meal-stats/.ms-row(단일 열 행) 정의 사용 — 옛 3열 그리드 잔재 제거 */
 
   /* 내 근처 맛집 검색 */
   .place-search-card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; }
@@ -843,8 +832,8 @@
   .ms-row:hover { background: #f1f6fd; }
   .ms-row.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; }
   .ms-row.dim { color: #a0aec0; cursor: default; background: #fafbfc; }
-  .ms-row .ms-meal { min-width: 58px; }
-  .ms-row .ms-sub { color: #718096; font-weight: 500; }
+  .ms-row .ms-meal { min-width: 58px; flex-shrink: 0; }
+  .ms-row .ms-sub { color: #718096; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ms-row.on .ms-sub { color: #cfe0f5; }
   .meal-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
   .meal-chip { padding: 5px 12px; border: 1px solid #cbd5e0; border-radius: 999px; font-size: 0.76rem;
