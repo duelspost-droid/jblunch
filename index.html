@@ -1641,18 +1641,26 @@ function renderHistory() {
     <div class="pref-card">
       <div class="pref-title">🙋 오늘 컨디션은? <span class="pref-hint">최대 2개 선택 가능 · 기본=해당없음</span></div>
       <div class="pref-chips">
-        <button class="pref-chip on" data-cond="" onclick="selectCond(this)">🌤️ 기본</button>
-        <button class="pref-chip" data-cond="해장 필요" onclick="selectCond(this)">🍜 해장 필요</button>
-        <button class="pref-chip" data-cond="매콤하게" onclick="selectCond(this)">🌶️ 매콤하게</button>
-        <button class="pref-chip" data-cond="가볍게" onclick="selectCond(this)">🥗 가볍게</button>
-        <button class="pref-chip" data-cond="든든하게" onclick="selectCond(this)">🍖 든든하게</button>
-        <button class="pref-chip" data-cond="일식" onclick="selectCond(this)">🍣 일식</button>
-        <button class="pref-chip" data-cond="한식" onclick="selectCond(this)">🍚 한식</button>
-        <button class="pref-chip" data-cond="고기" onclick="selectCond(this)">🥩 고기</button>
-        <button class="pref-chip" data-cond="혼밥" onclick="selectCond(this)">🚶 혼밥</button>
-        <button class="pref-chip" data-cond="와인" onclick="selectCond(this)">🍷 와인</button>
-        <button class="pref-chip" data-cond="임원" onclick="selectCond(this)">👔 임원</button>
-        <button class="pref-chip pref-chip-loc" data-loc="1" onclick="selectMyLocation()">📍 내 위치</button>
+        <button class="pref-chip on" data-cond="" data-meals="점심,저녁,술집" onclick="selectCond(this)">🌤️ 기본</button>
+        <!-- 식사용(점심·저녁) -->
+        <button class="pref-chip" data-cond="해장 필요" data-meals="점심,저녁" onclick="selectCond(this)">🍜 해장 필요</button>
+        <button class="pref-chip" data-cond="매콤하게" data-meals="점심,저녁" onclick="selectCond(this)">🌶️ 매콤하게</button>
+        <button class="pref-chip" data-cond="가볍게" data-meals="점심,저녁" onclick="selectCond(this)">🥗 가볍게</button>
+        <button class="pref-chip" data-cond="든든하게" data-meals="점심,저녁" onclick="selectCond(this)">🍖 든든하게</button>
+        <button class="pref-chip" data-cond="일식" data-meals="점심,저녁" onclick="selectCond(this)">🍣 일식</button>
+        <button class="pref-chip" data-cond="한식" data-meals="점심,저녁" onclick="selectCond(this)">🍚 한식</button>
+        <button class="pref-chip" data-cond="고기" data-meals="점심,저녁" onclick="selectCond(this)">🥩 고기</button>
+        <button class="pref-chip" data-cond="혼밥" data-meals="점심,저녁" onclick="selectCond(this)">🚶 혼밥</button>
+        <button class="pref-chip" data-cond="와인" data-meals="점심,저녁" onclick="selectCond(this)">🍷 와인</button>
+        <button class="pref-chip" data-cond="임원" data-meals="점심,저녁" onclick="selectCond(this)">👔 임원</button>
+        <!-- 술집 전용 (실시간 추천) -->
+        <button class="pref-chip" data-cond="가볍게 한잔" data-meals="술집" onclick="selectCond(this)">🍶 가볍게 한잔</button>
+        <button class="pref-chip" data-cond="안주 맛집" data-meals="술집" onclick="selectCond(this)">🍢 안주 맛집</button>
+        <button class="pref-chip" data-cond="회식·단체" data-meals="술집" onclick="selectCond(this)">👥 회식·단체</button>
+        <button class="pref-chip" data-cond="와인바" data-meals="술집" onclick="selectCond(this)">🍷 와인바</button>
+        <button class="pref-chip" data-cond="조용한 곳" data-meals="술집" onclick="selectCond(this)">🤫 조용한 곳</button>
+        <button class="pref-chip" data-cond="이자카야·포차" data-meals="술집" onclick="selectCond(this)">🏮 이자카야·포차</button>
+        <button class="pref-chip pref-chip-loc" data-loc="1" data-meals="점심,저녁,술집" onclick="selectMyLocation()">📍 내 위치</button>
       </div>
       <div class="pref-input-row">
         <input class="pref-input" id="pref-text" placeholder="메뉴·음식·조건 입력 (예: 냉면 / 마라탕 / 어제 과음했어)"
@@ -1936,7 +1944,14 @@ function getMealData(day, meal) {
 // 컨디션 칩 표시/숨김 + 선택 동기화 (JB=by_condition 있을 때 / 은행=항상 노출)
 function updateCondChips() {
   const md = getMealData(getDay(), currentMeal);
-  const hasCond = !useBatch() || !!(md && md.by_condition && Object.keys(md.by_condition).length);
+  // 끼니별 칩 노출: data-meals에 현재 끼니가 포함된 칩만 표시(술집엔 술집 전용 칩만)
+  document.querySelectorAll('.pref-chips .pref-chip').forEach(c => {
+    const meals = (c.dataset.meals || '점심,저녁,술집').split(',');
+    c.style.display = meals.includes(currentMeal) ? '' : 'none';
+  });
+  // 행 표시: 술집은 사전생성 by_condition이 없어도 전용 컨디션을 실시간 추천하므로 항상 노출.
+  const hasCond = currentMeal === '술집' || !useBatch() ||
+    !!(md && md.by_condition && Object.keys(md.by_condition).length);
   const wrap = document.querySelector('.pref-chips');
   if (wrap) wrap.style.display = hasCond ? 'flex' : 'none';
   syncCondChips();
