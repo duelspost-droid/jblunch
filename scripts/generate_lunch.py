@@ -736,7 +736,9 @@ def call_claude(client, prompt, use_web=True):
         for attempt in range(MAX_ATTEMPTS):
             wait = 0
             try:
-                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=8000, messages=messages)
+                # max_tokens: Haiku 4.5 한도는 64K. 컨디션 10종(by_condition) 응답이
+                # 8K를 넘겨 잘리면 JSON 파싱이 깨지므로 16K로 여유를 둠(비스트리밍 안전선).
+                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=16000, messages=messages)
                 if tools:
                     kwargs["tools"] = tools
                 response = client.messages.create(**kwargs)
@@ -793,6 +795,8 @@ def call_claude(client, prompt, use_web=True):
 
         else:
             # 예상치 못한 stop_reason — 텍스트라도 추출
+            if response.stop_reason == "max_tokens":
+                print("  ⚠️  응답이 max_tokens에서 잘림 — JSON 파싱 실패 가능(max_tokens 상향 필요)")
             text_parts = [
                 block.text
                 for block in response.content
@@ -1271,19 +1275,31 @@ def main():
     print(f"📰 최종 JB 소식 {len(news)}건 (AX·AI·디지털 {focus_n}건 최상단)")
 
     ok_count = 0
+    failed = []
+    jb_ok = True  # JB(주력=index.html·이메일) 성공 여부. 목록에 없으면 True 유지.
     for i, loc in enumerate(locations):
+        is_jb = loc.get("key") == "jb"
+        ok = False
         try:
-            if process_location(client, loc, today, date_compact, kakao_key, naver_id, naver_secret, news, stock):
-                ok_count += 1
+            ok = bool(process_location(client, loc, today, date_compact, kakao_key, naver_id, naver_secret, news, stock))
         except Exception as e:
             print(f"❌ [{loc.get('name')}] 처리 중 오류 (계속 진행): {e}")
+        if ok:
+            ok_count += 1
+        else:
+            failed.append(loc.get("name"))
+            if is_jb:
+                jb_ok = False
         if i < len(locations) - 1:
             time.sleep(40)  # 위치 간 rate limit 여유
 
-    if ok_count == 0:
-        print("❌ 모든 위치 생성 실패")
+    total = len(locations)
+    # 실패 알림(notify_failure) 트리거: 전부 실패 OR JB 실패 OR 절반 초과 실패.
+    # 일부만 실패해도 조용히 success로 끝나지 않게 함.
+    if ok_count == 0 or not jb_ok or len(failed) * 2 > total:
+        print(f"❌ 배치 실패 — 성공 {ok_count}/{total}, 실패: {', '.join(failed) or '(JB 포함)'}, JB_ok={jb_ok}")
         sys.exit(1)
-    print(f"\n✨ 완료! {ok_count}/{len(locations)}개 위치 생성됨")
+    print(f"\n✨ 완료! {ok_count}/{total}개 위치 생성됨 (실패: {', '.join(failed) or '없음'})")
 
 
 if __name__ == "__main__":

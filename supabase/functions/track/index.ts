@@ -12,7 +12,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
-    const action = (body.action || "visit").toString().slice(0, 60);
+    // 클라이언트가 실제 쓰는 action만 허용. admin_* 등 비클라이언트 action 주입을
+    // 차단해 관리자 잠금(admin_fail 위조 → 정상 IP 잠금) 및 감사 로그 오염을 막는다.
+    const ALLOWED = new Set([
+      "visit", "location_change", "custom_recommend",
+      "review_create", "review_edit", "review_delete",
+      "place_search", "nearby", "home_nearby",
+    ]);
+    let action = (body.action || "visit").toString().slice(0, 60);
+    if (!ALLOWED.has(action)) action = "other";
     const detail = (body.detail || "").toString().slice(0, 300);
     const path = (body.path || "").toString().slice(0, 200);
 
