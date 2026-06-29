@@ -979,6 +979,57 @@ MEAL_CTX = {
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
 
+def _rebalance_conditions(entry, candidates, max_cond=2):
+    """B: 같은 날 by_condition 간/기본↔컨디션 중복 완화.
+    - 한 가게는 최대 max_cond개 컨디션에만 등장(기본 5곳은 컨디션에 최대 max_cond-1번).
+    - 한 컨디션 안 중복 제거. 5곳 미만이면 후보풀에서 덜 쓰인 가게로 보충."""
+    bycond = entry.get("by_condition")
+    if not isinstance(bycond, dict) or not bycond:
+        return
+    norm = lambda s: "".join((s or "").split()).lower()
+    # 후보풀 파싱: "이름(분류, 도보N분)" → (이름, 분류, key)
+    pool, pool_seen = [], set()
+    for c in (candidates or []):
+        nm = str(c).split("(")[0].strip()
+        k = norm(nm)
+        if not k or k in pool_seen:
+            continue
+        pool_seen.add(k)
+        cat = ""
+        if "(" in c and ")" in c:
+            cat = c[c.index("(") + 1: c.rfind(")")].split(",")[0].strip()
+            if cat.startswith("도보"):
+                cat = ""
+        pool.append((nm, cat, k))
+    # 기본 5곳은 미리 1회 사용한 것으로 간주 → 컨디션에 덜 끼게
+    used = {norm(r.get("name")): 1 for r in entry.get("restaurants", []) if r.get("name")}
+    removed = filled = 0
+    for cond in list(bycond.keys()):
+        rlist = bycond.get(cond) or []
+        kept, seen_in = [], set()
+        for r in rlist:
+            k = norm(r.get("name"))
+            if not k or k in seen_in or used.get(k, 0) >= max_cond:
+                removed += 1
+                continue
+            seen_in.add(k)
+            used[k] = used.get(k, 0) + 1
+            kept.append(r)
+        if len(kept) < 5:   # 부족분 보충(덜 쓰인 가게 우선)
+            for nm, cat, k in sorted(pool, key=lambda p: used.get(p[2], 0)):
+                if len(kept) >= 5:
+                    break
+                if k in seen_in or used.get(k, 0) >= max_cond:
+                    continue
+                seen_in.add(k)
+                used[k] = used.get(k, 0) + 1
+                kept.append({"name": nm, "cuisine": cat, "feature": "", "price": "보통", "distance": ""})
+                filled += 1
+        bycond[cond] = kept
+    if removed or filled:
+        print(f"  ♻️  컨디션 중복정리: 제거 {removed} · 보충 {filled} (가게당 최대 {max_cond}컨디션)")
+
+
 def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None, mood_ctx=""):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
@@ -1044,7 +1095,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 2곳(둘 다 반드시 약 {ex_max}분 이내의 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
-- by_condition: {cond_list} — 각 컨디션에 맞는 5곳 (컨디션마다 다른 조합). 참고: {hint_line}
+- by_condition: {cond_list} — 각 컨디션에 맞는 5곳. 중복 최소화: 한 가게는 최대 2개 컨디션에만, 기본 restaurants 5곳은 컨디션과 되도록 안 겹치게, 한 컨디션 안 5곳도 가게·음식 종류가 서로 달라야 해. 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
@@ -1087,6 +1138,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         snippet = (text or "").strip().replace("\n", " ")[:300]
         print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후). 원응답≈ {snippet!r}")
         return None, text
+
+    # B: 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충)
+    _rebalance_conditions(entry, candidates)
 
     # id 보정
     for idx, r in enumerate(entry.get("restaurants", [])):
