@@ -1025,8 +1025,44 @@ def fetch_kakao_keyword(kakao_key, query, radius, max_count=30):
     return out
 
 
-def fetch_condition_pools(kakao_key):
-    """COND_KEYWORDS로 조건별 후보 풀 + 합집합 일반 풀(general)을 구성. 위치당 캐시(끼니 재사용).
+def fetch_naver_keyword(naver_id, naver_secret, query, radius, max_count=10):
+    """Naver 지역검색(local.json, sort=comment=인기순)으로 한 키워드 검색 → [(name, dist_m, cuisine, leaf)].
+    반경 미지원이라 좌표 거리로 필터. 리뷰 많은(=핫플·신상 포함) 가게가 상위로 와 Kakao를 보완."""
+    if not (naver_id and naver_secret):
+        return []
+    out = []
+    headers = {"X-Naver-Client-Id": naver_id, "X-Naver-Client-Secret": naver_secret}
+    try:
+        url = ("https://openapi.naver.com/v1/search/local.json"
+               f"?query={urllib.parse.quote(query)}&display=5&sort=comment")
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as r:
+            items = json.loads(r.read()).get("items", [])
+        for it in items:
+            name = re.sub(r"<[^>]+>", "", it.get("title", "")).strip()
+            if not name:
+                continue
+            try:
+                lng, lat = float(it["mapx"]) / 1e7, float(it["mapy"]) / 1e7
+            except (KeyError, ValueError):
+                continue
+            dist_m = haversine_m(ORIGIN_LAT, ORIGIN_LNG, lat, lng)
+            if dist_m > radius * 1.4:
+                continue
+            parts = [p.strip() for p in it.get("category", "").split(">") if p.strip()]
+            cuisine = parts[1] if len(parts) > 1 else (parts[0] if parts else "")
+            leaf = parts[-1] if parts else ""
+            out.append((name, int(dist_m), cuisine, leaf))
+            if len(out) >= max_count:
+                break
+    except Exception as e:
+        print(f"  ⚠️  Naver 키워드 조회 실패({query}): {e}")
+    return out
+
+
+def fetch_condition_pools(kakao_key, naver_id=None, naver_secret=None):
+    """COND_KEYWORDS로 조건별 후보 풀 + 합집합 일반 풀(general)을 구성. Kakao+Naver 둘 다 사용.
+    위치당 캐시(끼니 재사용).
     → (cond_pools: {cond: [(name,dist,cuisine,leaf)...]}, general: [(name,dist,cuisine,leaf)...] ≤300)"""
     global _cond_pool_cache
     if _cond_pool_cache is not None:
@@ -1038,7 +1074,9 @@ def fetch_condition_pools(kakao_key):
     for cond, kws in COND_KEYWORDS.items():
         seen, picks = set(), []
         for kw in kws:
-            for t in fetch_kakao_keyword(kakao_key, kw, radius):
+            hits = (fetch_kakao_keyword(kakao_key, kw, radius)
+                    + fetch_naver_keyword(naver_id, naver_secret, kw, radius))   # Kakao + Naver 병합
+            for t in hits:
                 key = t[0].replace(" ", "")
                 if key not in seen:
                     seen.add(key)
@@ -1046,8 +1084,8 @@ def fetch_condition_pools(kakao_key):
                 if key not in gen_seen:
                     gen_seen.add(key)
                     general.append(t)
-            if len(picks) >= 12:
-                break   # 조건당 ~12곳이면 충분
+            if len(picks) >= 14:
+                break   # 조건당 ~14곳이면 충분(두 소스)
         picks.sort(key=lambda t: t[1])
         cond_pools[cond] = picks
     general.sort(key=lambda t: t[1])
@@ -1165,7 +1203,7 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     # by_condition은 LLM이 아니라 이 풀에서 코드로 조립한다. 술집은 기존 근처 풀(문자열)을 사용.
     cond_pools = general_big = None
     if with_conditions:
-        cond_pools, general_big = fetch_condition_pools(kakao_key)
+        cond_pools, general_big = fetch_condition_pools(kakao_key, naver_id, naver_secret)
     if general_big:
         samp = list(general_big)
         random.Random(f"{today}-{PLACE_NAME}-base").shuffle(samp)
@@ -1224,38 +1262,38 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     ex_max = PROFILE["extra_max"]
 
     if with_conditions:
-        # by_condition은 코드로 조립(아래) — LLM은 기본 5 + extras 2 + comment만 생성(토큰 대폭 절감)
+        # by_condition은 코드로 조립(아래) — LLM은 기본 5 + extras 3 + comment만 생성(토큰 대폭 절감)
         weather_line = f"오늘 {REGION} 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
         prompt = f"""{weather_line}{origin_desc} 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 {mood_ctx}{cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
-- extras: 추가 추천 2곳(둘 다 반드시 약 {ex_max}분 이내의 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
+- extras: 추가 추천 3곳 — 1곳 tag="근처유명"(가까운 유명, 약 {ex_max}분 이내), 1곳 tag="검색유명"(웹에서 평 좋은 유명, 약 {ex_max}분 이내), 1곳 tag="신규맛집"(최근(올해/근래) 새로 오픈한 신상 맛집을 웹 검색으로 찾아 실재 확인 — 기본 5곳·다른 extras와 겹치지 않게, 다소 멀어도 됨). restaurants와 겹치지 않게
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
 - feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 예: "국물 요리 명가 · 깊고 깔끔한 국맛, 든든한 점심". 긴 문장 설명 X, 짧은 구절 나열
 
 ```json
-{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}]}}
+{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}},{{...,"tag":"신규맛집"}}]}}
 ```"""
     else:
         prompt = f"""{origin_desc} 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
 {cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
-- extras: 추가 2곳(둘 다 반드시 약 {ex_max}분 이내) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명)
+- extras: 추가 3곳 — 1곳 tag="근처유명"(가까운 유명, ~{ex_max}분), 1곳 tag="검색유명"(웹에서 평 좋은 유명, ~{ex_max}분), 1곳 tag="신규맛집"(최근 새로 오픈한 신상 가게를 웹 검색으로 찾아 확인, 다소 멀어도 됨)
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 tag 추가)
 - feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 긴 문장 설명 X, 짧은 구절 나열
 
 ```json
-{{"comment":"{meal} 추천 한마디","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}]}}
+{{"comment":"{meal} 추천 한마디","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}},{{...,"tag":"신규맛집"}}]}}
 ```"""
 
     print(f"🔍 [{meal}] 생성 중...")
-    # 점심(날씨/신선도)·술집(실존 가게명 확보)은 웹검색 사용.
-    # 저녁은 컨디션 10종으로 토큰이 커 지식 기반(rate limit 회피).
-    use_web = meal in ("점심", "술집")
+    # 모든 끼니 웹검색 사용: 신상 맛집(신규 오픈) 발굴 + 날씨/실존 확인.
+    # (by_condition을 코드로 옮겨 LLM 출력이 작아져 저녁도 웹 켜도 토큰 안전.)
+    use_web = True
     text = call_claude(client, prompt, use_web=use_web)
     entry = extract_json(text) if text else None
     if not entry:
@@ -1298,13 +1336,19 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         entry["restaurants"], _ = verify_and_enrich(entry.get("restaurants", []), kakao_key, naver_id, naver_secret)
         if entry.get("extras"):
             extras, _ = verify_and_enrich(entry["extras"], kakao_key, naver_id, naver_secret)
-            # 추가 추천은 프로파일 거리 상한 이내 + 검증된 곳만 (미확인/초과 제외)
+            # 추가 추천: 검증된 곳만. 거리 상한 이내(미확인/초과 제외) — 단 '신규맛집'은
+            # '가볼 만한 곳'이므로 다소 멀어도 유지(검증되면 상한 2배까지 허용).
             ex_max = PROFILE["extra_max"]
-            entry["extras"] = [r for r in extras
-                               if r.get("verified") and (parse_minutes(r.get("distance")) or 999) <= ex_max]
+            def _extra_ok(r):
+                if not r.get("verified"):
+                    return False
+                mins = parse_minutes(r.get("distance")) or 999
+                cap = ex_max * 2 if r.get("tag") == "신규맛집" else ex_max
+                return mins <= cap
+            entry["extras"] = [r for r in extras if _extra_ok(r)]
             dropped = len(extras) - len(entry["extras"])
             if dropped:
-                print(f"  ✂️  추가 추천 {dropped}곳 제외 ({ex_max}분 초과/미확인)")
+                print(f"  ✂️  추가 추천 {dropped}곳 제외 (거리 초과/미확인)")
         for cond in list(entry.get("by_condition", {}).keys()):
             entry["by_condition"][cond], _ = verify_and_enrich(entry["by_condition"][cond], kakao_key, naver_id, naver_secret)
 
