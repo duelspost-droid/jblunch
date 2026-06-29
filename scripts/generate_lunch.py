@@ -738,9 +738,9 @@ def call_claude(client, prompt, use_web=True):
         for attempt in range(MAX_ATTEMPTS):
             wait = 0
             try:
-                # max_tokens: by_condition(10종)을 코드로 조립하면서 LLM 출력이 기본 5 + extras 2
-                # + comment로 축소됨 → 6K로 충분(과거 16K는 by_condition 50개 때문이었음).
-                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=6000, messages=messages)
+                # max_tokens: 하이브리드에서 by_condition(10×5)을 LLM이 다시 큐레이션 출력하므로
+                # 기본 5 + extras 3 + 컨디션 50(짧은 feature) → 16K로 여유(비스트리밍 안전선).
+                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=16000, messages=messages)
                 if tools:
                     kwargs["tools"] = tools
                 response = client.messages.create(**kwargs)
@@ -1198,9 +1198,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     idp = MEAL_IDP[meal]
     id_prefix = date_compact + (f"-{idp}" if idp else "")
 
-    # 후보 풀: 컨디션 끼니(점심·저녁)는 조건별 키워드로 큰 구조화 풀을 만들고,
-    # 기본(restaurants)에는 그 일반 풀을 날짜 시드로 ~50 샘플해 넣는다(실제 밀집도 반영 + 일별 회전).
-    # by_condition은 LLM이 아니라 이 풀에서 코드로 조립한다. 술집은 기존 근처 풀(문자열)을 사용.
+    # 후보 풀: 컨디션 끼니(점심·저녁)는 조건별 키워드(Kakao+Naver)로 큰 구조화 풀을 만든다.
+    # 기본(restaurants)에는 일반 풀을 날짜 샘플 ~50, by_condition은 조건별 후보를 LLM에 주입해
+    # LLM이 웹검색으로 보태며 큐레이션(하이브리드). 코드는 중복캡·보충·폴백 담당. 술집은 기존 풀.
     cond_pools = general_big = None
     if with_conditions:
         cond_pools, general_big = fetch_condition_pools(kakao_key, naver_id, naver_secret)
@@ -1261,21 +1261,38 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     # extras 허용 거리(분) — 프로파일별
     ex_max = PROFILE["extra_max"]
 
+    # 조건별 후보 블록: LLM이 여기서 우선 고르고 웹검색으로 보탬. 날짜 시드로 회전 → 일별 신선도.
+    cond_cand_block = ""
+    if with_conditions and cond_pools:
+        lines = []
+        for cond, pool in cond_pools.items():
+            if not pool:
+                continue
+            head = list(pool[:14])
+            random.Random(f"{today}-{PLACE_NAME}-{cond}-llm").shuffle(head)
+            names = [t[0] for t in head[:8]]
+            if names:
+                lines.append(f"  {cond}: " + ", ".join(names))
+        if lines:
+            cond_cand_block = ("\n[조건별 후보] 각 조건 5곳은 아래에서 우선 고르고, 웹 검색으로 더 좋거나 "
+                               "새로 뜬 곳을 보태도 좋아(없으면 실재하는 인근 가게로):\n" + "\n".join(lines) + "\n")
+
     if with_conditions:
-        # by_condition은 코드로 조립(아래) — LLM은 기본 5 + extras 3 + comment만 생성(토큰 대폭 절감)
         weather_line = f"오늘 {REGION} 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
+        cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}{origin_desc} 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
-{mood_ctx}{cand_block}{avoid_line}
+{mood_ctx}{cand_block}{cond_cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 3곳 — 1곳 tag="근처유명"(가까운 유명, 약 {ex_max}분 이내), 1곳 tag="검색유명"(웹에서 평 좋은 유명, 약 {ex_max}분 이내), 1곳 tag="신규맛집"(최근(올해/근래) 새로 오픈한 신상 맛집을 웹 검색으로 찾아 실재 확인 — 기본 5곳·다른 extras와 겹치지 않게, 다소 멀어도 됨). restaurants와 겹치지 않게
+- by_condition: {' / '.join(CONDITIONS)} — 각 조건에 맞는 5곳. 위 [조건별 후보]에서 우선 고르고 웹 검색으로 더 좋거나 새로 뜬 곳을 보태도 돼(실재 가게만). 중복 최소화: 한 가게 최대 2개 조건, 기본 5곳과 안 겹치게, 한 조건 5곳도 서로 다르게
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
-- feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 예: "국물 요리 명가 · 깊고 깔끔한 국맛, 든든한 점심". 긴 문장 설명 X, 짧은 구절 나열
+- feature: 키워드형 짧은 구절. restaurants/extras는 약 25~35자(예: "국물 요리 명가 · 깊고 깔끔한 국맛"), by_condition은 약 12~18자로 간결히. 긴 문장 설명 X
 
 ```json
-{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}},{{...,"tag":"신규맛집"}}]}}
+{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}},{{...,"tag":"신규맛집"}}],"by_condition":{{{cond_json}}}}}
 ```"""
     else:
         prompt = f"""{origin_desc} 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
@@ -1312,12 +1329,15 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후). 원응답≈ {snippet!r}")
         return None, text
 
-    # by_condition: LLM이 아니라 조건별 키워드 풀에서 코드로 조립(날짜 로테이션 + 중복캡). LLM 토큰 0.
+    # by_condition: 하이브리드 — LLM이 조건별 후보 + 웹검색으로 큐레이션(위 프롬프트).
+    # LLM이 통째로 빠뜨리면 코드 조립으로 폴백. (이후 _rebalance가 중복캡 + 5곳 미만 보충 마무리)
     if with_conditions and cond_pools is not None:
-        entry["by_condition"] = assemble_by_condition(
-            cond_pools, general_big or [], entry.get("restaurants", []), today, recent_names)
+        bc = entry.get("by_condition")
+        if not isinstance(bc, dict) or not bc:
+            entry["by_condition"] = assemble_by_condition(
+                cond_pools, general_big or [], entry.get("restaurants", []), today, recent_names)
 
-    # B: 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충 — 안전망)
+    # 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충 — 안전망)
     _rebalance_conditions(entry, candidates)
 
     # id 보정
