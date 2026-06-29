@@ -77,12 +77,13 @@ PROFILE = PROFILES["auto"]   # 현재 위치의 추천 방식 (set_origin에서 
 
 _coords_cache = {}
 _candidates_cache = None
+_cond_pool_cache = None   # 조건별 후보 풀 (위치당 1회 수집, 끼니 간 재사용)
 
 
 def set_origin(lat, lng, region, place, profile="auto", custom=None):
     """현재 처리할 위치로 전역 컨텍스트 전환 + 위치 종속 캐시 초기화."""
     global ORIGIN_LAT, ORIGIN_LNG, REGION, PLACE_NAME, REGION_QUERIES, PROFILE
-    global _coords_cache, _candidates_cache
+    global _coords_cache, _candidates_cache, _cond_pool_cache
     ORIGIN_LAT, ORIGIN_LNG = lat, lng
     REGION = region
     PLACE_NAME = place
@@ -91,6 +92,7 @@ def set_origin(lat, lng, region, place, profile="auto", custom=None):
                       f"{region} 일식", f"{region} 술집"]
     _coords_cache = {}       # 좌표 캐시는 거리 기준점이 바뀌면 무효
     _candidates_cache = None  # 근처 후보도 위치별로 다시 수집
+    _cond_pool_cache = None   # 조건별 후보 풀도 위치별로 다시 수집
 
 
 def fmt_dist(meters):
@@ -736,9 +738,9 @@ def call_claude(client, prompt, use_web=True):
         for attempt in range(MAX_ATTEMPTS):
             wait = 0
             try:
-                # max_tokens: Haiku 4.5 한도는 64K. 컨디션 10종(by_condition) 응답이
-                # 8K를 넘겨 잘리면 JSON 파싱이 깨지므로 16K로 여유를 둠(비스트리밍 안전선).
-                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=16000, messages=messages)
+                # max_tokens: by_condition(10종)을 코드로 조립하면서 LLM 출력이 기본 5 + extras 2
+                # + comment로 축소됨 → 6K로 충분(과거 16K는 by_condition 50개 때문이었음).
+                kwargs = dict(model="claude-haiku-4-5-20251001", max_tokens=6000, messages=messages)
                 if tools:
                     kwargs["tools"] = tools
                 response = client.messages.create(**kwargs)
@@ -978,6 +980,128 @@ MEAL_CTX = {
 }
 MEAL_IDP = {"점심": "", "저녁": "D", "술집": "B"}
 
+# 조건 → Kakao keyword.json 검색어 (조건별 후보풀 생성용). 깔끔히 매핑되는 6 + 무드 프록시 4.
+COND_KEYWORDS = {
+    "해장 필요": ["해장국", "국밥"],
+    "매콤하게": ["마라탕", "짬뽕"],
+    "가볍게": ["샐러드", "국수"],
+    "든든하게": ["국밥", "백반"],
+    "일식": ["일식", "초밥"],
+    "한식": ["한식", "백반"],
+    "고기": ["고깃집", "삼겹살"],
+    "혼밥": ["혼밥", "라멘"],
+    "와인": ["와인바", "비스트로"],
+    "임원": ["한정식", "오마카세"],
+}
+
+
+def fetch_kakao_keyword(kakao_key, query, radius, max_count=30):
+    """Kakao 키워드 검색(keyword.json, 좌표+반경) → [(name, dist_m, cuisine, leaf)]. FD6/CE7만.
+    (기존 get_kakao_place는 size=1 단일 지오코딩용이라 좌표·반경 검색은 별도 작성.)"""
+    if not kakao_key:
+        return []
+    out = []
+    try:
+        for page in range(1, 3):   # 최대 2페이지(30곳)
+            url = ("https://dapi.kakao.com/v2/local/search/keyword.json"
+                   f"?query={urllib.parse.quote(query)}&x={ORIGIN_LNG}&y={ORIGIN_LAT}"
+                   f"&radius={int(radius)}&sort=distance&size=15&page={page}")
+            req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {kakao_key}"})
+            with urllib.request.urlopen(req, timeout=5) as r:
+                data = json.loads(r.read())
+            for d in data.get("documents", []):
+                if d.get("category_group_code") not in ("FD6", "CE7"):
+                    continue   # 음식점/카페만 (키워드는 비음식도 섞임)
+                cn = d.get("category_name", "")
+                cuisine = cn.replace("음식점 > ", "").split(" > ")[0].strip()
+                leaf = cn.split(" > ")[-1].strip()
+                out.append((d["place_name"], int(d.get("distance", 0)), cuisine, leaf))
+                if len(out) >= max_count:
+                    return out
+            if data.get("meta", {}).get("is_end"):
+                break
+    except Exception as e:
+        print(f"  ⚠️  Kakao 키워드 조회 실패({query}): {e}")
+    return out
+
+
+def fetch_condition_pools(kakao_key):
+    """COND_KEYWORDS로 조건별 후보 풀 + 합집합 일반 풀(general)을 구성. 위치당 캐시(끼니 재사용).
+    → (cond_pools: {cond: [(name,dist,cuisine,leaf)...]}, general: [(name,dist,cuisine,leaf)...] ≤300)"""
+    global _cond_pool_cache
+    if _cond_pool_cache is not None:
+        return _cond_pool_cache
+    radii = PROFILE["radii"]
+    radius = int(radii[min(1, len(radii) - 1)] * float(DIVERSITY.get("radius_boost", 1.0) or 1.0))
+    cond_pools = {}
+    gen_seen, general = set(), []
+    for cond, kws in COND_KEYWORDS.items():
+        seen, picks = set(), []
+        for kw in kws:
+            for t in fetch_kakao_keyword(kakao_key, kw, radius):
+                key = t[0].replace(" ", "")
+                if key not in seen:
+                    seen.add(key)
+                    picks.append(t)
+                if key not in gen_seen:
+                    gen_seen.add(key)
+                    general.append(t)
+            if len(picks) >= 12:
+                break   # 조건당 ~12곳이면 충분
+        picks.sort(key=lambda t: t[1])
+        cond_pools[cond] = picks
+    general.sort(key=lambda t: t[1])
+    general = general[:300]   # 사용자 요청: 300곳 이하로
+    _cond_pool_cache = (cond_pools, general)
+    tot = sum(len(v) for v in cond_pools.values())
+    print(f"  🗂️  조건별 후보 {tot}곳 / 일반 풀 {len(general)}곳 (반경 {radius}m)")
+    return _cond_pool_cache
+
+
+def assemble_by_condition(cond_pools, general, base_restaurants, today, recent_names=None, max_cond=2, per=5):
+    """조건별 풀에서 날짜 시드 로테이션으로 per곳씩 골라 by_condition을 코드로 조립(LLM 미사용).
+    - 교차 조건 디둡: 한 가게 ≤max_cond개 컨디션 / 기본 5곳은 컨디션에 ≤max_cond-1번(선점)
+    - 최근 추천(recent_names)은 후순위 / 부족분은 일반 풀에서 보충 / 빈 컨디션은 제외(→ 라이브 폴백)"""
+    norm = lambda s: "".join((s or "").split()).lower()
+    recent_keys = {norm(x) for x in (recent_names or [])}
+    used = {norm(r.get("name")): 1 for r in (base_restaurants or []) if r.get("name")}
+
+    def mk(t):
+        nm, dist, cuisine, leaf = t
+        feat = leaf if (leaf and leaf != cuisine) else ""   # 카테고리 말단을 짧은 feature 시드로(프런트가 보강)
+        return {"name": nm, "cuisine": cuisine or "", "feature": feat, "price": "보통", "distance": ""}
+
+    by = {}
+    for cond, pool in cond_pools.items():
+        rng = random.Random(f"{today}-{PLACE_NAME}-{cond}")
+        head = list(pool[:max(per * 2, 10)])
+        rng.shuffle(head)                       # 가까운 상위권 안에서 일별 회전
+        ordered = head + list(pool[len(head):])
+        ordered.sort(key=lambda t: norm(t[0]) in recent_keys)   # 최근 추천은 뒤로(안정정렬)
+        kept, seen_in = [], set()
+        for t in ordered:
+            k = norm(t[0])
+            if not k or k in seen_in or used.get(k, 0) >= max_cond:
+                continue
+            seen_in.add(k)
+            used[k] = used.get(k, 0) + 1
+            kept.append(mk(t))
+            if len(kept) >= per:
+                break
+        if len(kept) < per and general:         # 부족분: 일반 풀에서 덜 쓰인 가게로 보충
+            for t in sorted(general, key=lambda t: (used.get(norm(t[0]), 0), norm(t[0]) in recent_keys)):
+                k = norm(t[0])
+                if not k or k in seen_in or used.get(k, 0) >= max_cond:
+                    continue
+                seen_in.add(k)
+                used[k] = used.get(k, 0) + 1
+                kept.append(mk(t))
+                if len(kept) >= per:
+                    break
+        if kept:
+            by[cond] = kept   # 빈 컨디션은 넣지 않음 → 프런트가 라이브 검색으로 폴백
+    return by
+
 
 def _rebalance_conditions(entry, candidates, max_cond=2):
     """B: 같은 날 by_condition 간/기본↔컨디션 중복 완화.
@@ -1036,14 +1160,28 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     idp = MEAL_IDP[meal]
     id_prefix = date_compact + (f"-{idp}" if idp else "")
 
-    # 하이브리드: 근처 실제 음식점 후보 목록 (적응형 반경)
-    candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
-    if DIVERSITY["pool"] and candidates:   # A: 후보 풀을 무작위로 섞어 매번 다른 조합 유도
-        candidates = list(candidates)
-        random.shuffle(candidates)
+    # 후보 풀: 컨디션 끼니(점심·저녁)는 조건별 키워드로 큰 구조화 풀을 만들고,
+    # 기본(restaurants)에는 그 일반 풀을 날짜 시드로 ~50 샘플해 넣는다(실제 밀집도 반영 + 일별 회전).
+    # by_condition은 LLM이 아니라 이 풀에서 코드로 조립한다. 술집은 기존 근처 풀(문자열)을 사용.
+    cond_pools = general_big = None
+    if with_conditions:
+        cond_pools, general_big = fetch_condition_pools(kakao_key)
+    if general_big:
+        samp = list(general_big)
+        random.Random(f"{today}-{PLACE_NAME}-base").shuffle(samp)
+        samp = sorted(samp[:80], key=lambda t: t[1])[:50]   # 셔플 80 중 가까운 50
+        candidates = [(f"{nm}({cuisine}, {fmt_dist(dist)[0]})" if cuisine else f"{nm}({fmt_dist(dist)[0]})")
+                      for (nm, dist, cuisine, leaf) in samp]
+        sparse = len(general_big) < PROFILE["min_cand"]
+    else:
+        candidates = fetch_nearby_candidates(kakao_key, naver_id, naver_secret)
+        if DIVERSITY["pool"] and candidates:   # A: 후보 풀을 무작위로 섞어 매번 다른 조합 유도
+            candidates = list(candidates)
+            random.shuffle(candidates)
+        sparse = _cand_sparse
     # ③ 후보 충분도·프로파일에 따라 '먼 곳 추가' 허용 여부를 다르게 안내
     allow_far = PROFILE["allow_far"]
-    far_ok = (allow_far == "always") or (allow_far == "sparse" and _cand_sparse)
+    far_ok = (allow_far == "always") or (allow_far == "sparse" and sparse)
     cand_block = ""
     if candidates:
         if far_ok:
@@ -1086,23 +1224,20 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
     ex_max = PROFILE["extra_max"]
 
     if with_conditions:
-        cond_list = " / ".join(CONDITIONS)
-        hint_line = " ".join(f'({c}={h})' for c, h in COND_HINT.items())
+        # by_condition은 코드로 조립(아래) — LLM은 기본 5 + extras 2 + comment만 생성(토큰 대폭 절감)
         weather_line = f"오늘 {REGION} 날씨를 웹 검색으로 확인하고, " if meal == "점심" else ""
-        cond_json = ",".join(f'"{c}":[...]' for c in CONDITIONS)
         prompt = f"""{weather_line}{origin_desc} 근처에서 오늘 {meal} 자리로 갈 만한 {ctx}을 추천해줘.
 {mood_ctx}{cand_block}{avoid_line}
 웹 검색으로 {REGION} 인기 가게를 조사한 후 아래 JSON을 응답 마지막에 포함해줘.
 - restaurants: 기본 추천 5곳. {band_line}
 - extras: 추가 추천 2곳(둘 다 반드시 약 {ex_max}분 이내의 실제 가게) — 1곳 tag="근처유명"(가까운 유명), 1곳 tag="검색유명"(웹에서 평 좋은 유명). restaurants와 겹치지 않게
-- by_condition: {cond_list} — 각 컨디션에 맞는 5곳. 중복 최소화: 한 가게는 최대 2개 컨디션에만, 기본 restaurants 5곳은 컨디션과 되도록 안 겹치게, 한 컨디션 안 5곳도 가게·음식 종류가 서로 달라야 해. 참고: {hint_line}
 - comment: {"날씨를 반영한 한마디" if meal == "점심" else f"{meal} 추천 한마디"}
 
 각 가게 필드: name, cuisine, feature, price(저렴/보통/비쌈), distance(도보 N분) (extras는 추가로 tag)
 - feature: 대표 메뉴·맛·특징을 요약한 키워드형(약 25~35자, 모바일 2줄 분량). 예: "국물 요리 명가 · 깊고 깔끔한 국맛, 든든한 점심". 긴 문장 설명 X, 짧은 구절 나열
 
 ```json
-{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}],"by_condition":{{{cond_json}}}}}
+{{"comment":"...","restaurants":[...5곳],"extras":[{{...,"tag":"근처유명"}},{{...,"tag":"검색유명"}}]}}
 ```"""
     else:
         prompt = f"""{origin_desc} 근처에서 오늘 {meal} 가기 좋은 {ctx} 5곳을 추천해줘.
@@ -1139,7 +1274,12 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후). 원응답≈ {snippet!r}")
         return None, text
 
-    # B: 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충)
+    # by_condition: LLM이 아니라 조건별 키워드 풀에서 코드로 조립(날짜 로테이션 + 중복캡). LLM 토큰 0.
+    if with_conditions and cond_pools is not None:
+        entry["by_condition"] = assemble_by_condition(
+            cond_pools, general_big or [], entry.get("restaurants", []), today, recent_names)
+
+    # B: 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충 — 안전망)
     _rebalance_conditions(entry, candidates)
 
     # id 보정
