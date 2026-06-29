@@ -1060,15 +1060,8 @@ def fetch_naver_keyword(naver_id, naver_secret, query, radius, max_count=10):
     return out
 
 
-def fetch_condition_pools(kakao_key, naver_id=None, naver_secret=None):
-    """COND_KEYWORDS로 조건별 후보 풀 + 합집합 일반 풀(general)을 구성. Kakao+Naver 둘 다 사용.
-    위치당 캐시(끼니 재사용).
-    → (cond_pools: {cond: [(name,dist,cuisine,leaf)...]}, general: [(name,dist,cuisine,leaf)...] ≤300)"""
-    global _cond_pool_cache
-    if _cond_pool_cache is not None:
-        return _cond_pool_cache
-    radii = PROFILE["radii"]
-    radius = int(radii[min(1, len(radii) - 1)] * float(DIVERSITY.get("radius_boost", 1.0) or 1.0))
+def _gather_cond_pools(kakao_key, naver_id, naver_secret, radius):
+    """주어진 반경에서 조건별 후보 풀 + 일반 풀(general)을 한 번 수집 (Kakao+Naver 병합, 거리순)."""
     cond_pools = {}
     gen_seen, general = set(), []
     for cond, kws in COND_KEYWORDS.items():
@@ -1089,6 +1082,28 @@ def fetch_condition_pools(kakao_key, naver_id=None, naver_secret=None):
         picks.sort(key=lambda t: t[1])
         cond_pools[cond] = picks
     general.sort(key=lambda t: t[1])
+    return cond_pools, general
+
+
+def fetch_condition_pools(kakao_key, naver_id=None, naver_secret=None):
+    """COND_KEYWORDS로 조건별 후보 풀 + 합집합 일반 풀(general)을 구성. Kakao+Naver 둘 다 사용.
+    적응형 반경: 기본 반경에서 시작하고, 희박하면(정읍 등 시골) 더 넓혀 재수집. 위치당 캐시.
+    (Kakao는 sort=distance라 밀집지는 반경을 키워도 가까운 곳이 먼저 차므로 안전.)"""
+    global _cond_pool_cache
+    if _cond_pool_cache is not None:
+        return _cond_pool_cache
+    boost = float(DIVERSITY.get("radius_boost", 1.0) or 1.0)
+    radii = PROFILE["radii"]
+    target = max(PROFILE["min_cand"], 24)   # 일반 풀 최소 목표(이만큼 모이면 확대 중단)
+    radius = int(radii[min(1, len(radii) - 1)] * boost)   # 기본 시작 반경(밀집지는 이걸로 충분)
+    cond_pools, general = _gather_cond_pools(kakao_key, naver_id, naver_secret, radius)
+    for mult in (2, 4):   # 여전히 희박하면 프로파일 최대 반경의 배수로 더 넓혀 재수집
+        if len(general) >= target:
+            break
+        radius = int(radii[-1] * boost * mult)
+        cp2, g2 = _gather_cond_pools(kakao_key, naver_id, naver_secret, radius)
+        if len(g2) > len(general):
+            cond_pools, general = cp2, g2
     general = general[:300]   # 사용자 요청: 300곳 이하로
     _cond_pool_cache = (cond_pools, general)
     tot = sum(len(v) for v in cond_pools.values())
