@@ -236,6 +236,7 @@
   .badge { font-size: 0.67rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
   .badge-cuisine { background: #ebf4ff; color: #2b6cb0; }
   .badge-review { background: #fff4d6; color: #b7791f; }
+  .badge-new-review { background: #d3f9d8; color: #2f9e44; }
   .badge-tag { background: #ede9fe; color: #6b46c1; }
   .extra-head {
     font-size: 0.8rem; font-weight: 700; color: #6b46c1;
@@ -1516,6 +1517,10 @@ function buildCard(r) {
   const ratings = cms.map(c => c.rating).filter(Boolean);
   const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
   const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
+  // 최근 2일(48h) 내 새 리뷰가 달린 가게엔 '신규' 배지
+  const NEW_REVIEW_MS = 2 * 24 * 60 * 60 * 1000;
+  const hasNewReview = cms.some(c => { const t = c.created_at ? Date.parse(c.created_at) : NaN; return t && (Date.now() - t) < NEW_REVIEW_MS; });
+  const newReviewBadge = hasNewReview ? `<span class="badge badge-new-review">🆕 새 리뷰</span>` : '';
   const tagBadge = r.tag && TAG_BADGE[r.tag] ? `<span class="badge badge-tag">${TAG_BADGE[r.tag]}</span>` : '';
   // 리뷰가 있을 때만 카드에 인라인 표시 (없으면 안 보임)
   const reviewsHtml = cnt ? `<div class="reviews-block">${cms.map(c => {
@@ -1548,6 +1553,7 @@ function buildCard(r) {
         ${dCuisine ? `<span class="badge badge-cuisine">${escHtml(dCuisine)}</span>` : ''}
         ${tagBadge}
         ${reviewBadge}
+        ${newReviewBadge}
       </div>
       ${dFeature ? `<div class="card-feature">${escHtml(dFeature)}</div>` : ''}
       <div class="card-meta">
