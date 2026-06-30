@@ -1506,6 +1506,12 @@ function shortDistance(d) {
   return out;
 }
 
+// 최근 2일(48h) 내 새 리뷰가 달렸는지 — 카드/랭킹 '🆕 새 리뷰' 배지 공용
+function hasNewReview(name) {
+  const NEW_MS = 2 * 24 * 60 * 60 * 1000;
+  return (commentsState[name] || []).some(c => { const t = c.created_at ? Date.parse(c.created_at) : NaN; return t && (Date.now() - t) < NEW_MS; });
+}
+
 function buildCard(r) {
   const cms = commentsState[r.name] || [];
   // 컨디션 추천 등 일부 항목은 cuisine/feature/price가 비어옴 → describe 캐시로 폴백
@@ -1517,10 +1523,8 @@ function buildCard(r) {
   const ratings = cms.map(c => c.rating).filter(Boolean);
   const avgStar = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : null;
   const reviewBadge = cnt ? `<span class="badge badge-review">⭐ ${avgStar || '-'} · 리뷰 ${cnt}</span>` : '';
-  // 최근 2일(48h) 내 새 리뷰가 달린 가게엔 '신규' 배지
-  const NEW_REVIEW_MS = 2 * 24 * 60 * 60 * 1000;
-  const hasNewReview = cms.some(c => { const t = c.created_at ? Date.parse(c.created_at) : NaN; return t && (Date.now() - t) < NEW_REVIEW_MS; });
-  const newReviewBadge = hasNewReview ? `<span class="badge badge-new-review">🆕 새 리뷰</span>` : '';
+  // 최근 2일 내 새 리뷰가 달린 가게엔 '신규' 배지 (hasNewReview 헬퍼 공용)
+  const newReviewBadge = hasNewReview(r.name) ? `<span class="badge badge-new-review">🆕 새 리뷰</span>` : '';
   const tagBadge = r.tag && TAG_BADGE[r.tag] ? `<span class="badge badge-tag">${TAG_BADGE[r.tag]}</span>` : '';
   // 리뷰가 있을 때만 카드에 인라인 표시 (없으면 안 보임)
   const reviewsHtml = cnt ? `<div class="reviews-block">${cms.map(c => {
@@ -2776,7 +2780,7 @@ function renderStats() {
       ${topList.length ? topList.map((r,i) => `<div class="top-item" onclick="openModal('${escAttr(r.name)}','${escAttr(r.feature||'')}')">
         <div class="top-rank">${i+1}</div>
         <div class="top-info">
-          <div class="top-name">${emo(r.cuisine)} ${escHtml(r.name)} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span></div>
+          <div class="top-name">${emo(r.cuisine)} ${escHtml(r.name)} <span class="top-stars-inline">${r.rated ? `${'⭐'.repeat(Math.round(r.avg))} <small>${r.avg.toFixed(1)}</small> · ` : ''}리뷰 ${r.cnt}</span>${hasNewReview(r.name) ? ` <span class="badge badge-new-review">🆕 새 리뷰</span>` : ''}</div>
           <div class="top-cuisine">${escHtml(r.cuisine||'')}</div>
           ${r.feature ? `<div class="top-feature">${escHtml(r.feature)}</div>` : ''}
           <div class="top-meta">
