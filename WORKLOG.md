@@ -1,7 +1,7 @@
 # JB×AX 맛집 트래커 — 작업 로그 & 핸드오프 가이드
 
 > 다른 PC에서 이어서 작업하기 위한 문서. 프로젝트 구조 + 이번 세션 작업 내역 + 배포 방법.
-> 최종 업데이트: 2026-06-06
+> 최종 업데이트: 2026-07-01
 
 ---
 
@@ -251,6 +251,51 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 
 ### 진행 중
 - [x] **커스텀 도메인 `lunch.jbax.co.kr` SSL** — 발급 완료, https 정상 서비스 중. (duelspost-droid.github.io는 이 도메인으로 301 리다이렉트)
+
+---
+
+## 7-2. 이번 세션(2026-07-01) 작업 내역
+
+> 추천 엔진을 **하이브리드 풀**로 크게 개편 + 리뷰 배지 + 배치 버그 수정 + 보안/감사.
+> **아래 ⏳ cron 1건만 빼고 전부 master에 push 완료.**
+
+### 추천 엔진 — 하이브리드 재설계 (중복 해소 · 밀집도↑ · 매일 새로움)
+- [x] 같은 날 기본/컨디션 추천 중복 완화: 프롬프트 제약 + 코드 dedup (`cce9f65`)
+- [x] by_condition을 **조건별 Kakao 키워드 풀**에서 코드 조립 (`ce2ae66`)
+- [x] 조건 풀에 **Naver 병합** + **🆕 신규맛집**(웹검색 신상)을 '이런 곳도' extras로 추가 (`4b42dd1`)
+- [x] **풀 하이브리드**: 코드 풀(Kakao+Naver, 일반풀 ≤300곳) + LLM 웹 보강 + LLM 큐레이션 (`ce4b184`)
+- [x] **적응형 반경**: 희박 지역(정읍 등 시골)은 조건 풀 수집 반경 자동 확대 (`24eb4c1`)
+- [x] **🩹 기본 추천 0곳 버그 수정** — 정읍 '저녁 기본 0곳'의 근본원인. LLM이 `restaurants=[]`를 줘도
+      `_backfill_base()`가 후보 풀에서 5곳 채움(verify 전, 중복·extras·by_condition·recent 제외, 날짜 시드 회전).
+      풀까지 비어 끝내 0이면 끼니 실패 처리 → `gen_meal` 재시도/누락(빈 끼니를 성공으로 저장 안 함). (`5476a57`)
+      └ 검증: py_compile OK + 단위테스트 6종 PASS. 정상 위치엔 무영향(LLM이 5곳 주면 no-op).
+
+### 프론트엔드 (`index.html`)
+- [x] 📍 내 위치 칩: 기본(미선택)도 은은한 연파랑(#eef5fd), 활성 시 초록 유지 (`521b712`)
+- [x] 술집 탭 전용 **컨디션 칩 6종**(가볍게 한잔·안주·회식·와인바·조용한 곳·이자카야 등) — 누르면 analyze 실시간 추천 (`46332a9`)
+- [x] **🆕 새 리뷰 배지**(최근 2일): `hasNewReview()` 공용 헬퍼 → **카드**(`b3dd718`) + **리뷰 맛집 별점순 랭킹**(`a4d5bc4`) 모두 적용. 라이브 검증 완료.
+
+### 보안 / 운영
+- [x] track 함수 **action allowlist**(`supabase/functions/track/index.ts`) — 비인증 클라가 `admin_fail` 등을 위조해 관리자 잠금 우회/감사로그 오염하는 것 차단. (배포 완료)
+- [x] 월요일 배치 견고성 + `notify_failure` 부분실패 escalation 확인.
+- [x] deploy-functions에 `--use-api`(Docker 없이 서버사이드 번들링) (`1f5c43d`)
+
+### 감사(audit) — 4영역 병렬 점검 → 다음 작업 백로그 (우선순위순)
+보안·배치·프론트/모바일·운영 4영역 적대적 감사. **다음 PC에서 이어서 할 후보:**
+1. **🔴 리뷰 무단 수정/삭제 (실제 익스플로잇)** — RLS가 `comments anon update/delete using(true)`(0001:214-219)로 열려, 공개 anon 키로 **누구나 모든 리뷰 DELETE/PATCH 가능**. `comments`에 소유자 컬럼 없음. → `owner_token` 컬럼+localStorage 방식, 또는 edit/delete를 admin 함수 뒤로 이동 + anon update/delete grant 회수. (effort M)
+2. **admin 비번 'change-me' 폴백 확인** (`admin/index.ts:107-113`) — `ADMIN_PASSWORD` 미설정 시 공개 문자열 'change-me'로 시드. **Supabase에서 실제 password_hash가 'change-me' 해시인지 5분 확인** — 맞으면 즉시 high 보안.
+3. `suggestion_add` 스팸 무방비(IP 레이트리밋 + pending 공개 제외), `review-photos` 익명 업로드 무제한(버킷 `file_size_limit`+`allowed_mime_types`, 대시보드만), admin 락아웃 XFF 스푸핑 우회.
+4. 데드코드/문서드리프트: `updateMealInfo()` 빈 스텁(+죽은 `.meal-info` CSS), `get_today_preference()` 미호출, CLAUDE.md:72 유령 'reviews' 테이블(실제는 `comments`).
+- ✅ 감사로 확인된 **이미 처리됨**(재작업 X): track allowlist · notify_failure 부분실패 escalation · adaptive radius.
+
+### ⏳ 미완료 — 정규 배치 06:30 → 06:00 (origin 미반영, 유일한 잔여)
+- **요청**: 정규 배치를 매일 **06:00 KST**로 변경.
+- **변경 내용**: `.github/workflows/daily-lunch.yml` **line 5**
+  `cron: '30 21 * * 0-4'` → `cron: '0 21 * * 0-4'` (주석도 06:30→06:00, 21:30→21:00. UTC 21:00 = KST 06:00, 월~금)
+- **블록 사유**: 로컬 gh 토큰 스코프가 `gist, read:org, repo`뿐 — **`workflow` 스코프가 없어** 워크플로 파일 push가 OAuth App 정책으로 거부됨. **origin은 아직 06:30**(원본 그대로, 커밋된 것 없음).
+- **적용 방법(둘 중 하나)**:
+  - (a) `gh auth refresh -s workflow -h github.com` → 브라우저에서 승인 → line 5 수정 후 `git add .github/workflows/daily-lunch.yml && git commit && git pull --rebase origin master && git push`.
+  - (b) GitHub 웹에서 직접: `github.com/duelspost-droid/jblunch/edit/master/.github/workflows/daily-lunch.yml` → line 5 한 줄 수정 → Commit.
 
 ---
 
