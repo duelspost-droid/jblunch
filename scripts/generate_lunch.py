@@ -1207,6 +1207,52 @@ def _rebalance_conditions(entry, candidates, max_cond=2):
         print(f"  ♻️  컨디션 중복정리: 제거 {removed} · 보충 {filled} (가게당 최대 {max_cond}컨디션)")
 
 
+def _backfill_base(entry, general_big, candidates, today, recent_names=None, target=5):
+    """LLM이 restaurants를 비우거나 부족하게 주면 후보 풀에서 채운다(verify 전).
+    general_big(구조화 튜플) 우선, 없으면 candidates(문자열) 파싱. 채운 개수 반환."""
+    base = entry.get("restaurants")
+    if not isinstance(base, list):
+        base = []
+        entry["restaurants"] = base
+    if len(base) >= target:
+        return 0
+    norm = lambda s: "".join((s or "").split()).lower()
+    used = set()
+    for bucket in [base, entry.get("extras") or []] + list((entry.get("by_condition") or {}).values()):
+        for r in bucket:
+            if isinstance(r, dict) and r.get("name"):
+                used.add(norm(r["name"]))
+    recent = {norm(x) for x in (recent_names or [])}
+    # 채움 소스: (name, cuisine, leaf)
+    src = []
+    if general_big:
+        src = [(nm, cuisine, leaf) for (nm, _d, cuisine, leaf) in general_big]
+    elif candidates:
+        for c in candidates:
+            s = str(c)
+            nm = s.split("(")[0].strip()
+            cat = ""
+            if "(" in s and ")" in s:
+                cat = s[s.index("(") + 1:s.rfind(")")].split(",")[0].strip()
+                if cat.startswith("도보"):
+                    cat = ""
+            src.append((nm, cat, ""))
+    rng = random.Random(f"{today}-{PLACE_NAME}-basefill")
+    rng.shuffle(src)
+    src.sort(key=lambda t: norm(t[0]) in recent)   # 최근 추천은 뒤로(안정정렬)
+    n0 = len(base)
+    for nm, cuisine, leaf in src:
+        if len(base) >= target:
+            break
+        k = norm(nm)
+        if not k or k in used:
+            continue
+        used.add(k)
+        feat = leaf if (leaf and leaf != cuisine) else ""
+        base.append({"name": nm, "cuisine": cuisine or "", "feature": feat, "price": "보통", "distance": ""})
+    return len(base) - n0
+
+
 def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None, mood_ctx=""):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
@@ -1354,6 +1400,16 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
 
     # 같은 날 컨디션 간/기본↔컨디션 중복 완화 (가게당 최대 2개 컨디션 + 후보 보충 — 안전망)
     _rebalance_conditions(entry, candidates)
+
+    # base 백필: LLM이 restaurants를 비우거나 부족하게 주면 후보 풀에서 채움(verify 전).
+    # (농촌에서 LLM이 빈 배열을 주던 '기본 0곳' 버그 보강)
+    filled = _backfill_base(entry, general_big, candidates, today, recent_names)
+    if filled:
+        print(f"  🩹 [{meal}] 기본 추천 {filled}곳 후보로 보충")
+    # 풀까지 비어 base가 여전히 0이면 빈 끼니를 성공으로 저장하지 않고 실패 처리(→ gen_meal 재시도/누락)
+    if not (entry.get("restaurants") or []):
+        print(f"❌ [{meal}] 기본 추천 0곳 (후보 풀도 비어 보충 불가) — 끼니 실패 처리")
+        return None, text
 
     # id 보정
     for idx, r in enumerate(entry.get("restaurants", [])):
