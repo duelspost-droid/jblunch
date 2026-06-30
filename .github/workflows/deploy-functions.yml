@@ -41,7 +41,9 @@ jobs:
             echo "🚀 deploy: $fn"
             # verify_jwt 기본값(true) 유지 — 브라우저가 anon 키(유효 JWT)를 보내므로 호출 정상.
             # (함수 자체 인증: admin=세션토큰, track=공개기록 — 게이트웨이 JWT와 별개)
+            # --use-api: Docker 없이 서버사이드 번들링 (CI에서 Docker Hub 레이트리밋 회피)
             npx --yes supabase@latest functions deploy "$fn" \
-              --project-ref "$SUPABASE_PROJECT_REF"
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --use-api
           done
           echo "✅ 전 함수 배포 완료"
