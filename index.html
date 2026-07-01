@@ -990,6 +990,32 @@ const SB_HEADERS = {
   'Content-Type': 'application/json'
 };
 
+// ── 리뷰 소유권 ───────────────────────────────────────────────
+// 브라우저별 비밀(OWNER_SECRET)을 localStorage에 보관. 리뷰 작성 시 서버에는 sha256 해시만
+// 저장(owner_token)하고, 수정/삭제 시 원본 비밀을 X-Owner-Token 헤더로 전송 → RLS가 해시해 대조.
+// 저장값은 해시라 노출돼도 위조 불가. 내가 쓴 리뷰 id만 추적해 수정/삭제 버튼을 노출.
+let OWNER_SECRET = '';
+try { OWNER_SECRET = localStorage.getItem('jbax_owner_secret') || ''; } catch(e) {}
+if (!OWNER_SECRET) {
+  OWNER_SECRET = 'os_' + ((crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '')
+    : (Math.random().toString(36).slice(2) + Date.now().toString(36)));
+  try { localStorage.setItem('jbax_owner_secret', OWNER_SECRET); } catch(e) {}
+}
+async function ownerHash() {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(OWNER_SECRET));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+let myCommentIds = [];
+try { myCommentIds = JSON.parse(localStorage.getItem('jbax_my_comments') || '[]') || []; } catch(e) { myCommentIds = []; }
+function addMyComment(id) {
+  id = String(id);
+  if (!myCommentIds.includes(id)) {
+    myCommentIds.push(id);
+    try { localStorage.setItem('jbax_my_comments', JSON.stringify(myCommentIds)); } catch(e) {}
+  }
+}
+function isMyComment(id) { return myCommentIds.includes(String(id)); }
+
 // ── 접속/작업 로그 ────────────────────────────────────────────
 const TRACK_URL = `${SB_URL}/functions/v1/track`;
 function track(action, detail) {
@@ -1398,7 +1424,8 @@ async function insertComment(restaurantId, reviewerName, content, rating, meal, 
     meal: meal || null,
     image_url: imageUrl || null,
     location: curLoc,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    owner_token: await ownerHash()   // 서버엔 해시만 저장(원본 비밀은 클라 localStorage)
   };
   const res = await fetch(`${SB_URL}/rest/v1/comments`, {
     method: 'POST',
@@ -1407,13 +1434,14 @@ async function insertComment(restaurantId, reviewerName, content, rating, meal, 
   });
   if (!res.ok) throw new Error(await res.text());
   const rows = await res.json();
+  if (rows[0] && rows[0].id != null) addMyComment(rows[0].id);   // 내가 쓴 리뷰 → 수정/삭제 버튼 노출용
   return rows[0];
 }
 
 async function deleteComment(commentId) {
   const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
     method: 'DELETE',
-    headers: SB_HEADERS
+    headers: { ...SB_HEADERS, 'X-Owner-Token': OWNER_SECRET }   // RLS: 소유자만 삭제
   });
   if (!res.ok) throw new Error(await res.text());
 }
@@ -1421,7 +1449,7 @@ async function deleteComment(commentId) {
 async function updateComment(commentId, reviewerName, content, rating, meal, imageUrl) {
   const res = await fetch(`${SB_URL}/rest/v1/comments?id=eq.${commentId}`, {
     method: 'PATCH',
-    headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+    headers: { ...SB_HEADERS, 'Prefer': 'return=representation', 'X-Owner-Token': OWNER_SECRET },   // RLS: 소유자만 수정
     body: JSON.stringify({
       reviewer_name: reviewerName,
       content: content || null,
@@ -1542,10 +1570,10 @@ function buildCard(r) {
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
           ${c.image_url ? `<div class="review-photo-wrap"><img class="review-photo" src="${escHtml(c.image_url)}" loading="lazy" onclick="event.stopPropagation();openPhoto('${escAttr(c.image_url)}')"></div>` : ''}
         </div>
-        <div class="review-actions">
+        ${isMyComment(c.id) ? `<div class="review-actions">
           <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(r.name)}')">✏️</button>
           <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(r.name)}')">✕</button>
-        </div>
+        </div>` : ''}
       </div>`;
     }).join('')}</div>` : '';
   return `<div class="card ${cnt?'has-review':''}${r.tag?' card-extra':''}${r._nearby?' card-nearby':''}" id="c-${escAttr(r.name)}">
@@ -2300,10 +2328,10 @@ function openModal(name, feature, editC) {
           ${c.content ? `<div class="review-content">${escHtml(c.content)}</div>` : ''}
           ${c.image_url ? `<div class="review-photo-wrap"><img class="review-photo" src="${escHtml(c.image_url)}" loading="lazy" onclick="event.stopPropagation();openPhoto('${escAttr(c.image_url)}')"></div>` : ''}
         </div>
-        <div class="review-actions">
+        ${isMyComment(c.id) ? `<div class="review-actions">
           <button class="btn-edit-review" title="수정" onclick="editReview('${c.id}','${escAttr(name)}')">✏️</button>
           <button class="btn-del-review" title="삭제" onclick="confirmDelete('${c.id}','${escAttr(name)}')">✕</button>
-        </div>
+        </div>` : ''}
       </div>`;
     }).join('');
     revEl.style.display = 'flex';
