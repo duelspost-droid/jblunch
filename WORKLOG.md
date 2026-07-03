@@ -12,7 +12,7 @@
 - **사이트**: https://duelspost-droid.github.io/jblunch/
 - **저장소**: https://github.com/duelspost-droid/jblunch
 - **호스팅**: GitHub Pages (master 브랜치 push 시 자동 배포, 반영까지 1~3분)
-- **자동 추천**: GitHub Actions가 **평일(월~금) 06:30 KST** 실행 (`.github/workflows/daily-lunch.yml`, cron `30 21 * * 0-4`, 주말 제외)
+- **자동 추천**: GitHub Actions가 **평일(월~금) 06:00 KST** 실행 (`.github/workflows/daily-lunch.yml`, cron `0 21 * * 0-4`, 주말 제외)
 
 ### 기술 스택
 | 영역 | 기술 |
@@ -287,14 +287,10 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 4. **✅ [해결됨 2026-07-03] 데드코드/문서드리프트**: `updateMealInfo()` 스텁·죽은 `.meal-info` CSS·`matchCondition`/`COND_ANSWERS`/`COND_KEYWORDS`·`get_today_preference()` 제거, CLAUDE.md·WORKLOG 유령 'reviews' 테이블 삭제.
 - ✅ 감사로 확인된 **이미 처리됨**(재작업 X): track allowlist · notify_failure 부분실패 escalation · adaptive radius.
 
-### ⏳ 미완료 — 정규 배치 06:30 → 06:00 (origin 미반영, 유일한 잔여)
-- **요청**: 정규 배치를 매일 **06:00 KST**로 변경.
-- **변경 내용**: `.github/workflows/daily-lunch.yml` **line 5**
-  `cron: '30 21 * * 0-4'` → `cron: '0 21 * * 0-4'` (주석도 06:30→06:00, 21:30→21:00. UTC 21:00 = KST 06:00, 월~금)
-- **블록 사유**: 로컬 gh 토큰 스코프가 `gist, read:org, repo`뿐 — **`workflow` 스코프가 없어** 워크플로 파일 push가 OAuth App 정책으로 거부됨. **origin은 아직 06:30**(원본 그대로, 커밋된 것 없음).
-- **적용 방법(둘 중 하나)**:
-  - (a) `gh auth refresh -s workflow -h github.com` → 브라우저에서 승인 → line 5 수정 후 `git add .github/workflows/daily-lunch.yml && git commit && git pull --rebase origin master && git push`.
-  - (b) GitHub 웹에서 직접: `github.com/duelspost-droid/jblunch/edit/master/.github/workflows/daily-lunch.yml` → line 5 한 줄 수정 → Commit.
+### ✅ 완료 — 정규 배치 06:30 → 06:00 KST (2026-07-04, commit `d93310d`)
+- cron `30 21 * * 0-4` → **`0 21 * * 0-4`** (UTC 21:00 = KST 06:00, 월~금). 주석도 06:00/21:00으로 정정.
+- 로컬 gh 토큰에 `workflow` 스코프가 없어(gist·read:org·repo) push가 막혔으므로, **GitHub 웹 편집기에서 직접 수정·커밋**으로 반영(웹 세션은 workflow 스코프 불필요).
+- 참고: 앞으로 로컬에서 워크플로 파일을 push하려면 `gh auth refresh -s workflow -h github.com` 필요(현재 스코프 미보유).
 
 ---
 
