@@ -126,6 +126,11 @@ def fetch_locations():
                             "diversity": l.get("diversity")})
             except (KeyError, ValueError, TypeError):
                 continue
+        if out and not any(l.get("key") == "jb" for l in out):
+            # jb 행이 목록에서 빠지면(오타/삭제/enabled=false) JB 이메일·index.html이 조용히 영구
+            # 누락되므로 폴백 JB빌딩을 앞에 강제 추가한다.
+            print("⚠️  app_locations에 jb 없음 → JB빌딩 폴백 강제 추가")
+            out = fallback + out
         return out or fallback
     except Exception as e:
         print(f"⚠️  위치 목록 조회 실패 → JB빌딩만 처리: {e}")
@@ -753,31 +758,18 @@ def call_claude(client, prompt, use_web=True):
             ]
             return "\n".join(text_parts)
 
-        elif response.stop_reason == "tool_use":
+        elif response.stop_reason == "pause_turn":
+            # web_search_20250305 는 서버사이드 툴 — 긴 에이전틱 검색을 서버가 일시정지하면
+            # assistant 응답을 '변경 없이' messages 에 넣고 동일 tools 로 루프를 이어 재개한다.
+            # (예전엔 이 경우가 else 로 빠져 잘린 응답을 반환 → extract_json 실패·품질저하했음)
             messages.append({"role": "assistant", "content": response.content})
-
-            tool_results = []
             for block in response.content:
-                if block.type == "tool_use":
-                    query = (
-                        block.input.get("query", "...")
-                        if hasattr(block, "input")
-                        else "..."
-                    )
-                    print(f"  🔍 웹 검색: {query}")
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": "",
-                        }
-                    )
-
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
+                if getattr(block, "type", None) == "server_tool_use":
+                    q = block.input.get("query", "...") if hasattr(block, "input") else "..."
+                    print(f"  🔍 웹 검색: {q}")
 
         else:
-            # 예상치 못한 stop_reason — 텍스트라도 추출
+            # max_tokens / 예상외 stop_reason — 텍스트라도 추출 (가짜 tool_result 주입하지 않음)
             if response.stop_reason == "max_tokens":
                 print("  ⚠️  응답이 max_tokens에서 잘림 — JSON 파싱 실패 가능(max_tokens 상향 필요)")
             text_parts = [
@@ -1234,6 +1226,41 @@ def _backfill_base(entry, general_big, candidates, today, recent_names=None, tar
     return len(base) - n0
 
 
+def _clean_item(r):
+    """LLM 추천 아이템을 안전한 dict로 정규화. dict 아니거나 name(비어있지 않은 문자열) 없으면 None."""
+    if not isinstance(r, dict):
+        return None
+    name = r.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return None
+    r["name"] = name.strip()
+    for k in ("cuisine", "feature", "price", "distance"):
+        v = r.get(k)
+        r[k] = v.strip() if isinstance(v, str) else ""
+    return r
+
+
+def _normalize_entry(entry):
+    """LLM JSON의 restaurants/extras/by_condition을 안전 정규화.
+    기형 아이템(비-dict·name 없음, 비-list by_condition)을 걸러 이후 verify/id 보정 단계의
+    KeyError/TypeError(→ 위치 전체 중단)를 예방한다."""
+    for key in ("restaurants", "extras"):
+        lst = entry.get(key)
+        entry[key] = [x for x in map(_clean_item, lst) if x] if isinstance(lst, list) else []
+    bc = entry.get("by_condition")
+    if isinstance(bc, dict):
+        clean = {}
+        for cond, rlist in bc.items():
+            if isinstance(cond, str) and isinstance(rlist, list):
+                items = [x for x in map(_clean_item, rlist) if x]
+                if items:
+                    clean[cond] = items
+        entry["by_condition"] = clean
+    elif bc is not None:
+        entry["by_condition"] = {}
+    return entry
+
+
 def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=None, naver_id=None, naver_secret=None, recent_names=None, mood_ctx=""):
     """한 시간대(점심/저녁/술집) 추천 생성. {comment, restaurants, by_condition?} 반환."""
     ctx = MEAL_CTX[meal]
@@ -1370,6 +1397,9 @@ def generate_meal(client, today, date_compact, meal, with_conditions, kakao_key=
         snippet = (text or "").strip().replace("\n", " ")[:300]
         print(f"❌ [{meal}] JSON 파싱 실패 (재시도 후). 원응답≈ {snippet!r}")
         return None, text
+
+    # LLM 응답 정규화: 기형 아이템(비-dict·name 없음·비-list by_condition) 제거 → verify/id 보정 예외 방지
+    _normalize_entry(entry)
 
     # by_condition: 하이브리드 — LLM이 조건별 후보 + 웹검색으로 큐레이션(위 프롬프트).
     # LLM이 통째로 빠뜨리면 코드 조립으로 폴백. (이후 _rebalance가 중복캡 + 5곳 미만 보충 마무리)
@@ -1586,9 +1616,12 @@ def main():
 
     ok_count = 0
     failed = []
-    jb_ok = True  # JB(주력=index.html·이메일) 성공 여부. 목록에 없으면 True 유지.
+    jb_ok = True     # JB(주력=index.html·이메일) 성공 여부
+    jb_seen = False  # jb 위치가 실제로 처리됐는지 (부재 시 조용한 누락 방지)
     for i, loc in enumerate(locations):
         is_jb = loc.get("key") == "jb"
+        if is_jb:
+            jb_seen = True
         ok = False
         try:
             ok = bool(process_location(client, loc, today, date_compact, kakao_key, naver_id, naver_secret, news, stock))
@@ -1606,8 +1639,8 @@ def main():
     total = len(locations)
     # 실패 알림(notify_failure) 트리거: 전부 실패 OR JB 실패 OR 절반 초과 실패.
     # 일부만 실패해도 조용히 success로 끝나지 않게 함.
-    if ok_count == 0 or not jb_ok or len(failed) * 2 > total:
-        print(f"❌ 배치 실패 — 성공 {ok_count}/{total}, 실패: {', '.join(failed) or '(JB 포함)'}, JB_ok={jb_ok}")
+    if ok_count == 0 or not jb_ok or not jb_seen or len(failed) * 2 > total:
+        print(f"❌ 배치 실패 — 성공 {ok_count}/{total}, 실패: {', '.join(failed) or '(JB 포함)'}, JB_ok={jb_ok}, JB_seen={jb_seen}")
         sys.exit(1)
     print(f"\n✨ 완료! {ok_count}/{total}개 위치 생성됨 (실패: {', '.join(failed) or '없음'})")
 

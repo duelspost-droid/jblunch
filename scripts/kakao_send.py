@@ -104,7 +104,7 @@ def main():
         print("✅ 액세스 토큰 갱신 완료")
     except Exception as e:
         print(f"❌ 토큰 갱신 실패: {e}")
-        return
+        sys.exit(1)   # 진짜 실패(리프레시 토큰 만료 등) → step 실패시켜 notify_failure 발동
 
     try:
         send_to_me(access_token, entry["restaurants"], entry["date"],
@@ -115,6 +115,7 @@ def main():
     except Exception as e:
         body = e.read().decode() if hasattr(e, "read") else str(e)
         print(f"❌ 카카오 발송 실패: {body}")
+        sys.exit(1)   # 발송 실패(4xx/5xx) → step 실패시켜 notify_failure 발동
 
 
 if __name__ == "__main__":

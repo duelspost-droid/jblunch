@@ -5,6 +5,14 @@ on:
     - cron: '30 21 * * 0-4'  # KST 월~금 06:30 (= UTC 일~목 21:30) — 주말 제외
   workflow_dispatch:
 
+# 스케줄과 수동 dispatch(또는 사람 push)가 겹쳐 동시에 checkout→push 하지 않도록 직렬화
+concurrency:
+  group: daily-lunch
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # history.json/index.html 커밋·push (최소 권한)
+
 jobs:
   generate-recommendation:
     runs-on: ubuntu-latest
@@ -37,19 +45,41 @@ jobs:
           git config user.email "actions@github.com"
           git add history.json index.html
           git add data/ 2>/dev/null || true   # 배치된 위치 데이터(없을 수도 있음)
-          git diff --staged --quiet || git commit -m "🍽️ $(TZ=Asia/Seoul date +'%Y-%m-%d') 점심 맛집 추천 업데이트"
-          git push
-          echo "✅ 배포 완료"
-          echo "🌐 https://duelspost-droid.github.io/jblunch/"
+          if git diff --staged --quiet; then
+            echo "ℹ️  변경 없음 — push 생략"; exit 0
+          fi
+          git commit -m "🍽️ $(TZ=Asia/Seoul date +'%Y-%m-%d') 점심 맛집 추천 업데이트"
+          # 동시 실행/사람 push로 non-fast-forward 거부 시 rebase 후 재시도(최대 3회)
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "✅ 배포 완료 (attempt $attempt)"
+              echo "🌐 https://duelspost-droid.github.io/jblunch/"
+              exit 0
+            fi
+            echo "⚠️  push 거부(non-fast-forward?) — pull --rebase 후 재시도 ($attempt/3)"
+            git pull --rebase --autostash origin master || true
+            sleep 5
+          done
+          echo "❌ push 3회 실패"; exit 1
 
       - name: 카카오톡 발송
+        id: kakao
+        continue-on-error: true   # 보조 채널 — 실패해도 배치(이메일·사이트 배포) 전체를 fail 처리하지 않음
         env:
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
         run: python scripts/kakao_send.py
 
-      - name: 실패 알림 (어느 단계든 실패 시 이메일 통지)
+      - name: 카카오 발송 실패 알림 (주력 채널은 정상)
+        if: steps.kakao.outcome == 'failure'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          FAILED_CONTEXT: "카카오톡 발송만 실패 (이메일·사이트는 정상 — KAKAO_REFRESH_TOKEN 만료 여부 확인)"
+        run: python scripts/notify_failure.py
+
+      - name: 실패 알림 (생성/배포 등 주력 단계 실패 시 이메일 통지)
         if: failure()
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
