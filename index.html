@@ -167,7 +167,7 @@
     .content { max-width: 1000px; padding: 18px 24px; }
     .section .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; align-items: start; }
     /* 상단 영역도 카드와 같은 전체 폭으로 정렬 (가운데 몰림 방지) */
-    .top-banner, .meal-info, .pref-card { max-width: 100%; }
+    .top-banner, .pref-card { max-width: 100%; }
     .meal-toggle { max-width: 560px; }   /* 토글 버튼만 과도하게 넓어지지 않게 살짝 제한(좌측 정렬) */
     .tabs { padding: 0 24px; }
   }
@@ -681,11 +681,6 @@
     cursor: pointer; transition: all 0.15s;
   }
   .meal-btn.on { background: #0a3d7a; border-color: #0a3d7a; color: #fff; box-shadow: 0 2px 8px rgba(10,61,122,0.25); }
-  .meal-info {
-    font-size: 0.74rem; color: #8794a6; line-height: 1.5;
-    background: #f4f7fb; border-radius: 9px; padding: 8px 11px; margin-bottom: 14px;
-  }
-  .meal-info b { color: #0a3d7a; font-weight: 700; }
   .batch-note {
     font-size: 0.72rem; color: #9aa6b5; line-height: 1.5;
     margin: -8px 2px 14px; padding: 0 2px;
@@ -1723,7 +1718,6 @@ function renderHistory() {
     <button class="nearby-cta" onclick="goNearby()">📝 다녀온 다른 맛집에 리뷰 남기기 →</button>`;
   if (!sorted.length && useBatch()) { el.innerHTML = prefHtml; return; }
   el.innerHTML = prefHtml;
-  updateMealInfo();
   updateCondChips();
   if (useBatch()) renderCondGroup();      // 배치 데이터(JB·배치된 위치)
   else loadBankRecommend();               // 배치 없는 위치: 실시간 추천
@@ -1749,40 +1743,6 @@ let currentCond = '';   // 단일 컨디션(렌더 호환용, '': 기본)
 let currentConds = [];  // 다중 선택된 컨디션 배열 (빈 배열 = 기본=해당사항 없음)
 let locMode = false;    // 📍 내 위치 칩 활성 여부 (GPS 현재위치 기준 추천 모드)
 
-// 자유 입력 → 컨디션 키워드 매핑 (고정 도출)
-const COND_KEYWORDS = {
-  '해장 필요': ['해장','과음','술','숙취','국물','뜨끈','속풀','얼큰한국'],
-  '매콤하게': ['매콤','매운','얼큰','맵','칼칼','마라','떡볶','스트레스'],
-  '가볍게': ['가볍','가벼','샐러드','브런치','커피','간단','다이어','적게','속편'],
-  '든든하게': ['든든','배고','많이','푸짐','포만','고기많','양많','배불'],
-  '일식': ['일식','초밥','스시','소바','돈카츠','라멘','우동','회'],
-  '한식': ['한식','국밥','찌개','백반','집밥','한정식','김치'],
-  '고기': ['고기','삼겹','구이','한우','스테이크','갈비','회식','육'],
-  '혼밥': ['혼밥','혼자','빨리','빠르','간편','대기싫','웨이팅싫','후딱'],
-};
-
-// 컨디션별 답변 코멘트
-const COND_ANSWERS = {
-  '해장 필요': { emoji:'🍜', head:'해장이 필요하시군요!', body:'속을 따뜻하게 풀어줄 국물 요리 위주로 골라봤어요. 뜨끈한 국밥 한 그릇 어떠세요?' },
-  '매콤하게': { emoji:'🌶️', head:'매콤한 게 당기시네요!', body:'스트레스엔 역시 매운맛이죠. 얼큰하고 칼칼한 메뉴로 추천드려요.' },
-  '가볍게': { emoji:'🥗', head:'가볍게 드시고 싶으시군요!', body:'부담 없이 즐길 수 있는 산뜻한 메뉴 위주로 준비했어요.' },
-  '든든하게': { emoji:'🍖', head:'든든하게 채우고 싶으시죠!', body:'배부르게 먹을 수 있는 푸짐한 메뉴로 골라봤어요. 오후도 힘내세요!' },
-  '일식': { emoji:'🍣', head:'일식 기분이시네요!', body:'정갈한 일식 맛집들로 추천드려요. 소바부터 돈카츠까지 골라보세요.' },
-  '한식': { emoji:'🍚', head:'역시 한식이죠!', body:'든든한 집밥 같은 한식 맛집으로 준비했어요.' },
-  '고기': { emoji:'🥩', head:'고기가 당기시는군요!', body:'육즙 가득한 고기 맛집으로 추천드려요. 점심부터 든든하게!' },
-  '혼밥': { emoji:'🚶', head:'혼밥 모드시네요!', body:'빠르고 편하게 먹기 좋은, 혼자서도 부담 없는 곳들로 골랐어요.' },
-};
-
-function matchCondition(text) {
-  const t = text.replace(/\s/g, '');
-  let best = '', bestScore = 0;
-  for (const [cond, kws] of Object.entries(COND_KEYWORDS)) {
-    let score = 0;
-    for (const kw of kws) if (t.includes(kw)) score++;
-    if (score > bestScore) { bestScore = score; best = cond; }
-  }
-  return bestScore > 0 ? best : '';
-}
 
 const ANALYZE_URL = `${SB_URL}/functions/v1/analyze`;
 const PLACES_URL = `${SB_URL}/functions/v1/places-search`;
@@ -1879,7 +1839,6 @@ function rerunHistory(text) {
 let currentMeal = '점심';     // 점심 / 저녁 / 술집
 let customResult = null;       // {label, comment, restaurants}
 const MEAL_EMOJI = { '점심':'🍚', '저녁':'🌙', '술집':'🍺' };
-function updateMealInfo() {}
 
 // 자유 입력 추천
 function applyFreeText() {
@@ -2016,7 +1975,6 @@ function selectMeal(el) {
   if (input) input.value = '';
   document.getElementById('pref-answer').classList.remove('show');
   document.getElementById('pref-progress').classList.remove('show');
-  updateMealInfo();
   updateCondChips();
   if (useBatch()) renderCondGroup(); else loadBankRecommend();
   loadHistory();   // 시간대별 검색기록 갱신

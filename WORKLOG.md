@@ -100,8 +100,7 @@ JB_LNG = 126.927376521939
 ### 테이블
 | 테이블 | 주요 컬럼 |
 |--------|-----------|
-| `comments` | id, restaurant_id(=가게명), reviewer_name, content, rating, **meal(점심/저녁/술집)**, created_at |
-| `reviews` | id, visited |
+| `comments` | id, restaurant_id(=가게명), reviewer_name, content, rating, **meal(점심/저녁/술집)**, created_at, **owner_token(sha256 소유토큰)** |
 | `daily_preference` | date, preference |
 | `search_history` | id, text, meal, created_at |
 | `access_logs` | id, created_at, ip, action, detail, user_agent, path (RLS — service role 전용) |
@@ -282,10 +281,10 @@ curl -s -X POST "https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/datab
 
 ### 감사(audit) — 4영역 병렬 점검 → 다음 작업 백로그 (우선순위순)
 보안·배치·프론트/모바일·운영 4영역 적대적 감사. **다음 PC에서 이어서 할 후보:**
-1. **🔴 리뷰 무단 수정/삭제 (실제 익스플로잇)** — RLS가 `comments anon update/delete using(true)`(0001:214-219)로 열려, 공개 anon 키로 **누구나 모든 리뷰 DELETE/PATCH 가능**. `comments`에 소유자 컬럼 없음. → `owner_token` 컬럼+localStorage 방식, 또는 edit/delete를 admin 함수 뒤로 이동 + anon update/delete grant 회수. (effort M)
+1. **✅ [해결됨 2026-07-03] 리뷰 무단 수정/삭제** — 열린 RLS(0001) + 프로덕션 드리프트 정책 "Allow all"(public/ALL/using(true))로 anon이 모든 리뷰 DELETE/PATCH 가능하던 취약점. → migration **0002**(owner_token=sha256 해시 RLS + X-Owner-Token 헤더 대조, "Allow all" 제거, owner_token SELECT 미노출) + index.html(비밀 localStorage·해시 저장·내 리뷰에만 ✏️/✕). 커밋 cf1ec70, 라이브 검증 완료.
 2. **admin 비번 'change-me' 폴백 확인** (`admin/index.ts:107-113`) — `ADMIN_PASSWORD` 미설정 시 공개 문자열 'change-me'로 시드. **Supabase에서 실제 password_hash가 'change-me' 해시인지 5분 확인** — 맞으면 즉시 high 보안.
 3. `suggestion_add` 스팸 무방비(IP 레이트리밋 + pending 공개 제외), `review-photos` 익명 업로드 무제한(버킷 `file_size_limit`+`allowed_mime_types`, 대시보드만), admin 락아웃 XFF 스푸핑 우회.
-4. 데드코드/문서드리프트: `updateMealInfo()` 빈 스텁(+죽은 `.meal-info` CSS), `get_today_preference()` 미호출, CLAUDE.md:72 유령 'reviews' 테이블(실제는 `comments`).
+4. **✅ [해결됨 2026-07-03] 데드코드/문서드리프트**: `updateMealInfo()` 스텁·죽은 `.meal-info` CSS·`matchCondition`/`COND_ANSWERS`/`COND_KEYWORDS`·`get_today_preference()` 제거, CLAUDE.md·WORKLOG 유령 'reviews' 테이블 삭제.
 - ✅ 감사로 확인된 **이미 처리됨**(재작업 X): track allowlist · notify_failure 부분실패 escalation · adaptive radius.
 
 ### ⏳ 미완료 — 정규 배치 06:30 → 06:00 (origin 미반영, 유일한 잔여)

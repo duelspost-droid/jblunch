@@ -18,7 +18,7 @@
 ```
 GitHub Actions (평일 월~금 06:30 KST)
   └─ scripts/generate_lunch.py
-       ├─ Claude Haiku API + 웹검색 → 맛집 추천 (기본 + 컨디션 8종)
+       ├─ Claude Haiku API + 웹검색 → 맛집 추천 (기본 5곳 + 컨디션 10종)
        ├─ Supabase → 날씨/컨디션 데이터 저장
        ├─ Gmail SMTP → 이메일 발송 (duels@jbfg.com, CC: duels@hanmail.net)
        ├─ history.json + index.html 업데이트
@@ -42,6 +42,10 @@ GitHub Actions (평일 월~금 06:30 KST)
 | `GMAIL_APP_PASSWORD` | Gmail App Password |
 | `NAVER_CLIENT_ID` | Naver 지역검색 API ID (선택, developers.naver.com) |
 | `NAVER_CLIENT_SECRET` | Naver 지역검색 API 시크릿 (선택) |
+| `KAKAO_REST_API_KEY` | Kakao Local/지도 API 키 (카톡 발송·지도) |
+| `KAKAO_CLIENT_SECRET` | Kakao 앱 시크릿 (카톡 발송) |
+| `KAKAO_REFRESH_TOKEN` | Kakao '나에게 보내기' 리프레시 토큰 |
+| `SUPABASE_ACCESS_TOKEN` | Edge Function 자동배포용 (deploy-functions.yml) |
 
 ## 로컬 실행
 ```bash
@@ -69,8 +73,7 @@ gl.main()
 ## Supabase
 - **URL**: https://nrdapzgtibbusvoaceuh.supabase.co
 - **테이블**:
-  - `reviews` — 방문 체크 (id, visited)
-  - `comments` — 리뷰 (restaurant_id, reviewer_name, content, rating, meal)
+  - `comments` — 리뷰 (restaurant_id, reviewer_name, content, rating, meal, owner_token=sha256 소유토큰; anon은 owner_token 미노출 정책)
   - `daily_preference` — 오늘 컨디션 (date, preference)
   - `access_logs` / `admin_config` / `admin_sessions` — 접속로그·관리자(RLS, service role 전용)
   - `ip_geo` — IP→지역 30일 캐시 / `place_meta` — AI 맛집 소개 캐시

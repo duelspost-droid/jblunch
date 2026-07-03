@@ -707,25 +707,6 @@ def generate_daily_message(client, weather, news, restaurants):
         return ""
 
 
-def get_today_preference(today):
-    """Supabase에서 오늘 저장된 컨디션/선호도 조회."""
-    try:
-        url = f"{SB_URL}/rest/v1/daily_preference?date=eq.{today}&select=preference"
-        req = urllib.request.Request(url, headers={
-            "apikey": SB_KEY,
-            "Authorization": f"Bearer {SB_KEY}"
-        })
-        with urllib.request.urlopen(req) as r:
-            rows = json.loads(r.read())
-        if rows:
-            pref = rows[0]["preference"]
-            print(f"✅ 오늘 컨디션 발견: {pref}")
-            return pref
-    except Exception as e:
-        print(f"⚠️  컨디션 조회 실패 (무시): {e}")
-    return None
-
-
 def call_claude(client, prompt, use_web=True):
     """Claude API 호출 (web search 옵션, agentic loop). Rate limit 시 자동 재시도."""
     messages = [{"role": "user", "content": prompt}]
