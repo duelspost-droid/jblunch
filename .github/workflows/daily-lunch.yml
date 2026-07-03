@@ -2,7 +2,7 @@ name: Daily Lunch Recommendation
 
 on:
   schedule:
-    - cron: '30 21 * * 0-4'  # KST 월~금 06:30 (= UTC 일~목 21:30) — 주말 제외
+    - cron: '0 21 * * 0-4'  # KST 월~금 06:00 (= UTC 일~목 21:00) — 주말 제외
   workflow_dispatch:
 
 # 스케줄과 수동 dispatch(또는 사람 push)가 겹쳐 동시에 checkout→push 하지 않도록 직렬화
