@@ -345,6 +345,35 @@ Deno.serve(async (req) => {
       await logAdmin("diversity_set", ip, JSON.stringify(div), ua);
       return json({ ok: true, diversity: div });
     }
+
+    // ── 배치 실행 시각(KST) — 관리자 지정 (05:00~12:00, 15분 단위) ──
+    if (action === "get_batch_time") {
+      const r = await fetch(`${SB_URL}/rest/v1/app_settings?id=eq.1&select=batch_hour,batch_minute`, { headers: SH });
+      const rows = r.ok ? await r.json() : [];
+      const row = rows[0] || {};
+      const hour = Number.isInteger(row.batch_hour) ? row.batch_hour : 6;
+      const minute = Number.isInteger(row.batch_minute) ? row.batch_minute : 0;
+      return json({ ok: true, hour, minute });
+    }
+    if (action === "set_batch_time") {
+      let hour = Math.round(Number(body.hour));
+      let minute = Math.round(Number(body.minute));
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return json({ error: "시:분을 확인해 주세요." }, 400);
+      minute = Math.max(0, Math.min(59, minute));
+      minute = Math.round(minute / 15) * 15;         // 15분 단위 정규화
+      if (minute === 60) { minute = 0; hour += 1; }
+      if (hour < 5 || hour > 12 || (hour === 12 && minute > 0)) {
+        return json({ error: "배치 시각은 05:00~12:00 사이여야 해요." }, 400);
+      }
+      const r = await fetch(`${SB_URL}/rest/v1/app_settings?on_conflict=id`, {
+        method: "POST",
+        headers: { ...SH, Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ id: 1, batch_hour: hour, batch_minute: minute, updated_at: new Date().toISOString() }),
+      });
+      if (!r.ok) return json({ error: "저장 실패: " + (await r.text()) }, 500);
+      await logAdmin("batch_time_set", ip, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`, ua);
+      return json({ ok: true, hour, minute });
+    }
     // ── 추천 방식 전체 일괄 적용 ────────────────────────────────
     if (action === "loc_set_all_profile") {
       const p = (body.rec_profile || "").toString();

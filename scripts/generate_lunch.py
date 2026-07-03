@@ -437,6 +437,37 @@ def get_today_kst():
     return datetime.now(kst).strftime("%Y-%m-%d")
 
 
+def get_now_kst():
+    return datetime.now(timezone(timedelta(hours=9)))
+
+
+def fetch_batch_time():
+    """app_settings에서 관리자 지정 배치 실행 시각(KST) 로드. 실패/미설정 시 (6, 0)=06:00."""
+    try:
+        url = f"{SB_URL}/rest/v1/app_settings?id=eq.1&select=batch_hour,batch_minute"
+        req = urllib.request.Request(url, headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            rows = json.loads(r.read())
+        row = rows[0] if rows else {}
+        h = row.get("batch_hour")
+        if h is None:
+            return (6, 0)
+        return (max(0, min(23, int(h))), max(0, min(59, int(row.get("batch_minute") or 0))))
+    except Exception as e:
+        print(f"⚠️  배치 시각 조회 실패 → 기본 06:00 사용: {e}")
+        return (6, 0)
+
+
+def history_has_today(today, history_path="history.json"):
+    """오늘 날짜 추천이 이미 기록됐는지 — 하루 1회 실행 게이트용(중복 실행 방지)."""
+    try:
+        with open(history_path, encoding="utf-8") as f:
+            history = json.load(f)
+        return any(r.get("date") == today for r in history.get("recommendations", []))
+    except Exception:
+        return False
+
+
 def translate_weather_desc(desc):
     """wttr.in 영문 날씨 설명을 한글로 변환 (lang_ko 누락 대비)."""
     if not desc:
@@ -1587,6 +1618,25 @@ def main():
     date_compact = today.replace("-", "")
 
     print(f"📅 오늘 날짜 (KST): {today}")
+
+    # 예약 실행 게이트 — 스케줄(cron) 트리거일 때만 적용.
+    # 워크플로는 아침 창에서 15분마다 돌지만, 실제 배치는 관리자 지정 KST 시각
+    # 이후 첫 실행에 '하루 1회'만 동작. (수동 workflow_dispatch·로컬 실행은 게이트 없이 즉시 실행)
+    if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
+        now_kst = get_now_kst()
+        if now_kst.weekday() >= 5:  # 5=토, 6=일 (KST 기준)
+            print("⏭️  주말(KST) — 배치 미실행")
+            sys.exit(0)
+        bh, bm = fetch_batch_time()
+        target = now_kst.replace(hour=bh, minute=bm, second=0, microsecond=0)
+        if now_kst < target:
+            print(f"⏭️  예약 시각 {bh:02d}:{bm:02d} 이전 (현재 {now_kst:%H:%M} KST) — 종료")
+            sys.exit(0)
+        if history_has_today(today):
+            print(f"⏭️  오늘({today}) 이미 실행됨 — 종료")
+            sys.exit(0)
+        print(f"▶️  예약 시각 도달 — 배치 실행 (설정 {bh:02d}:{bm:02d}, 현재 {now_kst:%H:%M} KST)")
+
     if naver_id and naver_secret:
         print("✅ Naver API 설정됨 (Kakao + Naver 병렬 사용)")
     else:

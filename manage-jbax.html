@@ -452,6 +452,14 @@
     <!-- ── 탭: 설정 ── -->
     <div class="tab-pane" id="tab-set">
     <div class="card">
+      <h2 style="margin-bottom:14px">⏰ 배치 실행 시각 (한국시간)</h2>
+      <p style="margin:0 0 12px;color:#8a94a6;font-size:13px;line-height:1.5">매일 <b>평일</b> 지정한 시각쯤 오늘의 맛집을 자동 생성·발송해요. 05:00~12:00, 15분 단위.<br>※ GitHub 스케줄 특성상 실제 실행은 지정 시각 <b>직후</b>(최대 15분 내외)일 수 있어요.</p>
+      <label>실행 시각</label>
+      <select id="batch-time"></select>
+      <div class="msg" id="bt-msg"></div>
+      <button class="btn" onclick="saveBatchTime()">시각 저장</button>
+    </div>
+    <div class="card">
       <h2 style="margin-bottom:14px">🔑 비밀번호 변경</h2>
       <label>현재 비밀번호</label>
       <input type="password" id="cpw" placeholder="현재 비밀번호" autocomplete="current-password">
@@ -721,6 +729,7 @@ function render(data){
   });
   loadSuggestions();  // 기능 제안 목록
   loadDiversity();    // 추천 다양성 설정
+  loadBatchTime();    // 배치 실행 시각
 }
 
 // ── 추천 다양성 설정 ──────────────────────────────────────────
@@ -751,6 +760,36 @@ async function saveDiversity(){
   msg.className='msg'; msg.textContent='저장 중…';
   const { ok, data } = await adminCall({ action:'diversity_set', diversity, token: curToken });
   if(ok){ msg.className='msg ok'; msg.textContent='✅ 저장됨 (다음 배치부터 적용)'; }
+  else { msg.className='msg err'; msg.textContent='⚠️ '+((data&&data.error)||'저장 실패'); }
+}
+
+// ── 배치 실행 시각 (KST, 05:00~12:00 · 15분 단위) ──────────────
+function _btBuildOptions(selMin){
+  const s=document.getElementById('batch-time'); if(!s) return;
+  let html='';
+  for(let h=5; h<=12; h++){
+    for(const m of [0,15,30,45]){
+      if(h===12 && m>0) continue;                 // 12:00까지만
+      const v=h*60+m, lbl=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+      html += `<option value="${v}"${v===selMin?' selected':''}>${lbl}</option>`;
+    }
+  }
+  s.innerHTML=html;
+}
+async function loadBatchTime(){
+  const { ok, data } = await adminCall({ action:'get_batch_time', token: curToken });
+  const h = (ok && Number.isInteger(data.hour)) ? data.hour : 6;
+  const m = (ok && Number.isInteger(data.minute)) ? data.minute : 0;
+  _btBuildOptions(h*60 + m);
+}
+async function saveBatchTime(){
+  const msg=document.getElementById('bt-msg');
+  const v = parseInt(document.getElementById('batch-time').value, 10);
+  if(!Number.isFinite(v)){ msg.className='msg err'; msg.textContent='시각을 선택하세요.'; return; }
+  const hour = Math.floor(v/60), minute = v%60;
+  msg.className='msg'; msg.textContent='저장 중…';
+  const { ok, data } = await adminCall({ action:'set_batch_time', hour, minute, token: curToken });
+  if(ok){ msg.className='msg ok'; msg.textContent=`✅ 저장됨 — 매일 평일 ${String(data.hour).padStart(2,'0')}:${String(data.minute).padStart(2,'0')}쯤 실행`; }
   else { msg.className='msg err'; msg.textContent='⚠️ '+((data&&data.error)||'저장 실패'); }
 }
 
