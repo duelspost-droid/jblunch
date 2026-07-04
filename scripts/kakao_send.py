@@ -81,6 +81,12 @@ def send_to_me(access_token, restaurants, today, comment, weather="", news=None,
 
 
 def main():
+    # 배치가 예약 게이트로 건너뛴 실행(주말·시각 전·중복)이면 카카오 발송도 생략.
+    # (15분 창에서 매번 헛발송/실패 알림이 나가지 않게 — generate_lunch.py가 플래그 기록)
+    if os.path.exists(".batch_skipped"):
+        print("⏭️  배치가 예약 게이트로 건너뜀 — 카카오 발송 생략")
+        return
+
     refresh_token = os.environ.get("KAKAO_REFRESH_TOKEN")
     if not refresh_token:
         print("⚠️  KAKAO_REFRESH_TOKEN 미설정 — 카카오 발송 생략")

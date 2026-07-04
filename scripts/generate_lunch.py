@@ -1624,16 +1624,25 @@ def main():
     # 이후 첫 실행에 '하루 1회'만 동작. (수동 workflow_dispatch·로컬 실행은 게이트 없이 즉시 실행)
     if os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         now_kst = get_now_kst()
+        skip_reason = None
+        bh = bm = 0
         if now_kst.weekday() >= 5:  # 5=토, 6=일 (KST 기준)
-            print("⏭️  주말(KST) — 배치 미실행")
-            sys.exit(0)
-        bh, bm = fetch_batch_time()
-        target = now_kst.replace(hour=bh, minute=bm, second=0, microsecond=0)
-        if now_kst < target:
-            print(f"⏭️  예약 시각 {bh:02d}:{bm:02d} 이전 (현재 {now_kst:%H:%M} KST) — 종료")
-            sys.exit(0)
-        if history_has_today(today):
-            print(f"⏭️  오늘({today}) 이미 실행됨 — 종료")
+            skip_reason = "주말(KST)"
+        else:
+            bh, bm = fetch_batch_time()
+            target = now_kst.replace(hour=bh, minute=bm, second=0, microsecond=0)
+            if now_kst < target:
+                skip_reason = f"예약 시각 {bh:02d}:{bm:02d} 이전 (현재 {now_kst:%H:%M} KST)"
+            elif history_has_today(today):
+                skip_reason = f"오늘({today}) 이미 실행됨"
+        if skip_reason:
+            print(f"⏭️  {skip_reason} — 배치·발송 미실행")
+            # 이후 워크플로 스텝(카카오 발송)이 매 15분 헛돌지 않도록 스킵 플래그 기록.
+            # kakao_send.py가 이 파일을 보면 발송을 생략한다(커밋 대상 아님).
+            try:
+                open(".batch_skipped", "w").close()
+            except OSError:
+                pass
             sys.exit(0)
         print(f"▶️  예약 시각 도달 — 배치 실행 (설정 {bh:02d}:{bm:02d}, 현재 {now_kst:%H:%M} KST)")
 
