@@ -69,6 +69,7 @@ jobs:
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          KAKAO_TOKEN_SECRET: ${{ secrets.KAKAO_TOKEN_SECRET }}
         run: python scripts/kakao_send.py
 
       - name: 카카오 발송 실패 알림 (주력 채널은 정상)
