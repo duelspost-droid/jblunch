@@ -12,6 +12,51 @@ import urllib.parse
 REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "af04c6cff1c0c408283c25e84d5b481d")
 CLIENT_SECRET = os.environ.get("KAKAO_CLIENT_SECRET", "")
 
+# refresh_token 영속 저장소(Supabase 엣지함수). KAKAO_TOKEN_SECRET로 인증.
+# 카카오는 refresh_token 잔여 만료가 1개월 미만일 때만 새 refresh_token을 응답에 실어준다.
+# 그때 되저장하면, 배치가 60일 안에 최소 1회만 돌아도 토큰이 사실상 만료되지 않는다.
+SB_TOKEN_FN = "https://nrdapzgtibbusvoaceuh.supabase.co/functions/v1/kakao-token"
+# 공개 anon 키 — Supabase 함수 호출 시 JWT 검증 통과용(실제 인증은 KAKAO_TOKEN_SECRET).
+SB_ANON = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFw"
+           "emd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5"
+           "NTQ3OTYxMX0.hzAnNaPdx1AaswsY1hkzc98aRSD2PXUjVi_mLl3bzcM")
+TOKEN_SECRET = os.environ.get("KAKAO_TOKEN_SECRET", "")
+
+
+def _token_fn(action, **kw):
+    data = json.dumps({"action": action, "secret": TOKEN_SECRET, **kw}).encode()
+    req = urllib.request.Request(SB_TOKEN_FN, data=data, headers={
+        "Content-Type": "application/json",
+        "apikey": SB_ANON,
+        "Authorization": f"Bearer {SB_ANON}",
+    })
+    with urllib.request.urlopen(req, timeout=8) as r:
+        return json.loads(r.read())
+
+
+def load_refresh_token():
+    """refresh_token 로드: Supabase(단일 출처) 우선, 실패/미설정 시 GH 시크릿 시드 폴백."""
+    if TOKEN_SECRET:
+        try:
+            rt = (_token_fn("get") or {}).get("refresh_token")
+            if rt:
+                return rt
+            print("ℹ️  Supabase에 저장된 토큰 없음 — 시드(KAKAO_REFRESH_TOKEN) 사용")
+        except Exception as e:
+            print(f"⚠️  토큰 조회 실패 → 시드 폴백: {e}")
+    return os.environ.get("KAKAO_REFRESH_TOKEN")
+
+
+def save_refresh_token(new_rt):
+    """카카오가 회전시켜 준 새 refresh_token을 Supabase에 되저장(사실상 무기한 유지)."""
+    if not (TOKEN_SECRET and new_rt):
+        return
+    try:
+        _token_fn("set", refresh_token=new_rt)
+        print("🔄 회전된 refresh_token 저장 완료 (다음 실행부터 새 토큰 사용)")
+    except Exception as e:
+        print(f"⚠️  회전 토큰 저장 실패 (다음 실행에서 재시도): {e}")
+
 
 def refresh_access_token(refresh_token):
     """리프레시 토큰으로 새 액세스 토큰 발급."""
@@ -87,9 +132,9 @@ def main():
         print("⏭️  배치가 예약 게이트로 건너뜀 — 카카오 발송 생략")
         return
 
-    refresh_token = os.environ.get("KAKAO_REFRESH_TOKEN")
+    refresh_token = load_refresh_token()
     if not refresh_token:
-        print("⚠️  KAKAO_REFRESH_TOKEN 미설정 — 카카오 발송 생략")
+        print("⚠️  refresh_token 없음(Supabase·KAKAO_REFRESH_TOKEN 모두) — 카카오 발송 생략")
         return
 
     # history.json에서 오늘 추천 로드 (없거나 손상 시: 1차 실패가 2차 오류로 가려지지 않게 정상 종료)
@@ -108,6 +153,10 @@ def main():
         tokens = refresh_access_token(refresh_token)
         access_token = tokens["access_token"]
         print("✅ 액세스 토큰 갱신 완료")
+        # 카카오가 회전시켜 준 새 refresh_token이 오면 저장소에 반영(무기한 유지의 핵심)
+        new_rt = tokens.get("refresh_token")
+        if new_rt and new_rt != refresh_token:
+            save_refresh_token(new_rt)
     except Exception as e:
         print(f"❌ 토큰 갱신 실패: {e}")
         sys.exit(1)   # 진짜 실패(리프레시 토큰 만료 등) → step 실패시켜 notify_failure 발동
