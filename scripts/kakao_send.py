@@ -15,7 +15,7 @@ CLIENT_SECRET = os.environ.get("KAKAO_CLIENT_SECRET", "")
 # refresh_token 영속 저장소(Supabase 엣지함수). KAKAO_TOKEN_SECRET로 인증.
 # 카카오는 refresh_token 잔여 만료가 1개월 미만일 때만 새 refresh_token을 응답에 실어준다.
 # 그때 되저장하면, 배치가 60일 안에 최소 1회만 돌아도 토큰이 사실상 만료되지 않는다.
-SB_TOKEN_FN = "https://nrdapzgtibbusvoaceuh.supabase.co/functions/v1/kakao-token"
+SB_TOKEN_FN = "https://nrdapzgtibbusvoaceuh.supabase.co/functions/v1/admin"
 # 공개 anon 키 — Supabase 함수 호출 시 JWT 검증 통과용(실제 인증은 KAKAO_TOKEN_SECRET).
 SB_ANON = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yZGFw"
            "emd0aWJidXN2b2FjZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDM2MTEsImV4cCI6MjA5"
@@ -38,7 +38,7 @@ def load_refresh_token():
     """refresh_token 로드: Supabase(단일 출처) 우선, 실패/미설정 시 GH 시크릿 시드 폴백."""
     if TOKEN_SECRET:
         try:
-            rt = (_token_fn("get") or {}).get("refresh_token")
+            rt = (_token_fn("kakao_token_get") or {}).get("refresh_token")
             if rt:
                 return rt
             print("ℹ️  Supabase에 저장된 토큰 없음 — 시드(KAKAO_REFRESH_TOKEN) 사용")
@@ -52,7 +52,7 @@ def save_refresh_token(new_rt):
     if not (TOKEN_SECRET and new_rt):
         return
     try:
-        _token_fn("set", refresh_token=new_rt)
+        _token_fn("kakao_token_set", refresh_token=new_rt)
         print("🔄 회전된 refresh_token 저장 완료 (다음 실행부터 새 토큰 사용)")
     except Exception as e:
         print(f"⚠️  회전 토큰 저장 실패 (다음 실행에서 재시도): {e}")

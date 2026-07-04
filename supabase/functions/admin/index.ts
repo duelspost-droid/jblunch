@@ -250,6 +250,28 @@ Deno.serve(async (req) => {
       return json({ ok: true, qna: r.ok ? await r.json() : [] });
     }
 
+    // ── 카카오 refresh_token 저장소 (배치 전용, 공유 시크릿 인증 · 관리자 인증 게이트 앞) ──
+    if (action === "kakao_token_get" || action === "kakao_token_set") {
+      const KT_SECRET = Deno.env.get("KAKAO_TOKEN_SECRET") || "";
+      if (!KT_SECRET || (body.secret || "").toString() !== KT_SECRET) {
+        return json({ error: "unauthorized" }, 401);
+      }
+      if (action === "kakao_token_get") {
+        const r = await fetch(`${SB_URL}/rest/v1/kakao_tokens?id=eq.1&select=refresh_token`, { headers: SH });
+        const rows = r.ok ? await r.json() : [];
+        return json({ refresh_token: (rows[0] && rows[0].refresh_token) || null });
+      }
+      const rt = (body.refresh_token || "").toString();
+      if (rt.length < 20) return json({ error: "bad token" }, 400);
+      const rr = await fetch(`${SB_URL}/rest/v1/kakao_tokens?on_conflict=id`, {
+        method: "POST",
+        headers: { ...SH, Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify({ id: 1, refresh_token: rt, updated_at: new Date().toISOString() }),
+      });
+      if (!rr.ok) return json({ error: "저장 실패: " + (await rr.text()) }, 500);
+      return json({ ok: true });
+    }
+
     // ── 그 외(로그/로그아웃): 토큰 인증 (레거시 비번도 허용, 단 잠금 적용) ──
     const token = (body.token || "").toString();
     let authed = await validSession(token);
