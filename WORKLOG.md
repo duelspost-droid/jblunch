@@ -310,6 +310,16 @@ gh run view <run-id> --log | grep -E "Rate limit|JSON 파싱|❌"
 
 ---
 
+## 8-1. 카카오 토큰 자동갱신 (사실상 무기한, 2026-07-04 구축)
+
+카카오 refresh_token은 60일 고정이나, 잔여 만료 1개월 미만일 때 refresh 응답에 새 토큰이 실려온다. 이를 저장하면 배치가 60일 안에 1회만 돌아도 계속 갱신됨.
+- **저장소**: Supabase `kakao_tokens`(싱글턴, service-role 전용). 배치는 **admin 함수의 `kakao_token_get`/`kakao_token_set`** 액션으로 접근(공유시크릿 `KAKAO_TOKEN_SECRET` 인증).
+- **`KAKAO_TOKEN_SECRET`**: GitHub Secret + **Supabase Edge Functions Secrets** 양쪽에 **동일 랜덤값**. 둘이 다르면 401 → 발송은 `KAKAO_REFRESH_TOKEN` 시드로 폴백.
+- **kakao_send.py**: `load_refresh_token()`(Supabase get→실패 시 `KAKAO_REFRESH_TOKEN` 시드) → refresh → 응답에 새 refresh_token 오면 `kakao_token_set`으로 되저장.
+- **재발급이 필요한 경우**(배치가 60일+ 완전 중단 시): `callback.html`로 code 받아 → 교환 → `kakao_token_set`(Supabase) + `KAKAO_REFRESH_TOKEN`(GH) 둘 다 갱신. client_secret은 콘솔 앱키 페이지의 '클라이언트 시크릿'. redirect_uri=`https://duelspost-droid.github.io/jblunch/callback.html`.
+
+---
+
 ## 9. 알려진 이슈 / 다음 작업 후보
 
 - **Rate limit**: Haiku 10k tokens/min. 저녁(컨디션 10종) 생성이 가끔 실패.
