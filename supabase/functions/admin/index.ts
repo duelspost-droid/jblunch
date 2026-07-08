@@ -107,7 +107,14 @@ async function getConfig(): Promise<{ password_hash: string; salt: string | null
 async function ensureSeed() {
   const cfg = await getConfig();
   if (!cfg.password_hash) {
-    const seed = Deno.env.get("ADMIN_PASSWORD") || "change-me";
+    // 공개 저장소 문자열('change-me') 폴백 제거 — DB 리셋/최초배포 창에서 누구나
+    // 그 비번으로 로그인해 관리자 장악하던 취약점 방지. 강한 ADMIN_PASSWORD 시크릿이
+    // 있을 때만 시드하고, 없으면 시드 생략(로그인 불가 = fail-secure).
+    const seed = Deno.env.get("ADMIN_PASSWORD") || "";
+    if (seed.length < 12) {
+      console.error("⚠️ ADMIN_PASSWORD 미설정/12자 미만 — 관리자 비번 시드 생략(공개 폴백 제거).");
+      return;
+    }
     await setPassword(seed);
   }
 }
