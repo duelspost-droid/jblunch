@@ -2487,15 +2487,16 @@ async function openShare(name) {
   if (distance) meta.push(`${typeof distIcon === 'function' ? distIcon(distance) : '🚶'} ${distance}`);
   if (meta.length) lines.push(meta.join('  ·  '));
   if (intro) lines.push(`\n“${intro}”`);
-  lines.push(`\n📲 여의나루 점심 맛집 트래커 — 리뷰·지도·예약 보기\n${url}`);
-  const text = lines.join('\n');   // 본문에도 URL 포함(앱별 누락 방지)
+  lines.push(`\n📲 여의나루 점심 맛집 트래커 — 리뷰·지도·예약 보기`);   // URL은 아래 url 필드로만
+  const body = lines.join('\n');
   if (navigator.share) {
-    try { await navigator.share({ title: name, text, url }); return; }
+    // url을 전용 필드로만 전달(text엔 URL 미포함) → 공유 대상에서 링크가 두 번 나오지 않음
+    try { await navigator.share({ title: name, text: body, url }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }  // 사용자가 취소
   }
-  // 폴백: 클립보드 복사
+  // 폴백: 클립보드 복사 (본문 + URL 한 번)
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(`${body}\n${url}`);
     showToast('🔗 리뷰 링크가 복사되었어요!');
     return;
   } catch (e) {}
