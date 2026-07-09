@@ -2410,15 +2410,25 @@ function routeIsCar(name) {
   return false;
 }
 function routeWord(car) { return car ? '자동차' : '도보'; }
+// 경로 출발지: 내 위치(GPS)로 검색·보기 중이면 현재 GPS 좌표, 아니면 선택 기준위치(JB빌딩 등).
+// (예전엔 항상 기준위치라, '내 위치' 검색 후 길찾기 시 출발이 회사로 잡히던 버그)
+function routeOrigin() {
+  if (myPos && (locMode || placeOrigin === '현위치')) {
+    return { lat: myPos.lat, lng: myPos.lng, short: '내 위치' };
+  }
+  return { lat: LOC().lat, lng: LOC().lng, short: LOC().short };
+}
 // 구글지도 키리스 임베드(output=embed): iframe 안에서 렌더 → 외부 앱 호출 없음
 function routeEmbedUrl(name, lng, lat, car) {
-  const saddr = `${LOC().lat},${LOC().lng}`;
+  const o = routeOrigin();
+  const saddr = `${o.lat},${o.lng}`;
   const daddr = (lng && lat) ? `${lat},${lng}(${name})` : `${name} ${LOC().region}`;
   return `https://maps.google.com/maps?saddr=${encodeURIComponent(saddr)}&daddr=${encodeURIComponent(daddr)}&dirflg=${car ? 'd' : 'w'}&hl=ko&output=embed`;
 }
 // 새 탭용(임베드가 막힐 때 대비) — 역시 웹
 function routeWebUrl(name, lng, lat, car) {
-  const o = `${LOC().lat},${LOC().lng}`;
+  const org = routeOrigin();
+  const o = `${org.lat},${org.lng}`;
   const d = (lng && lat) ? `${lat},${lng}` : `${name} ${LOC().region}`;
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&travelmode=${car ? 'driving' : 'walking'}&hl=ko`;
 }
@@ -2429,14 +2439,15 @@ function closeRoute() {
 }
 function showRoute(name, lng, lat) {
   const car = routeIsCar(name);
-  document.getElementById('route-title').textContent = `${car ? '🚗' : '🚶'} ${LOC().short} → ${name}`;
+  document.getElementById('route-title').textContent = `${car ? '🚗' : '🚶'} ${routeOrigin().short} → ${name}`;
   document.getElementById('route-frame').src = routeEmbedUrl(name, lng, lat, car);
   document.getElementById('route-ext').href = routeWebUrl(name, lng, lat, car);
   document.getElementById('route-bg').style.display = 'flex';
 }
 // 네이버 지도 웹 길찾기 URL (출발: 선택 위치 → 목적지, 도보/자동차)
 function naverRouteUrl(name, lng, lat, car) {
-  const start = `${LOC().lng},${LOC().lat},${encodeURIComponent(LOC().short)},,`;
+  const org = routeOrigin();
+  const start = `${org.lng},${org.lat},${encodeURIComponent(org.short)},,`;
   return (lng && lat)
     ? `https://map.naver.com/p/directions/${start}/${lng},${lat},${encodeURIComponent(name)},,/-/${car ? 'car' : 'walk'}`
     : `https://map.naver.com/p/search/${encodeURIComponent(name + ' ' + LOC().region)}`;
@@ -2457,17 +2468,27 @@ async function openMapRoute(name) {
 async function openShare(name) {
   // 쿼리 파라미터(?r=) — 해시보다 공유 앱 전달이 안정적
   const url = `${location.origin}${location.pathname}?r=${encodeURIComponent(name)}`;
-  // 리뷰 요약(평점·개수) + 소개 한 줄
+  // 리뷰·가게정보 요약 → 정교한 공유 카드 텍스트 (종류·평점·가격·거리·소개)
   const cms = commentsState[name] || [];
   const rs = cms.map(c => c.rating).filter(Boolean);
   const avg = rs.length ? (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1) : null;
-  const info = (typeof findRestaurant === 'function' ? findRestaurant(name) : null) || {};
-  const intro = (placeIntros[name] || info.feature || '').slice(0, 60);
-  let text = `🍽️ ${name}`;
-  if (avg) text += `  ⭐${avg} · 리뷰 ${cms.length}개`;
-  else if (cms.length) text += `  리뷰 ${cms.length}개`;
-  if (intro) text += `\n${intro}`;
-  text += `\n\nJB×AX 맛집 트래커에서 리뷰 보기 👇\n${url}`;  // 본문에도 URL 포함(앱별 누락 방지)
+  const info = (typeof findRestaurant === 'function' ? findRestaurant(name) : null) || placeDetails[name] || {};
+  const cuisine = (info.cuisine || '').trim();
+  const price = (info.price || '').trim();
+  const distance = (info.distance || '').trim();
+  const intro = (placeIntros[name] || info.feature || '').trim().slice(0, 90);
+  const emoji = (typeof emo === 'function' ? emo(cuisine) : '🍽️');
+
+  const lines = [`${emoji} ${name}${cuisine ? `  ·  ${cuisine}` : ''}`];
+  if (avg) lines.push(`⭐ ${avg}  ·  리뷰 ${cms.length}개`);
+  else if (cms.length) lines.push(`💬 리뷰 ${cms.length}개`);
+  const meta = [];
+  if (price) meta.push(`💰 ${price}`);
+  if (distance) meta.push(`${typeof distIcon === 'function' ? distIcon(distance) : '🚶'} ${distance}`);
+  if (meta.length) lines.push(meta.join('  ·  '));
+  if (intro) lines.push(`\n“${intro}”`);
+  lines.push(`\n📲 여의나루 점심 맛집 트래커 — 리뷰·지도·예약 보기\n${url}`);
+  const text = lines.join('\n');   // 본문에도 URL 포함(앱별 누락 방지)
   if (navigator.share) {
     try { await navigator.share({ title: name, text, url }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }  // 사용자가 취소
