@@ -1,6 +1,1216 @@
 {
   "recommendations": [
     {
+      "date": "2026-07-16",
+      "comment": "부분적으로 흐리지만 적당히 쌀쌀하지 않은 날씨, 그리고 회사의 긍정적인 뉴스와 주가 상승이 함께하는 오늘—가깝고 든든한 밥상으로 팀 분위기를 띄워보세요.",
+      "message": "오늘은 낮 기온이 31도까지 올라갈 예정으로, 시원한 국물 요리인 남도소머리국밥이나 신가화로의 메뉴를 추천드립니다. 한편 금융자금의 행선지가 피지컬 AI 로봇으로 주목받는 등 그룹의 기술 혁신 기조가 계속되고 있으니, 점심 시간에 여유 있게 식사하시며 소식을 살펴보시기 바랍니다.",
+      "weather": "부분적으로 흐림 24°C (최저 20° / 최고 31°)",
+      "news": [
+        {
+          "title": "금융자금의 다음 행선지 피지컬 AI···로봇 본체 넘어 데이터·두뇌로",
+          "link": "https://www.womaneconomy.co.kr/news/articleView.html?idxno=256171",
+          "focus": true
+        },
+        {
+          "title": "\"BNK금융-JB금융 합병해야\" 고개 드는 지방금융 합병론. 배경은?",
+          "link": "https://www.autodaily.co.kr/news/articleView.html?idxno=545788",
+          "focus": false
+        },
+        {
+          "title": "[김제소식]전북은행, 김제시에 위생용품 100상자 기탁 등",
+          "link": "https://www.newsis.com/view/NISX20260715_0003709913",
+          "focus": false
+        }
+      ],
+      "restaurants": [
+        {
+          "name": "신가화로",
+          "cuisine": "한식",
+          "feature": "고소한 국물과 신선한 재료의 조화, 든든한 밥상",
+          "price": "보통",
+          "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+          "id": "20260716-1",
+          "verified": true
+        },
+        {
+          "name": "청년식탁사잇길",
+          "cuisine": "한식",
+          "feature": "혼밥도 편한 정갈한 한끼, 신선한 반찬",
+          "price": "보통",
+          "distance": "도보 2분 (카카오) / 도보 3분 (네이버)",
+          "id": "20260716-2",
+          "verified": true
+        },
+        {
+          "name": "남도소머리국밥",
+          "cuisine": "한식",
+          "feature": "깊은 국물맛, 진하고 따뜻한 위로 한 그릇",
+          "price": "저렴",
+          "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+          "id": "20260716-3",
+          "verified": true
+        },
+        {
+          "name": "도꾸이",
+          "cuisine": "일식",
+          "feature": "신선한 초밥과 함께 상큼하고 담백하게",
+          "price": "보통",
+          "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+          "id": "20260716-4",
+          "verified": true
+        },
+        {
+          "name": "뜰안에밥상",
+          "cuisine": "한식",
+          "feature": "푸짐한 한정식, 정성 가득한 상차림",
+          "price": "비쌈",
+          "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+          "id": "20260716-5",
+          "verified": true
+        }
+      ],
+      "extras": [
+        {
+          "name": "족보설렁탕",
+          "cuisine": "한식",
+          "feature": "담백하고 깔끔한 국물, 속을 데우는 따뜻함",
+          "price": "보통",
+          "distance": "차로 4분 · 약 1.5km (카카오) / 차로 4분 · 약 1.5km (네이버)",
+          "tag": "근처유명",
+          "id": "20260716-x1",
+          "verified": true
+        },
+        {
+          "name": "고궁",
+          "cuisine": "한식",
+          "feature": "전주비빔밥 명가, 한옥 감성의 고급스러운 분위기",
+          "price": "비쌈",
+          "distance": "차로 4분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+          "tag": "검색유명",
+          "id": "20260716-x2",
+          "verified": true
+        },
+        {
+          "name": "완산벌연탄집",
+          "cuisine": "고기",
+          "feature": "초벌 숯불 구이, 깔끔하고 맛있는 고기의 본질",
+          "price": "비쌈",
+          "distance": "차로 8분 · 약 2.7km (카카오) / 차로 8분 · 약 2.7km (네이버)",
+          "tag": "신규맛집",
+          "id": "20260716-x3",
+          "verified": true
+        }
+      ],
+      "by_condition": {
+        "해장 필요": [
+          {
+            "name": "남도소머리국밥",
+            "cuisine": "한식",
+            "feature": "진한 국물, 해장의 진리",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-해장-1",
+            "verified": true
+          },
+          {
+            "name": "청년감자탕순대국 전북대점",
+            "cuisine": "한식",
+            "feature": "뜨거운 국물, 든든한 한끼",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260716-해장-2",
+            "verified": true
+          },
+          {
+            "name": "큰맘할매순대국 전주1호점",
+            "cuisine": "한식",
+            "feature": "옛스러운 맛, 푸근한 위로",
+            "price": "저렴",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260716-해장-3",
+            "verified": true
+          },
+          {
+            "name": "족보설렁탕",
+            "cuisine": "한식",
+            "feature": "담백한 육수, 속을 채우는 따뜻함",
+            "price": "보통",
+            "distance": "차로 4분 · 약 1.5km (카카오) / 차로 4분 · 약 1.5km (네이버)",
+            "id": "20260716-해장-4",
+            "verified": true
+          },
+          {
+            "name": "본설렁탕 전주금암점",
+            "cuisine": "한식",
+            "feature": "고소한 국물, 피로를 씻는 진국",
+            "price": "저렴",
+            "distance": "도보 7분 (카카오)",
+            "id": "20260716-해장-5",
+            "verified": true
+          }
+        ],
+        "매콤하게": [
+          {
+            "name": "천일반점",
+            "cuisine": "중식",
+            "feature": "칼칼한 맛, 자극적인 맛깔",
+            "price": "저렴",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260716-매콤-1",
+            "verified": true
+          },
+          {
+            "name": "굿모닝",
+            "cuisine": "중식",
+            "feature": "적당한 매운맛, 중식 특유의 향",
+            "price": "저렴",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-매콤-2",
+            "verified": true
+          },
+          {
+            "name": "이비가짬뽕 전주금암점",
+            "cuisine": "중식",
+            "feature": "매콤한 국물, 해산물의 풍미",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-매콤-3",
+            "verified": true
+          },
+          {
+            "name": "백리향",
+            "cuisine": "중식",
+            "feature": "깊은 양념, 맵고 고소한 맛",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-매콤-4",
+            "verified": true
+          },
+          {
+            "name": "춘리마라탕",
+            "cuisine": "중식",
+            "feature": "마라의 정취, 중독적인 맛",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260716-매콤-5",
+            "verified": true
+          }
+        ],
+        "가볍게": [
+          {
+            "name": "해브어굿샐",
+            "cuisine": "양식",
+            "feature": "신선한 재료, 담백한 한 끼",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-가볍-1",
+            "verified": true
+          },
+          {
+            "name": "필라델피아",
+            "cuisine": "양식",
+            "feature": "이탈리안의 감칠맛, 가벼운 점심",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-가볍-2",
+            "verified": true
+          },
+          {
+            "name": "치팅데이 전북대점",
+            "cuisine": "양식",
+            "feature": "캐주얼한 분위기, 편안한 양식",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260716-가볍-3",
+            "verified": true
+          },
+          {
+            "name": "롤링파스타 전북대점",
+            "cuisine": "양식",
+            "feature": "신선한 파스타, 가벼운 소스",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260716-가볍-4",
+            "verified": true
+          },
+          {
+            "name": "파파존스 전주점",
+            "cuisine": "양식",
+            "feature": "피자의 감칠맛, 편한 한끼",
+            "price": "보통",
+            "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260716-가볍-5",
+            "verified": true
+          }
+        ],
+        "든든하게": [
+          {
+            "name": "조선무청시래기 금암점",
+            "cuisine": "한식",
+            "feature": "시래기의 풍미, 할머니표 국밥",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-든든-1",
+            "verified": true
+          },
+          {
+            "name": "국면당 금암본점",
+            "cuisine": "한식",
+            "feature": "칼국수와 우동, 정성 가득한 한 그릇",
+            "price": "저렴",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260716-든든-2",
+            "verified": true
+          },
+          {
+            "name": "서울전통육개장 전주터미널점",
+            "cuisine": "한식",
+            "feature": "깊은 육국물, 속을 채우는 매운맛",
+            "price": "보통",
+            "distance": "도보 6분 (카카오)",
+            "id": "20260716-든든-3",
+            "verified": true
+          },
+          {
+            "name": "뜰안에밥상",
+            "cuisine": "한식",
+            "feature": "푸짐한 밥상, 몸과 마음을 채우는 한정식",
+            "price": "비쌈",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260716-든든-4",
+            "verified": true
+          },
+          {
+            "name": "고기듬뿍국물두루치기 본점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260716-든든-5",
+            "verified": true
+          }
+        ],
+        "일식": [
+          {
+            "name": "도꾸이",
+            "cuisine": "일식",
+            "feature": "신선한 초밥, 담백한 맛",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-일식-1",
+            "verified": true
+          },
+          {
+            "name": "료카츠",
+            "cuisine": "일식",
+            "feature": "고급 카츠의 정취, 고소한 튀김",
+            "price": "비쌈",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-일식-2",
+            "verified": true
+          },
+          {
+            "name": "금암소바",
+            "cuisine": "일식",
+            "feature": "메밀 달인의 깊은 국물, 전통의 맛",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-일식-3",
+            "verified": true
+          },
+          {
+            "name": "코이누",
+            "cuisine": "일식",
+            "feature": "정통 초밥, 신선한 한끼",
+            "price": "보통",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260716-일식-4",
+            "verified": true
+          },
+          {
+            "name": "카츠호",
+            "cuisine": "일식",
+            "feature": "돈까스의 바삭함, 소스의 감칠맛",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-일식-5",
+            "verified": true
+          }
+        ],
+        "한식": [
+          {
+            "name": "신가화로",
+            "cuisine": "한식",
+            "feature": "정갈한 밥상, 신선한 재료",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260716-한식-1",
+            "verified": true
+          },
+          {
+            "name": "청년식탁사잇길",
+            "cuisine": "한식",
+            "feature": "혼밥 친화, 깔끔한 반찬",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-한식-2",
+            "verified": true
+          },
+          {
+            "name": "금암피순대",
+            "cuisine": "한식",
+            "feature": "순대국의 진수, 푸른 채소의 맛",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-한식-3",
+            "verified": true
+          },
+          {
+            "name": "정주분식",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260716-한식-4",
+            "verified": true
+          },
+          {
+            "name": "장충동왕족발 전주점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260716-한식-5",
+            "verified": true
+          }
+        ],
+        "고기": [
+          {
+            "name": "고기듬뿍국물두루치기 본점",
+            "cuisine": "고기",
+            "feature": "국물 두루치기의 진수, 밥도둑",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260716-고기-1",
+            "verified": true
+          },
+          {
+            "name": "완산벌연탄집",
+            "cuisine": "고기",
+            "feature": "숯불 구이, 깔끔한 맛의 정석",
+            "price": "비쌈",
+            "distance": "차로 8분 · 약 2.7km (카카오) / 차로 8분 · 약 2.7km (네이버)",
+            "id": "20260716-고기-2",
+            "verified": true
+          },
+          {
+            "name": "장충동왕족발",
+            "cuisine": "고기",
+            "feature": "족발의 맛, 쫀득한 식감",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260716-고기-3",
+            "verified": true
+          },
+          {
+            "name": "삼형제솥뚜껑삼겹살 전북대본점",
+            "cuisine": "고기",
+            "feature": "솥뚜껑 구이, 숯불 풍미",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-고기-4",
+            "verified": true
+          },
+          {
+            "name": "오늘김해뒷고기 전북대점",
+            "cuisine": "고기",
+            "feature": "뒷고기의 육즙, 직화의 맛",
+            "price": "보통",
+            "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260716-고기-5",
+            "verified": true
+          }
+        ],
+        "혼밥": [
+          {
+            "name": "해브어굿샐",
+            "cuisine": "양식",
+            "feature": "가볍고 편한, 혼자도 좋은",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-혼밥-1",
+            "verified": true
+          },
+          {
+            "name": "금암소바",
+            "cuisine": "일식",
+            "feature": "면요리의 묘미, 혼밥 천국",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-혼밥-2",
+            "verified": true
+          },
+          {
+            "name": "파리바게뜨 전주남도",
+            "cuisine": "간식",
+            "feature": "가볍고 빠른, 간편한 한끼",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-혼밥-3",
+            "verified": true
+          },
+          {
+            "name": "풍천민물숯불장어",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-혼밥-4",
+            "verified": true
+          },
+          {
+            "name": "금암면옥 본점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260716-혼밥-5",
+            "verified": true
+          }
+        ],
+        "와인": [
+          {
+            "name": "필라델피아",
+            "cuisine": "양식",
+            "feature": "와인과 어울리는 이탈리안",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-와인-1",
+            "verified": true
+          },
+          {
+            "name": "북대가자",
+            "cuisine": "술집",
+            "feature": "술 안주가 풍성한, 편한 분위기",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-와인-2",
+            "verified": true
+          },
+          {
+            "name": "7월의밤",
+            "cuisine": "술집",
+            "feature": "감성 있는 저녁, 술 친구의 최고",
+            "price": "보통",
+            "distance": "도보 6분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-와인-3",
+            "verified": true
+          },
+          {
+            "name": "파쿠야 전주점",
+            "cuisine": "술집",
+            "feature": "일식 안주, 술 한잔의 정취",
+            "price": "보통",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260716-와인-4",
+            "verified": true
+          },
+          {
+            "name": "코츠모",
+            "cuisine": "술집",
+            "feature": "편한 분위기, 가볍게 즐기는",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260716-와인-5",
+            "verified": true
+          }
+        ],
+        "임원": [
+          {
+            "name": "족보설렁탕",
+            "cuisine": "한식",
+            "feature": "깔끔한 한정식, 조용한 분위기",
+            "price": "보통",
+            "distance": "차로 4분 · 약 1.5km (카카오) / 차로 4분 · 약 1.5km (네이버)",
+            "id": "20260716-임원-1",
+            "verified": true
+          },
+          {
+            "name": "고궁",
+            "cuisine": "한식",
+            "feature": "한옥 운치, 격조 있는 한정식",
+            "price": "비쌈",
+            "distance": "차로 4분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+            "id": "20260716-임원-2",
+            "verified": true
+          },
+          {
+            "name": "완산벌연탄집",
+            "cuisine": "고기",
+            "feature": "고급 고기, 세련된 상차림",
+            "price": "비쌈",
+            "distance": "차로 8분 · 약 2.7km (카카오) / 차로 8분 · 약 2.7km (네이버)",
+            "id": "20260716-임원-3",
+            "verified": true
+          },
+          {
+            "name": "국면당 금암본점",
+            "cuisine": "한식",
+            "feature": "정통 국수, 차분한 분위기",
+            "price": "저렴",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260716-임원-4",
+            "verified": true
+          },
+          {
+            "name": "완산동까스",
+            "cuisine": "일식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260716-임원-5",
+            "verified": true
+          }
+        ]
+      },
+      "meals": {
+        "저녁": {
+          "restaurants": [
+            {
+              "name": "신가화로",
+              "cuisine": "한식",
+              "feature": "깔끔한 전주 향토 음식 · 회식 분위기 최적",
+              "price": "보통",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260716-D-1",
+              "verified": true
+            },
+            {
+              "name": "청년식탁사잇길",
+              "cuisine": "한식",
+              "feature": "감성 있는 한정식 · 소규모 모임 좋음",
+              "price": "보통",
+              "distance": "도보 2분 (카카오) / 도보 3분 (네이버)",
+              "id": "20260716-D-2",
+              "verified": true
+            },
+            {
+              "name": "료카츠",
+              "cuisine": "일식",
+              "feature": "아늑한 분위기의 일식당 · 신선한 메뉴",
+              "price": "보통",
+              "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+              "id": "20260716-D-3",
+              "verified": true
+            },
+            {
+              "name": "완산동까스",
+              "cuisine": "일식",
+              "feature": "프리미엄 돈카츠 · 색다른 저녁 경험",
+              "price": "보통",
+              "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+              "id": "20260716-D-4",
+              "verified": true
+            },
+            {
+              "name": "필라델피아",
+              "cuisine": "양식",
+              "feature": "우아한 양식당 · 특별한 모임 분위기",
+              "price": "비쌈",
+              "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+              "id": "20260716-D-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "강담",
+              "cuisine": "일식/오마카세",
+              "feature": "고급스러운 숙성 일식 · 접대 최적",
+              "price": "비쌈",
+              "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+              "tag": "근처유명",
+              "id": "20260716-D-x1",
+              "verified": true
+            },
+            {
+              "name": "늘채움",
+              "cuisine": "한정식",
+              "feature": "33년 노포의 푸짐한 상차림 · 회식의 정석",
+              "price": "보통",
+              "distance": "차로 4분 · 약 1.2km (카카오) / 차로 4분 · 약 1.2km (네이버)",
+              "tag": "검색유명",
+              "id": "20260716-D-x2",
+              "verified": true
+            },
+            {
+              "name": "진미식당",
+              "cuisine": "한식",
+              "feature": "전주 게장과 한정식 · 새로운 맛의 발견",
+              "price": "보통",
+              "distance": "차로 6분 · 약 2.1km (카카오) / 차로 7분 · 약 2.4km (네이버)",
+              "tag": "신규맛집",
+              "id": "20260716-D-x3",
+              "verified": true
+            }
+          ],
+          "by_condition": {
+            "해장 필요": [
+              {
+                "name": "청년감자탕순대국 전북대점",
+                "cuisine": "한식",
+                "feature": "뜨끈한 감자탕국물",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-해장-1",
+                "verified": true
+              },
+              {
+                "name": "남도소머리국밥",
+                "cuisine": "한식",
+                "feature": "국물진 소머리국밥",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-해장-2",
+                "verified": true
+              },
+              {
+                "name": "본설렁탕 전주금암점",
+                "cuisine": "한식",
+                "feature": "진한 소도둑 국물",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오)",
+                "id": "20260716-D-해장-3",
+                "verified": true
+              },
+              {
+                "name": "서울전통육개장",
+                "cuisine": "한식",
+                "feature": "속 든든한 육개장",
+                "price": "저렴",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260716-D-해장-4",
+                "verified": true
+              },
+              {
+                "name": "금암피순대",
+                "cuisine": "한식",
+                "feature": "피순대의 진한 맛",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-해장-5",
+                "verified": true
+              }
+            ],
+            "매콤하게": [
+              {
+                "name": "천일반점",
+                "cuisine": "중식",
+                "feature": "얼큰한 중국요리",
+                "price": "저렴",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260716-D-매콤-1",
+                "verified": true
+              },
+              {
+                "name": "굿모닝",
+                "cuisine": "중식",
+                "feature": "칼칼한 마라맛",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-매콤-2",
+                "verified": true
+              },
+              {
+                "name": "완산동까스",
+                "cuisine": "일식",
+                "feature": "프리미엄 카츠",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-매콤-3",
+                "verified": true
+              },
+              {
+                "name": "이비가짬뽕",
+                "cuisine": "중식",
+                "feature": "국물 매운 짬뽕",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-매콤-4",
+                "verified": true
+              },
+              {
+                "name": "춘리마라탕",
+                "cuisine": "중식",
+                "feature": "얼큼매콤한 마라",
+                "price": "저렴",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-매콤-5",
+                "verified": true
+              }
+            ],
+            "가볍게": [
+              {
+                "name": "해브어굿샐",
+                "cuisine": "샐러드",
+                "feature": "신선한 샐러드 한끼",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-가볍-1",
+                "verified": true
+              },
+              {
+                "name": "도꾸이",
+                "cuisine": "일식",
+                "feature": "가벼운 일식 메뉴",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-가볍-2",
+                "verified": true
+              },
+              {
+                "name": "미소야 전북대점",
+                "cuisine": "일식",
+                "feature": "담백한 미소라면",
+                "price": "저렴",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260716-D-가볍-3",
+                "verified": true
+              },
+              {
+                "name": "카츠호",
+                "cuisine": "일식",
+                "feature": "튀김의 담백한 맛",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-가볍-4",
+                "verified": true
+              },
+              {
+                "name": "파파존스",
+                "cuisine": "양식",
+                "feature": "가벼운 피자 한끼",
+                "price": "보통",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260716-D-가볍-5",
+                "verified": true
+              }
+            ],
+            "든든하게": [
+              {
+                "name": "조선무청시래기",
+                "cuisine": "한식",
+                "feature": "소박한 국밥과 국",
+                "price": "저렴",
+                "distance": "차로 6분 · 약 2.0km (카카오) / 차로 6분 · 약 2.0km (네이버)",
+                "id": "20260716-D-든든-1",
+                "verified": true
+              },
+              {
+                "name": "국면당 금암본점",
+                "cuisine": "한식",
+                "feature": "든든한 국수 한끼",
+                "price": "저렴",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260716-D-든든-2",
+                "verified": true
+              },
+              {
+                "name": "뜰안에밥상",
+                "cuisine": "한식",
+                "feature": "상다리 휘는 밥상",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260716-D-든든-3",
+                "verified": true
+              },
+              {
+                "name": "서울전통육개장",
+                "cuisine": "한식",
+                "feature": "속 꽉 찬 육개장",
+                "price": "저렴",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260716-D-든든-4",
+                "verified": true
+              },
+              {
+                "name": "큰맘할매순대국",
+                "cuisine": "한식",
+                "feature": "푸짐한 순대국밥",
+                "price": "저렴",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260716-D-든든-5",
+                "verified": true
+              }
+            ],
+            "일식": [
+              {
+                "name": "도꾸이",
+                "cuisine": "일식",
+                "feature": "신선한 일식메뉴",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-일식-1",
+                "verified": true
+              },
+              {
+                "name": "코이누",
+                "cuisine": "일식",
+                "feature": "고급진 일본식 요리",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260716-D-일식-2",
+                "verified": true
+              },
+              {
+                "name": "카츠호",
+                "cuisine": "일식",
+                "feature": "프리미엄 튀김 요리",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-일식-3",
+                "verified": true
+              },
+              {
+                "name": "강담",
+                "cuisine": "일식/오마카세",
+                "feature": "고급 오마카세 경험",
+                "price": "비쌈",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-일식-4",
+                "verified": true
+              },
+              {
+                "name": "미소야 전북대점",
+                "cuisine": "일식",
+                "feature": "정통 미소라면",
+                "price": "저렴",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260716-D-일식-5",
+                "verified": true
+              }
+            ],
+            "한식": [
+              {
+                "name": "신가화로",
+                "cuisine": "한식",
+                "feature": "전주 향토 음식",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260716-D-한식-1",
+                "verified": true
+              },
+              {
+                "name": "청년식탁사잇길",
+                "cuisine": "한식",
+                "feature": "감성 있는 한정식",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-한식-2",
+                "verified": true
+              },
+              {
+                "name": "남도소머리국밥",
+                "cuisine": "한식",
+                "feature": "진한 국물 국밥",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-한식-3",
+                "verified": true
+              },
+              {
+                "name": "정주분식",
+                "cuisine": "한식",
+                "feature": "가성비 분식 맛집",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260716-D-한식-4",
+                "verified": true
+              },
+              {
+                "name": "필라델피아",
+                "cuisine": "양식/한식퓨전",
+                "feature": "세련된 식사 경험",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-한식-5",
+                "verified": true
+              }
+            ],
+            "고기": [
+              {
+                "name": "삼형제솥뚜껑삼겹살",
+                "cuisine": "한식",
+                "feature": "푸짐한 고기 구이",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-고기-1",
+                "verified": true
+              },
+              {
+                "name": "그릴35",
+                "cuisine": "한식",
+                "feature": "숯불 고기 구이",
+                "price": "보통",
+                "distance": "도보 8분 (카카오)",
+                "id": "20260716-D-고기-2",
+                "verified": true
+              },
+              {
+                "name": "오늘김해뒷고기",
+                "cuisine": "한식",
+                "feature": "신선한 뒷고기",
+                "price": "보통",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260716-D-고기-3",
+                "verified": true
+              },
+              {
+                "name": "황제보쌈",
+                "cuisine": "한식",
+                "feature": "특선 고기 보쌈",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260716-D-고기-4",
+                "verified": true
+              },
+              {
+                "name": "고기듬뿍국물두루치기 본점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260716-D-고기-5",
+                "verified": true
+              }
+            ],
+            "혼밥": [
+              {
+                "name": "해브어굿샐",
+                "cuisine": "샐러드",
+                "feature": "가볍게 즐기는 샐러드",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-혼밥-1",
+                "verified": true
+              },
+              {
+                "name": "정주분식",
+                "cuisine": "한식",
+                "feature": "간편한 분식 한끼",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260716-D-혼밥-2",
+                "verified": true
+              },
+              {
+                "name": "장충동왕족발 전주점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260716-D-혼밥-3",
+                "verified": true
+              },
+              {
+                "name": "풍천민물숯불장어",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-혼밥-4",
+                "verified": true
+              },
+              {
+                "name": "백리향",
+                "cuisine": "중식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-혼밥-5",
+                "verified": true
+              }
+            ],
+            "와인": [
+              {
+                "name": "강담",
+                "cuisine": "일식/와인바",
+                "feature": "와인 추천 오마카세",
+                "price": "비쌈",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-와인-1",
+                "verified": true
+              },
+              {
+                "name": "늘채움",
+                "cuisine": "한정식",
+                "feature": "전통주·와인 조화",
+                "price": "보통",
+                "distance": "차로 4분 · 약 1.2km (카카오) / 차로 4분 · 약 1.2km (네이버)",
+                "id": "20260716-D-와인-2",
+                "verified": true
+              },
+              {
+                "name": "롤링파스타 전북대점",
+                "cuisine": "양식",
+                "feature": "이탈리안과 와인",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-와인-3",
+                "verified": true
+              },
+              {
+                "name": "치팅데이 전북대점",
+                "cuisine": "양식",
+                "feature": "캐주얼 와인바 분위기",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260716-D-와인-4",
+                "verified": true
+              },
+              {
+                "name": "파리바게뜨 전주남도",
+                "cuisine": "간식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-와인-5",
+                "verified": true
+              }
+            ],
+            "임원": [
+              {
+                "name": "뜰안에밥상",
+                "cuisine": "한식",
+                "feature": "정중한 상차림 경험",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260716-D-임원-1",
+                "verified": true
+              },
+              {
+                "name": "늘채움",
+                "cuisine": "한정식",
+                "feature": "접대용 푸짐한 코스",
+                "price": "보통",
+                "distance": "차로 4분 · 약 1.2km (카카오) / 차로 4분 · 약 1.2km (네이버)",
+                "id": "20260716-D-임원-2",
+                "verified": true
+              },
+              {
+                "name": "금암면옥 본점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260716-D-임원-3",
+                "verified": true
+              },
+              {
+                "name": "북대가자",
+                "cuisine": "술집",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-임원-4",
+                "verified": true
+              },
+              {
+                "name": "금암소바",
+                "cuisine": "일식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260716-D-임원-5",
+                "verified": true
+              }
+            ]
+          }
+        },
+        "술집": {
+          "restaurants": [
+            {
+              "name": "연변나나가맥",
+              "cuisine": "포차/맥주",
+              "feature": "동북식 안주 + 생맥주, 밥이 되는 맛있는 안주",
+              "price": "저렴",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260716-B-1",
+              "verified": true
+            },
+            {
+              "name": "훈민정음",
+              "cuisine": "막걸리/술집",
+              "feature": "전통 막걸리, 전주식 전깻잎·부추 등 로컬 안주",
+              "price": "저렴",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260716-B-2",
+              "verified": true
+            },
+            {
+              "name": "셋다운",
+              "cuisine": "이자카야/술집",
+              "feature": "분위기 있는 이자카야, 일본식 안주 & 소주·맥주",
+              "price": "보통",
+              "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+              "id": "20260716-B-3",
+              "verified": true
+            },
+            {
+              "name": "코츠모",
+              "cuisine": "요리주점/오뎅",
+              "feature": "따뜻한 일본식 오뎅 & 소주, 겨울밤 분위기 있는 술집",
+              "price": "보통",
+              "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+              "id": "20260716-B-4",
+              "verified": true
+            },
+            {
+              "name": "들턱",
+              "cuisine": "요리주점/한식",
+              "feature": "정성 있는 한식 안주, 오래된 단골 애정하는 로컬 술집",
+              "price": "보통",
+              "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+              "id": "20260716-B-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "오스쿠로",
+              "cuisine": "와인바",
+              "feature": "유럽식 감성 와인바, 로맨틱한 분위기 & 페어링 안주",
+              "price": "비쌈",
+              "distance": "차로 3분 · 약 1.2km (카카오) / 차로 3분 · 약 1.2km (네이버)",
+              "tag": "근처유명",
+              "id": "20260716-B-x1",
+              "verified": true
+            },
+            {
+              "name": "초로초로",
+              "cuisine": "이자카야",
+              "feature": "전주 명물 이자카야, 신선한 활어·참치 & 생맥주",
+              "price": "보통",
+              "distance": "차로 7분 · 약 2.3km (카카오) / 차로 10분 · 약 3.4km (네이버)",
+              "tag": "검색유명",
+              "id": "20260716-B-x2",
+              "verified": true
+            },
+            {
+              "name": "하가지구",
+              "cuisine": "한식 술집",
+              "feature": "밥이 되는 정성스러운 안주, 2024~2025년 신상 술집",
+              "price": "보통",
+              "distance": "차로 6분 · 약 2.1km (카카오) / 차로 5분 · 약 1.9km (네이버)",
+              "tag": "신규맛집",
+              "id": "20260716-B-x3",
+              "verified": true
+            }
+          ]
+        }
+      }
+    },
+    {
       "date": "2026-07-15",
       "comment": "흐린 날씨에 든든한 국물 음식으로 회사의 구조적 변화 소식을 따뜻하게 위로받을 수 있는 하루가 되길.",
       "message": "오늘은 흐린 날씨에 강수가 예상되는 만큼, 따뜻한 국물 요리로 입맛을 돋우시기 바랍니다. 고기듬뿍국물두루치기 본점이나 엄가네시골집의 얼큰한 뼈해장국을 추천드리며, 현재 진행 중인 지방금융 통합 논의 속에서도 임직원 여러분의 건강과 활력이 가장 중요함을 기억하시기 바랍니다. 맛있는 점심 시간 되시길 바랍니다.",
