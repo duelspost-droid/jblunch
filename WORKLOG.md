@@ -1,7 +1,24 @@
 # JB×AX 맛집 트래커 — 작업 로그 & 핸드오프 가이드
 
 > 다른 PC에서 이어서 작업하기 위한 문서. 프로젝트 구조 + 이번 세션 작업 내역 + 배포 방법.
-> 최종 업데이트: 2026-07-01
+> 최종 업데이트: 2026-07-09
+
+---
+
+## ⚠️ 현재 블로커 (2026-07-09) — 다른 PC에서 **이것부터** 처리
+
+**Supabase 프로젝트 `nrdapzgtibbusvoaceuh` 가 정지(INACTIVE)** → 백엔드 전체 다운:
+컨디션 검색(analyze)·주가(stock)·리뷰(comments)·주변검색·관리자페이지가 모두 불통. 서브도메인 NXDOMAIN.
+**프론트/함수 코드는 정상 — 프로젝트만 재개하면 즉시 복구.**
+
+- **원인**: 무료 org `xmfktepqewgqaajyvgqm`(plan=free)의 **활성 2개 한도**를 `darkweb-monitor`·`silvertown-app`이 차지 → jblunch 재개(restore) 불가(403 project limit).
+- **재개 3안**:
+  1. jblunch를 **`korail` org**(ref `etctlpnerxkeswffmzys`, plan=**pro**)로 **Transfer** — 대시보드 *Project Settings → General → Transfer project*(정지 상태도 가능). **단 korail에 이미 프로젝트 있어 +$10/월** 발생(사용자 확인 필요해 미실행, 2026-07-09 중단).
+  2. 무료 org에서 `darkweb-monitor` 또는 `silvertown` 중 하나 **정지**($0, 그 프로젝트가 다운).
+  3. 무료 org를 **Pro 업그레이드**(~$25/월, 결제=사용자 직접).
+- **Transfer는 대시보드 전용**(공개 Management API에 없음 — `GET .../transfer` 404). 슬롯 확보 뒤 재개는
+  `curl -X POST https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/restore -H "Authorization: Bearer sbp_..."`.
+- 재개 후 검증: `POST {SB_URL}/functions/v1/analyze -d '{"text":"냉면","meal":"점심"}'` 200 + 추천 반환 확인.
 
 ---
 
@@ -317,6 +334,30 @@ gh run view <run-id> --log | grep -E "Rate limit|JSON 파싱|❌"
 - **`KAKAO_TOKEN_SECRET`**: GitHub Secret + **Supabase Edge Functions Secrets** 양쪽에 **동일 랜덤값**. 둘이 다르면 401 → 발송은 `KAKAO_REFRESH_TOKEN` 시드로 폴백.
 - **kakao_send.py**: `load_refresh_token()`(Supabase get→실패 시 `KAKAO_REFRESH_TOKEN` 시드) → refresh → 응답에 새 refresh_token 오면 `kakao_token_set`으로 되저장.
 - **재발급이 필요한 경우**(배치가 60일+ 완전 중단 시): `callback.html`로 code 받아 → 교환 → `kakao_token_set`(Supabase) + `KAKAO_REFRESH_TOKEN`(GH) 둘 다 갱신. client_secret은 콘솔 앱키 페이지의 '클라이언트 시크릿'. redirect_uri=`https://duelspost-droid.github.io/jblunch/callback.html`.
+
+---
+
+## 7-3. 이번 세션(2026-07-03~09) 작업 내역
+
+> 전 페이지 6차원 워크플로 감사(2026-07-03, findings 54→백로그 32건) 후 상위 항목 처리.
+
+### 처리·배포 완료
+- [x] **리뷰 무단 수정/삭제 취약점** — `comments` anon update/delete가 `using(true)`(+프로덕션 드리프트 "Allow all")로 누구나 삭제/수정 가능하던 것 → **owner_token=sha256 해시 RLS**(X-Owner-Token 헤더 대조) + 프론트(비밀 localStorage·해시 저장·내 리뷰만 ✏️/✕). migration `0002`, 라이브 검증. (감사 #1)
+- [x] **자동배포 활성화** — GitHub Secret `SUPABASE_ACCESS_TOKEN` 등록 + `deploy-functions.yml`에 **`--use-api`**(Docker Hub 레이트리밋 회피) → 함수 push 시 자동배포.
+- [x] **배치 견고성**(감사 #6~10,27) — call_claude `pause_turn` 처리·가짜 tool_result 제거 / `_normalize_entry`로 기형 LLM JSON 방어 / `jb` 폴백·`jb_seen` / kakao 실패 `exit 1`+워크플로 분리 / push rebase 재시도·concurrency / permissions 최소화. (`583b031`)
+- [x] **데드코드·문서 정리**(감사 #19,20,22,25,26) — updateMealInfo·matchCondition·COND_*·get_today_preference·.meal-info 제거, 유령 `reviews` 테이블 삭제, Secrets 표 보강.
+- [x] **주가 배너 미표시 버그** — renderHistory가 배너(#tb-stock) 재생성 시 비워지는데 loadStock 재호출 안 되던 것 → stock 캐시 + 재렌더 시 재호출. (`e824e25`)
+- [x] **admin 'change-me' 공개 폴백 제거**(감사 #2) — ADMIN_PASSWORD 미설정 시 공개문자열 시드 → fail-secure. (`6382f9c`)
+- [x] **길찾기 출발지 교정** — '내 위치' 검색 후에도 출발이 회사(LOC)로 잡히던 것 → `routeOrigin()`(내위치 맥락이면 GPS `myPos`). (`0d4c050`)
+- [x] **공유 메시지 정교화**(카드형) + **공유 URL 중복 제거**(text에서 URL 빼고 url 필드로만). (`0d4c050`, `dd0c773`)
+- [x] **PAT 갱신** — 옛 `jblunch-push`(07-01 만료) → 새 classic PAT `jblunch-cli`(repo+workflow)로 git remote 갱신.
+
+### 미처리 백로그 (감사 32건 중 남은 것, 우선순위순)
+- **보안**: #3 Kakao 키 하드코딩(`af04...`) 폴백 제거·로테이션(공개저장소 노출) / #12 admin 락아웃 XFF 스푸핑 / #13 suggestion_add 스팸 무방비·pending 즉시공개 / #23 review-photos 익명 업로드 크기·타입 제한. **admin 라이브 비번 '021600'(약함) → 관리자페이지에서 강한 값으로 변경(사용자)**.
+- **테스트/CI**: #4 `lunch_utils` 단위테스트(현재 0개, WORKLOG '6종 PASS'는 미커밋) / #5 CI py_compile·pytest 게이트 / #21 assemble/rebalance/backfill 결정적 테스트.
+- **프론트 버그**: #14 내주변 검색창 포커스 유실 / #15 위치변경 시 backfill 미취소 / #16 `_introPending` 미삭제 stale / #17 confirmDelete 문자열≠숫자 고스트 / #18 generateRecommend 요청토큰 없어 연타 시 스테일 덮어씀.
+- **정리/저위험**: #24 후보 라벨 역파싱 중복→순수함수 추출 / #28 update_history 무방비 JSON 로드 / #29 update_index_html '];' 조기절단 / #30 모달 ESC·스크롤잠금·별점 a11y / #31 주가 부호 누락 / #32 저위험 하드닝 묶음.
+- **07-04 신규코드 미감사**: 배치 시각 관리자설정·카카오 토큰 저장(admin 함수 secret 기반) — 적대적 리뷰 가치 있음.
 
 ---
 
