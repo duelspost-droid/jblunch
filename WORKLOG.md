@@ -5,20 +5,21 @@
 
 ---
 
-## ⚠️ 현재 블로커 (2026-07-09) — 다른 PC에서 **이것부터** 처리
+## ✅ [해결됨 2026-07-09] 프로젝트 정지 → 복구 완료
 
-**Supabase 프로젝트 `nrdapzgtibbusvoaceuh` 가 정지(INACTIVE)** → 백엔드 전체 다운:
-컨디션 검색(analyze)·주가(stock)·리뷰(comments)·주변검색·관리자페이지가 모두 불통. 서브도메인 NXDOMAIN.
-**프론트/함수 코드는 정상 — 프로젝트만 재개하면 즉시 복구.**
+**증상이었던 것**: Supabase `nrdapzgtibbusvoaceuh` 정지(INACTIVE) → 컨디션 검색(analyze)·주가·리뷰·관리자 전부 불통.
+**원인**: 무료 org `xmfktepqewgqaajyvgqm`(free)의 **활성 2개 한도**를 darkweb-monitor·silvertown이 차지 → restore 403.
+**조치**: `darkweb-monitor` 정지로 슬롯 확보 → `POST /v1/projects/<ref>/restore` → **ACTIVE_HEALTHY 복구**. 비용 $0.
+**검증**: analyze 200 + 실제 추천 반환, stock/track/places-search 200, admin 401(인증게이트 정상), comments REST 200.
 
-- **원인**: 무료 org `xmfktepqewgqaajyvgqm`(plan=free)의 **활성 2개 한도**를 `darkweb-monitor`·`silvertown-app`이 차지 → jblunch 재개(restore) 불가(403 project limit).
-- **재개 3안**:
-  1. jblunch를 **`korail` org**(ref `etctlpnerxkeswffmzys`, plan=**pro**)로 **Transfer** — 대시보드 *Project Settings → General → Transfer project*(정지 상태도 가능). **단 korail에 이미 프로젝트 있어 +$10/월** 발생(사용자 확인 필요해 미실행, 2026-07-09 중단).
-  2. 무료 org에서 `darkweb-monitor` 또는 `silvertown` 중 하나 **정지**($0, 그 프로젝트가 다운).
-  3. 무료 org를 **Pro 업그레이드**(~$25/월, 결제=사용자 직접).
-- **Transfer는 대시보드 전용**(공개 Management API에 없음 — `GET .../transfer` 404). 슬롯 확보 뒤 재개는
-  `curl -X POST https://api.supabase.com/v1/projects/nrdapzgtibbusvoaceuh/restore -H "Authorization: Bearer sbp_..."`.
-- 재개 후 검증: `POST {SB_URL}/functions/v1/analyze -d '{"text":"냉면","meal":"점심"}'` 200 + 추천 반환 확인.
+> ⚠️ 이 프로젝트는 **jblunch 전용이 아니라 5개 서비스 공용 백엔드**다 — 함수 15개:
+> jblunch(admin·analyze·places-search·stock·track·kakao-token) / VulnScan(vuln-scan·vuln-remediate) /
+> secuday(ai-ask·send-mailing·generate-poster) / frfd(insight-ai·quick-handler) / 뉴스레터·웹툰.
+> 그래서 이 프로젝트가 멈추면 5개가 동시에 죽는다. **무료 티어 = 활성 2개 한도**이므로,
+> 무료 org에 프로젝트가 3개 이상이면 또 강제정지가 재발한다(현재 shared+silvertown 2개 = 안정).
+
+**진행 중인 후속 작업**: darkweb을 이 공유 프로젝트로 **통합**하는 중(그래야 darkweb도 살아나고 슬롯 문제 영구 해소).
+→ 상세·재개 방법은 **darkweb repo `/Users/hk/darkweb-monitor-dashboard/HANDOFF-MIGRATION.md`** 참고. 현재 darkweb은 정지 상태(다운).
 
 ---
 
