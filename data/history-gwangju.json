@@ -1,6 +1,1206 @@
 {
   "recommendations": [
     {
+      "date": "2026-08-05",
+      "comment": "뿌옅지만 따뜻한 오늘, AI 혁신을 주도하는 회사 분위기처럼 활기찬 한 끼 어떨까요?",
+      "message": "오늘은 스모그가 있는 날씨로 맑지 않으니, 상큼한 김밥이나 따뜻한 해장국으로 컨디션을 챙기시기 바랍니다. 최근 김기홍 회장께서 강조하신 전사적 AI 마인드를 갖춰 오후도 활기차게 업무에 임하시고, 시마스시, 종착역 금남점, 수선화돈가스 등 다양한 맛집을 추천드립니다.",
+      "weather": "Smoky haze 25°C (최저 25° / 최고 34°)",
+      "news": [
+        {
+          "title": "AX기반 혁신 강조한 김기홍 JB금융 회장 \"전사적 AX 마인드 갖춰야\"",
+          "link": "http://www.consumernews.co.kr/news/articleView.html?idxno=760776",
+          "focus": true
+        },
+        {
+          "title": "“AX, CEO가 주도”…김기홍 JB금융 회장, 전사 AI 내재화 속도",
+          "link": "https://www.ekn.kr/web/view.php?key=20260804023339417",
+          "focus": true
+        },
+        {
+          "title": "[은행 Talk Talk] 신한금융, 과기정통부와 취약계층 디지털 교육 지원 外",
+          "link": "https://news.dealsitetv.com/articles/174230",
+          "focus": true
+        }
+      ],
+      "restaurants": [
+        {
+          "name": "시마스시 롯데백화점광주점",
+          "cuisine": "일식",
+          "feature": "신선한 초밥 · 롯데백화점 B1",
+          "price": "보통",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20260805-1",
+          "verified": true
+        },
+        {
+          "name": "김밥OK",
+          "cuisine": "분식",
+          "feature": "가볍고 빠른 한 끼 · 간편식사",
+          "price": "저렴",
+          "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+          "id": "20260805-2",
+          "verified": true
+        },
+        {
+          "name": "종착역 금남점",
+          "cuisine": "고기",
+          "feature": "신선한 고기 · 소금구이 명가",
+          "price": "보통",
+          "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+          "id": "20260805-3",
+          "verified": true
+        },
+        {
+          "name": "수선화돈가스",
+          "cuisine": "일식",
+          "feature": "바삭한 돈가스 · 진한 소스",
+          "price": "보통",
+          "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+          "id": "20260805-4",
+          "verified": true
+        },
+        {
+          "name": "청진동해장국",
+          "cuisine": "한식",
+          "feature": "깊은 국맛 · 든든한 보양식",
+          "price": "보통",
+          "distance": "차로 5분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+          "id": "20260805-5",
+          "verified": true
+        }
+      ],
+      "extras": [
+        {
+          "name": "동천장어구이장어탕",
+          "cuisine": "한식",
+          "feature": "푸짐한 장어 · 전문점의 깊은 맛",
+          "price": "보통",
+          "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+          "tag": "근처유명",
+          "id": "20260805-x1",
+          "verified": true
+        },
+        {
+          "name": "깐깐한족발 계림점",
+          "cuisine": "한식",
+          "feature": "쫀득한 식감 · 직화 매운 족발",
+          "price": "보통",
+          "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+          "tag": "검색유명",
+          "id": "20260805-x2",
+          "verified": true
+        },
+        {
+          "name": "샤브온당",
+          "cuisine": "한식",
+          "feature": "청정 육수 · 미나리 샤브",
+          "price": "보통",
+          "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+          "tag": "신규맛집",
+          "id": "20260805-x3",
+          "verified": true
+        }
+      ],
+      "by_condition": {
+        "해장 필요": [
+          {
+            "name": "청진동해장국",
+            "cuisine": "한식",
+            "feature": "진한 국맛",
+            "price": "보통",
+            "distance": "차로 5분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+            "id": "20260805-해장-1",
+            "verified": true
+          },
+          {
+            "name": "일품양평해장국 계림점",
+            "cuisine": "한식",
+            "feature": "시원한 국물",
+            "price": "보통",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-해장-2",
+            "verified": true
+          },
+          {
+            "name": "숙이네맛집",
+            "cuisine": "한식",
+            "feature": "따뜻한 위로",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-해장-3",
+            "verified": true
+          },
+          {
+            "name": "동천장어구이장어탕",
+            "cuisine": "한식",
+            "feature": "진한 국물",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-해장-4",
+            "verified": true
+          },
+          {
+            "name": "푸짐한집",
+            "cuisine": "한식",
+            "feature": "든든한 한 끼",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-해장-5",
+            "verified": true
+          }
+        ],
+        "매콤하게": [
+          {
+            "name": "제일반점",
+            "cuisine": "중식",
+            "feature": "매콤한 맛",
+            "price": "저렴",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260805-매콤-1",
+            "verified": true
+          },
+          {
+            "name": "깐깐한족발 계림점",
+            "cuisine": "한식",
+            "feature": "직화 매운맛",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-매콤-2",
+            "verified": true
+          },
+          {
+            "name": "다홍치마",
+            "cuisine": "한식",
+            "feature": "매운 간장 맛",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260805-매콤-3",
+            "verified": true
+          },
+          {
+            "name": "계동치킨 대인점",
+            "cuisine": "치킨",
+            "feature": "고소하고 매콤",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-매콤-4",
+            "verified": true
+          },
+          {
+            "name": "교촌치킨 계림점",
+            "cuisine": "치킨",
+            "feature": "매콤한 양념",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-매콤-5",
+            "verified": true
+          }
+        ],
+        "가볍게": [
+          {
+            "name": "김밥OK",
+            "cuisine": "분식",
+            "feature": "가볍고 빠른",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260805-가볍-1",
+            "verified": true
+          },
+          {
+            "name": "포케올데이 광주금남점",
+            "cuisine": "샐러드",
+            "feature": "신선한 야채",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260805-가볍-2",
+            "verified": true
+          },
+          {
+            "name": "계동치킨 대인점",
+            "cuisine": "치킨",
+            "feature": "간편 한 끼",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-가볍-3",
+            "verified": true
+          },
+          {
+            "name": "사랑해베이글 광주대인점",
+            "cuisine": "간식",
+            "feature": "가벼운 브런치",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260805-가볍-4",
+            "verified": true
+          },
+          {
+            "name": "교촌치킨 계림점",
+            "cuisine": "치킨",
+            "feature": "간편식사",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-가볍-5",
+            "verified": true
+          }
+        ],
+        "든든하게": [
+          {
+            "name": "제일반점",
+            "cuisine": "중식",
+            "feature": "푸짐한 양",
+            "price": "보통",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260805-든든-1",
+            "verified": true
+          },
+          {
+            "name": "동천장어구이장어탕",
+            "cuisine": "한식",
+            "feature": "대량 영양식",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-든든-2",
+            "verified": true
+          },
+          {
+            "name": "깐깐한족발 계림점",
+            "cuisine": "한식",
+            "feature": "푸짐한 고기",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-든든-3",
+            "verified": true
+          },
+          {
+            "name": "종착역 금남점",
+            "cuisine": "고기",
+            "feature": "신선한 고기",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20260805-든든-4",
+            "verified": true
+          },
+          {
+            "name": "라온 롯데백화점광주점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260805-든든-5",
+            "verified": true
+          }
+        ],
+        "일식": [
+          {
+            "name": "시마스시 롯데백화점광주점",
+            "cuisine": "일식",
+            "feature": "신선 초밥",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20260805-일식-1",
+            "verified": true
+          },
+          {
+            "name": "수선화돈가스",
+            "cuisine": "일식",
+            "feature": "바삭한 돈가스",
+            "price": "보통",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-일식-2",
+            "verified": true
+          },
+          {
+            "name": "초밥시대 광주점",
+            "cuisine": "일식",
+            "feature": "신선한 회",
+            "price": "보통",
+            "distance": "도보 6분 (카카오)",
+            "id": "20260805-일식-3",
+            "verified": true
+          },
+          {
+            "name": "멘무샤 충장NC웨이브점",
+            "cuisine": "일식",
+            "feature": "일본식 국수",
+            "price": "보통",
+            "distance": "도보 11분 (카카오) / 도보 11분 (네이버)",
+            "id": "20260805-일식-4",
+            "verified": true
+          },
+          {
+            "name": "오케이초밥 충장점",
+            "cuisine": "일식",
+            "feature": "정성스런 초밥",
+            "price": "보통",
+            "distance": "도보 12분 (카카오)",
+            "id": "20260805-일식-5",
+            "verified": true
+          }
+        ],
+        "한식": [
+          {
+            "name": "라온 롯데백화점광주점",
+            "cuisine": "한식",
+            "feature": "전통 한식",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260805-한식-1",
+            "verified": true
+          },
+          {
+            "name": "다홍치마",
+            "cuisine": "한식",
+            "feature": "정통 한식",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260805-한식-2",
+            "verified": true
+          },
+          {
+            "name": "가정식추어탕뷔페",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20260805-한식-3",
+            "verified": true
+          },
+          {
+            "name": "자연산회포장마차",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260805-한식-4",
+            "verified": true
+          },
+          {
+            "name": "북동가든",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-한식-5",
+            "verified": true
+          }
+        ],
+        "고기": [
+          {
+            "name": "숙이네맛집",
+            "cuisine": "한식",
+            "feature": "구수한 고기",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-고기-1",
+            "verified": true
+          },
+          {
+            "name": "황칠나라함께하는왕갈비",
+            "cuisine": "한식",
+            "feature": "푸짐한 갈비",
+            "price": "비쌈",
+            "distance": "도보 7분 (카카오)",
+            "id": "20260805-고기-2",
+            "verified": true
+          },
+          {
+            "name": "유명회관",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-고기-3",
+            "verified": true
+          },
+          {
+            "name": "대인동왕족발",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+            "id": "20260805-고기-4",
+            "verified": true
+          },
+          {
+            "name": "꽃담",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-고기-5",
+            "verified": true
+          }
+        ],
+        "혼밥": [
+          {
+            "name": "포케올데이 광주금남점",
+            "cuisine": "샐러드",
+            "feature": "혼자 즐기는",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20260805-혼밥-1",
+            "verified": true
+          },
+          {
+            "name": "초밥시대 광주점",
+            "cuisine": "일식",
+            "feature": "혼자 먹기 편한",
+            "price": "보통",
+            "distance": "도보 6분 (카카오)",
+            "id": "20260805-혼밥-2",
+            "verified": true
+          },
+          {
+            "name": "금남스넥",
+            "cuisine": "분식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-혼밥-3",
+            "verified": true
+          },
+          {
+            "name": "진진설곰탕 갈비탕 광주대인본점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-혼밥-4",
+            "verified": true
+          },
+          {
+            "name": "오가호프통닭",
+            "cuisine": "술집",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-혼밥-5",
+            "verified": true
+          }
+        ],
+        "와인": [
+          {
+            "name": "북동가든",
+            "cuisine": "한식",
+            "feature": "고급스러운",
+            "price": "비쌈",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-와인-1",
+            "verified": true
+          },
+          {
+            "name": "유명회관",
+            "cuisine": "한식",
+            "feature": "격식있는 분위기",
+            "price": "비쌈",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20260805-와인-2",
+            "verified": true
+          },
+          {
+            "name": "박순자녹두집",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260805-와인-3",
+            "verified": true
+          },
+          {
+            "name": "신락원 신관",
+            "cuisine": "중식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260805-와인-4",
+            "verified": true
+          },
+          {
+            "name": "부흥중화요리",
+            "cuisine": "중식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+            "id": "20260805-와인-5",
+            "verified": true
+          }
+        ],
+        "임원": [
+          {
+            "name": "꽃담",
+            "cuisine": "한식",
+            "feature": "차분한 분위기",
+            "price": "보통",
+            "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+            "id": "20260805-임원-1",
+            "verified": true
+          },
+          {
+            "name": "금정식당",
+            "cuisine": "한식",
+            "feature": "조용한 한정식",
+            "price": "비쌈",
+            "distance": "도보 12분 (카카오) / 도보 12분 (네이버)",
+            "id": "20260805-임원-2",
+            "verified": true
+          },
+          {
+            "name": "명지원",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260805-임원-3",
+            "verified": true
+          },
+          {
+            "name": "달정원",
+            "cuisine": "카페",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260805-임원-4",
+            "verified": true
+          },
+          {
+            "name": "무등한정식",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+            "id": "20260805-임원-5",
+            "verified": true
+          }
+        ]
+      },
+      "meals": {
+        "저녁": {
+          "restaurants": [
+            {
+              "name": "시마스시 롯데백화점광주점",
+              "cuisine": "일식",
+              "feature": "신선 회와 정통 초밥 · 롯데 안의 프리미엄 일식당",
+              "price": "비쌈",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20260805-D-1",
+              "verified": true
+            },
+            {
+              "name": "동천장어구이장어탕",
+              "cuisine": "한식",
+              "feature": "특급 장어탕 · 국물 깊고 담백한 보양식",
+              "price": "보통",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "id": "20260805-D-2",
+              "verified": true
+            },
+            {
+              "name": "깐깐한족발 계림점",
+              "cuisine": "한식",
+              "feature": "쫄깃한 족발과 곤약 · 속 시원한 야식 명가",
+              "price": "보통",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "id": "20260805-D-3",
+              "verified": true
+            },
+            {
+              "name": "황칠나라함께하는왕갈비",
+              "cuisine": "한식",
+              "feature": "등심 갈비와 전통 양념 · 회식용 격식 있는 분위기",
+              "price": "보통",
+              "distance": "도보 7분 (카카오)",
+              "id": "20260805-D-4",
+              "verified": true
+            },
+            {
+              "name": "무등한정식",
+              "cuisine": "한식",
+              "feature": "한정식 정갈함 · 접대와 모임에 좋은 상차림",
+              "price": "비쌈",
+              "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+              "id": "20260805-D-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "종착역 금남점",
+              "cuisine": "한식",
+              "feature": "투박하고 든든한 국밥류 · 근처 인기 신뢰 가는 식당",
+              "price": "저렴",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "tag": "근처유명",
+              "id": "20260805-D-x1",
+              "verified": true
+            },
+            {
+              "name": "초밥시대 광주점",
+              "cuisine": "일식",
+              "feature": "신선회와 가성비 초밥 · 회식 수용 능력 우수",
+              "price": "보통",
+              "distance": "도보 6분 (카카오)",
+              "tag": "검색유명",
+              "id": "20260805-D-x2",
+              "verified": true
+            },
+            {
+              "name": "퀴비",
+              "cuisine": "양식",
+              "feature": "뇨끼와 파스타 · 분위기 감성 있는 동명동 핫플",
+              "price": "보통",
+              "distance": "차로 3분 · 약 1.1km (카카오) / 차로 3분 · 약 1.1km (네이버)",
+              "tag": "신규맛집",
+              "id": "20260805-D-x3",
+              "verified": true
+            }
+          ],
+          "by_condition": {
+            "해장 필요": [
+              {
+                "name": "청진동해장국",
+                "cuisine": "한식",
+                "feature": "맑고 깔끔한 해장국",
+                "price": "저렴",
+                "distance": "차로 5분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+                "id": "20260805-D-해장-1",
+                "verified": true
+              },
+              {
+                "name": "일품양평해장국 계림점",
+                "cuisine": "한식",
+                "feature": "진한 국물과 우거지",
+                "price": "저렴",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260805-D-해장-2",
+                "verified": true
+              },
+              {
+                "name": "동천장어구이장어탕",
+                "cuisine": "한식",
+                "feature": "장어탕의 보양식 효능",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-해장-3",
+                "verified": true
+              },
+              {
+                "name": "종착역 금남점",
+                "cuisine": "한식",
+                "feature": "든든한 국밥과 국물",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-해장-4",
+                "verified": true
+              },
+              {
+                "name": "숙이네맛집",
+                "cuisine": "한식",
+                "feature": "따뜻한 밥과 국물 정성",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-해장-5",
+                "verified": true
+              }
+            ],
+            "매콤하게": [
+              {
+                "name": "제일반점",
+                "cuisine": "중식",
+                "feature": "매운맛 중식 본격 경험",
+                "price": "저렴",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260805-D-매콤-1",
+                "verified": true
+              },
+              {
+                "name": "푸짐한집",
+                "cuisine": "한식",
+                "feature": "고추장 양념 칼칼함",
+                "price": "저렴",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-매콤-2",
+                "verified": true
+              },
+              {
+                "name": "깐깐한족발 계림점",
+                "cuisine": "한식",
+                "feature": "매콤 양념과 알싸함",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-매콤-3",
+                "verified": true
+              },
+              {
+                "name": "다홍치마",
+                "cuisine": "한식",
+                "feature": "고추 양념의 신선한 맛",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260805-D-매콤-4",
+                "verified": true
+              },
+              {
+                "name": "오가호프통닭",
+                "cuisine": "술집",
+                "feature": "매운맛 술안주 칭찬",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-매콤-5",
+                "verified": true
+              }
+            ],
+            "가볍게": [
+              {
+                "name": "포케올데이 광주금남점",
+                "cuisine": "샐러드",
+                "feature": "신선 야채와 가벼움",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260805-D-가볍-1",
+                "verified": true
+              },
+              {
+                "name": "계동치킨 대인점",
+                "cuisine": "치킨",
+                "feature": "바삭한 치킨 한마리",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-가볍-2",
+                "verified": true
+              },
+              {
+                "name": "사랑해베이글 광주대인점",
+                "cuisine": "간식",
+                "feature": "가벼운 베이글 한끼",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-가볍-3",
+                "verified": true
+              },
+              {
+                "name": "교촌치킨 계림점",
+                "cuisine": "치킨",
+                "feature": "담백한 양념 치킨",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-가볍-4",
+                "verified": true
+              },
+              {
+                "name": "초밥시대 광주점",
+                "cuisine": "일식",
+                "feature": "신선 초밥의 가벼움",
+                "price": "보통",
+                "distance": "도보 6분 (카카오)",
+                "id": "20260805-D-가볍-5",
+                "verified": true
+              }
+            ],
+            "든든하게": [
+              {
+                "name": "황칠나라함께하는왕갈비",
+                "cuisine": "한식",
+                "feature": "푸짐한 왕갈비 상차림",
+                "price": "보통",
+                "distance": "도보 7분 (카카오)",
+                "id": "20260805-D-든든-1",
+                "verified": true
+              },
+              {
+                "name": "종착역 금남점",
+                "cuisine": "한식",
+                "feature": "든든한 국밥과 밥",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-든든-2",
+                "verified": true
+              },
+              {
+                "name": "청진동해장국",
+                "cuisine": "한식",
+                "feature": "국물 속 고기의 푸짐함",
+                "price": "저렴",
+                "distance": "차로 5분 · 약 1.6km (카카오) / 차로 5분 · 약 1.6km (네이버)",
+                "id": "20260805-D-든든-3",
+                "verified": true
+              },
+              {
+                "name": "무등한정식",
+                "cuisine": "한식",
+                "feature": "다채로운 한정식 상",
+                "price": "비쌈",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260805-D-든든-4",
+                "verified": true
+              },
+              {
+                "name": "라온 롯데백화점광주점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-든든-5",
+                "verified": true
+              }
+            ],
+            "일식": [
+              {
+                "name": "시마스시 롯데백화점광주점",
+                "cuisine": "일식",
+                "feature": "프리미엄 초밥과 롯데",
+                "price": "비쌈",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20260805-D-일식-1",
+                "verified": true
+              },
+              {
+                "name": "초밥시대 광주점",
+                "cuisine": "일식",
+                "feature": "신선 초밥의 가성비",
+                "price": "보통",
+                "distance": "도보 6분 (카카오)",
+                "id": "20260805-D-일식-2",
+                "verified": true
+              },
+              {
+                "name": "수선화돈가스",
+                "cuisine": "일식",
+                "feature": "일식 돈가스 정통",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260805-D-일식-3",
+                "verified": true
+              },
+              {
+                "name": "퀴비",
+                "cuisine": "양식",
+                "feature": "뇨끼 파스타 감성",
+                "price": "보통",
+                "distance": "차로 3분 · 약 1.1km (카카오) / 차로 3분 · 약 1.1km (네이버)",
+                "id": "20260805-D-일식-4",
+                "verified": true
+              },
+              {
+                "name": "라그로쏘",
+                "cuisine": "양식",
+                "feature": "이탈리아식 감성 저녁",
+                "price": "보통",
+                "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+                "id": "20260805-D-일식-5",
+                "verified": true
+              }
+            ],
+            "한식": [
+              {
+                "name": "라온 롯데백화점광주점",
+                "cuisine": "한식",
+                "feature": "현대식 한식의 정성",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-한식-1",
+                "verified": true
+              },
+              {
+                "name": "김밥OK",
+                "cuisine": "분식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-한식-2",
+                "verified": true
+              },
+              {
+                "name": "가정식추어탕뷔페",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-한식-3",
+                "verified": true
+              },
+              {
+                "name": "자연산회포장마차",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260805-D-한식-4",
+                "verified": true
+              },
+              {
+                "name": "북동가든",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260805-D-한식-5",
+                "verified": true
+              }
+            ],
+            "고기": [
+              {
+                "name": "다홍치마",
+                "cuisine": "한식",
+                "feature": "숯불 고기 맛",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260805-D-고기-1",
+                "verified": true
+              },
+              {
+                "name": "유명회관",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20260805-D-고기-2",
+                "verified": true
+              },
+              {
+                "name": "대인동왕족발",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260805-D-고기-3",
+                "verified": true
+              },
+              {
+                "name": "꽃담",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-고기-4",
+                "verified": true
+              },
+              {
+                "name": "금남스넥",
+                "cuisine": "분식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-고기-5",
+                "verified": true
+              }
+            ],
+            "혼밥": [
+              {
+                "name": "포케올데이 광주금남점",
+                "cuisine": "샐러드",
+                "feature": "혼밥 편한 카운터",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20260805-D-혼밥-1",
+                "verified": true
+              },
+              {
+                "name": "계동치킨 대인점",
+                "cuisine": "치킨",
+                "feature": "간편 야식 한마리",
+                "price": "저렴",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20260805-D-혼밥-2",
+                "verified": true
+              },
+              {
+                "name": "제일반점",
+                "cuisine": "중식",
+                "feature": "중식 혼밥 편함",
+                "price": "저렴",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20260805-D-혼밥-3",
+                "verified": true
+              },
+              {
+                "name": "김밥OK",
+                "cuisine": "분식",
+                "feature": "빠른 분식 한끼",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20260805-D-혼밥-4",
+                "verified": true
+              },
+              {
+                "name": "진진설곰탕 갈비탕 광주대인본점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 7분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-혼밥-5",
+                "verified": true
+              }
+            ],
+            "와인": [
+              {
+                "name": "퀴비",
+                "cuisine": "양식",
+                "feature": "뇨끼와 와인 페어링",
+                "price": "보통",
+                "distance": "차로 3분 · 약 1.1km (카카오) / 차로 3분 · 약 1.1km (네이버)",
+                "id": "20260805-D-와인-1",
+                "verified": true
+              },
+              {
+                "name": "라그로쏘",
+                "cuisine": "양식",
+                "feature": "이탈리아 와인 어울림",
+                "price": "보통",
+                "distance": "도보 13분 (카카오) / 도보 13분 (네이버)",
+                "id": "20260805-D-와인-2",
+                "verified": true
+              },
+              {
+                "name": "오가호프통닭",
+                "cuisine": "술집",
+                "feature": "술과 안주의 조화",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 7분 (네이버)",
+                "id": "20260805-D-와인-3",
+                "verified": true
+              },
+              {
+                "name": "박순자녹두집",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260805-D-와인-4",
+                "verified": true
+              },
+              {
+                "name": "신락원 신관",
+                "cuisine": "중식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260805-D-와인-5",
+                "verified": true
+              }
+            ],
+            "임원": [
+              {
+                "name": "부흥중화요리",
+                "cuisine": "중식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 8분 (카카오) / 도보 8분 (네이버)",
+                "id": "20260805-D-임원-1",
+                "verified": true
+              },
+              {
+                "name": "명지원",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260805-D-임원-2",
+                "verified": true
+              },
+              {
+                "name": "달정원",
+                "cuisine": "카페",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 9분 (카카오) / 도보 9분 (네이버)",
+                "id": "20260805-D-임원-3",
+                "verified": true
+              },
+              {
+                "name": "제주국수왕",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 10분 (카카오) / 도보 10분 (네이버)",
+                "id": "20260805-D-임원-4",
+                "verified": true
+              },
+              {
+                "name": "장충고기국수 충장점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 10분 (카카오)",
+                "id": "20260805-D-임원-5",
+                "verified": true
+              }
+            ]
+          }
+        },
+        "술집": {
+          "restaurants": [
+            {
+              "name": "뽀뽀",
+              "cuisine": "술집(소주방)",
+              "feature": "편한 분위기의 소주방, 추천 안주",
+              "price": "저렴",
+              "distance": "도보 2분 (카카오) / 차로 3분 · 약 1.2km (네이버)",
+              "id": "20260805-B-1",
+              "verified": true
+            },
+            {
+              "name": "꼬미",
+              "cuisine": "술집(호프/칵테일)",
+              "feature": "다양한 주류 및 안주, 감성 분위기",
+              "price": "보통",
+              "distance": "차로 3분 · 약 1.0km (카카오) / 차로 3분 · 약 1.0km (네이버)",
+              "id": "20260805-B-2",
+              "verified": true
+            },
+            {
+              "name": "야식포차",
+              "cuisine": "포차",
+              "feature": "야식 포차의 매콤한 안주, 캐주얼",
+              "price": "저렴",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20260805-B-3",
+              "verified": true
+            },
+            {
+              "name": "광주소맥방",
+              "cuisine": "술집(소주방)",
+              "feature": "로컬 소주방, 정겨운 분위기",
+              "price": "저렴",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "id": "20260805-B-4",
+              "verified": true
+            },
+            {
+              "name": "첨단지구와인바",
+              "cuisine": "와인바",
+              "feature": "세련된 와인 선택, 감성 있는 공간",
+              "price": "비쌈",
+              "distance": "거리 미확인",
+              "id": "20260805-B-5",
+              "verified": false
+            }
+          ],
+          "extras": [
+            {
+              "name": "부보상",
+              "cuisine": "요리주점",
+              "feature": "창가 안주, 높은 퀄리티, 동명동 인기",
+              "price": "보통",
+              "distance": "차로 4분 · 약 1.3km (카카오) / 차로 4분 · 약 1.3km (네이버)",
+              "tag": "검색유명",
+              "id": "20260805-B-x2",
+              "verified": true
+            },
+            {
+              "name": "하이킹 첨단점",
+              "cuisine": "호프/하이볼바",
+              "feature": "미국펍 분위기, 다양한 하이볼, 신상",
+              "price": "보통",
+              "distance": "차로 26분 · 약 9.2km (카카오)",
+              "tag": "신규맛집",
+              "id": "20260805-B-x3",
+              "verified": true
+            }
+          ]
+        }
+      }
+    },
+    {
       "date": "2026-08-04",
       "comment": "폭염 속 맑은 날씨, 주가 상승의 호재로 여유 있게 시원하고 든든한 점심 어때요?",
       "message": "오늘은 맑고 기온이 높은 날씨인 만큼, 시원한 추어탕이나 포케 등 담백한 음식을 추천드립니다. 여의도 인근 맛집에서 편하게 식사하시기 바라며, 저희 그룹이 금융 마이데이터 브랜드평판에서 우수한 평가를 받은 만큼 더욱 발전된 서비스로 보답하겠습니다. 즐거운 점심시간 되시기 바랍니다.",
