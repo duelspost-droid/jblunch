@@ -669,6 +669,7 @@
   .tb-stock-change.flat { color: #868e96; }
   .tb-stock-mk { font-size: 0.68rem; font-weight: 700; color: #98a2b3; background: #f1f3f6; border-radius: 10px; padding: 2px 8px; }
   .tb-stock-mk.live { color: #2f9e44; background: #ebfbee; }
+  .tb-stock-mk.closed { color: #e03131; background: #fff5f5; }
 
   /* 시간대(점심/저녁/술집) 토글 */
   .meal-toggle {
@@ -1763,11 +1764,23 @@ function _renderStock() {
   const arrow = up ? '▲' : (down ? '▼' : '–');
   const rate = (d.changeRate !== '' && d.changeRate != null) ? `${d.changeRate > 0 ? '+' : ''}${d.changeRate}%` : '';
   const open = d.marketStatus === 'OPEN';
+  // 휴장(주말·공휴일) 판별: 마지막 체결일이 오늘(KST)보다 이전이면 '지난 거래일 종가'
+  let mkText = '종가', mkCls = '';
+  if (open) {
+    mkText = '● 장중'; mkCls = 'live';
+  } else {
+    const td = (d.tradedAt || '').slice(0, 10);
+    const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    if (td && td < todayKST) {
+      const md = `${+td.slice(5, 7)}/${+td.slice(8, 10)}`;   // 2026-09-23 → 9/23
+      mkText = `🔴 휴장 · ${md} 종가`; mkCls = 'closed';
+    }
+  }
   el.innerHTML = `
     <span class="tb-stock-head">📈 JB금융지주</span>
     <span class="tb-stock-price">${escHtml(d.price)}원</span>
     <span class="tb-stock-change ${cls}">${arrow} ${escHtml(String(d.change).replace('-',''))} (${escHtml(rate)})</span>
-    <span class="tb-stock-mk ${open ? 'live' : ''}">${open ? '● 장중' : '종가'}</span>`;
+    <span class="tb-stock-mk ${mkCls}">${escHtml(mkText)}</span>`;
 }
 async function loadStock() {
   const el = document.getElementById('tb-stock');
