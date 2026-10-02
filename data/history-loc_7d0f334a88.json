@@ -1,6 +1,1206 @@
 {
   "recommendations": [
     {
+      "date": "2026-10-02",
+      "comment": "흐린 날씨에 든든한 국물 요리로 따뜻함을 느껴보세요. JB금융의 실용적이고 긍정적인 분위기 속 든든한 한끼를 즐길 시간입니다.",
+      "message": "쌀쌀한 아침 날씨이지만 오후에는 따뜻해질 예정이오니, 한그릇에담다나 명가한식더뷔페에서 따뜻한 한식으로 든든하게 점심을 챙기시기 바랍니다. 한편, 당사 그룹에서는 AI 금융 솔루션과 고령층 대상 금융교육 등 고객 가치 창출을 위해 적극 노력하고 있으니 많은 관심 부탁드립니다.",
+      "weather": "맑음 12°C (최저 9° / 최고 20°)",
+      "news": [
+        {
+          "title": "\"개념타령 이젠 그만\"…돈 버는 AI, 한자리서 공개된다",
+          "link": "https://zdnet.co.kr/view/?no=20261001081811",
+          "focus": true
+        },
+        {
+          "title": "\"모바일뱅킹 어렵지 않아요\"…고령층 금융교육 전국 687회",
+          "link": "https://www.mt.co.kr/finance/2026/10/02/2026100114225768143",
+          "focus": false
+        },
+        {
+          "title": "[금융권 이모저모]한국투자신탁운용, 연금 가이드북 개정…세액공제·투...",
+          "link": "https://www.businessplus.kr/news/articleView.html?idxno=117595",
+          "focus": false
+        }
+      ],
+      "restaurants": [
+        {
+          "name": "한그릇에담다",
+          "cuisine": "한식",
+          "feature": "정성스러운 한식, 깔끔하고 따뜻한 맛",
+          "price": "보통",
+          "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+          "id": "20261002-1",
+          "verified": true
+        },
+        {
+          "name": "명가한식더뷔페",
+          "cuisine": "뷔페",
+          "feature": "다양한 반찬과 따뜻한 국물 음식",
+          "price": "보통",
+          "distance": "차로 6분 · 약 2.1km (카카오) / 차로 6분 · 약 2.1km (네이버)",
+          "id": "20261002-2",
+          "verified": true
+        },
+        {
+          "name": "신정마루",
+          "cuisine": "한식",
+          "feature": "전통 한식의 정갈한 맛과 편안함",
+          "price": "보통",
+          "distance": "차로 7분 · 약 2.5km (카카오) / 차로 7분 · 약 2.5km (네이버)",
+          "id": "20261002-3",
+          "verified": true
+        },
+        {
+          "name": "미카도스시",
+          "cuisine": "일식",
+          "feature": "신선한 회와 따뜻한 우동의 조화",
+          "price": "보통",
+          "distance": "차로 15분 · 약 5.2km (카카오) / 차로 15분 · 약 5.2km (네이버)",
+          "id": "20261002-4",
+          "verified": true
+        },
+        {
+          "name": "청춘상회",
+          "cuisine": "한식",
+          "feature": "가볍고도 든든한 한식, 따뜻한 분위기",
+          "price": "저렴",
+          "distance": "차로 23분 · 약 8.1km (카카오) / 차로 23분 · 약 8.1km (네이버)",
+          "id": "20261002-5",
+          "verified": true
+        }
+      ],
+      "extras": [
+        {
+          "name": "달하촌이가",
+          "cuisine": "한식",
+          "feature": "국물 음식이 정평인 현지 오래된 식당",
+          "price": "보통",
+          "distance": "차로 6분 · 약 2.2km (카카오)",
+          "tag": "근처유명",
+          "id": "20261002-x1",
+          "verified": true
+        },
+        {
+          "name": "양자강",
+          "cuisine": "중식",
+          "feature": "매콤하고 맛있는 정읍 대표 짬뽕집",
+          "price": "보통",
+          "distance": "차로 18분 · 약 6.5km (카카오) / 차로 18분 · 약 6.5km (네이버)",
+          "tag": "검색유명",
+          "id": "20261002-x2",
+          "verified": true
+        },
+        {
+          "name": "세원해장국",
+          "cuisine": "한식",
+          "feature": "신선한 국물로 어느 때나 맛있는 해장국",
+          "price": "저렴",
+          "distance": "차로 23분 · 약 8.1km (카카오) / 차로 23분 · 약 8.1km (네이버)",
+          "tag": "신규맛집",
+          "id": "20261002-x3",
+          "verified": true
+        }
+      ],
+      "by_condition": {
+        "해장 필요": [
+          {
+            "name": "세원해장국",
+            "cuisine": "해장국",
+            "feature": "진한 국물로 깔끔하게",
+            "price": "",
+            "distance": "차로 23분 · 약 8.1km (카카오) / 차로 23분 · 약 8.1km (네이버)",
+            "id": "20261002-해장-1",
+            "verified": true
+          },
+          {
+            "name": "태평회관",
+            "cuisine": "한식",
+            "feature": "따뜻한 국밥과 반찬",
+            "price": "",
+            "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+            "id": "20261002-해장-2",
+            "verified": true
+          },
+          {
+            "name": "남도묵은지",
+            "cuisine": "한식",
+            "feature": "묵은지의 풍미 있는 한끼",
+            "price": "",
+            "distance": "차로 14분 · 약 5.0km (카카오) / 차로 14분 · 약 5.0km (네이버)",
+            "id": "20261002-해장-3",
+            "verified": true
+          },
+          {
+            "name": "신정마루",
+            "cuisine": "한식",
+            "feature": "정갈한 국물 음식",
+            "price": "",
+            "distance": "차로 7분 · 약 2.5km (카카오) / 차로 7분 · 약 2.5km (네이버)",
+            "id": "20261002-해장-4",
+            "verified": true
+          },
+          {
+            "name": "정읍식당",
+            "cuisine": "한식",
+            "feature": "국물로 속을 달래는 맛",
+            "price": "",
+            "distance": "차로 17분 · 약 5.8km (카카오) / 차로 17분 · 약 5.8km (네이버)",
+            "id": "20261002-해장-5",
+            "verified": true
+          }
+        ],
+        "매콤하게": [
+          {
+            "name": "양자강",
+            "cuisine": "중식",
+            "feature": "정읍 대표 짬뽕의 매콤함",
+            "price": "",
+            "distance": "차로 18분 · 약 6.5km (카카오) / 차로 18분 · 약 6.5km (네이버)",
+            "id": "20261002-매콤-1",
+            "verified": true
+          },
+          {
+            "name": "도야짬뽕",
+            "cuisine": "중식",
+            "feature": "매콤한 짬뽕의 깊은 맛",
+            "price": "",
+            "distance": "차로 23분 · 약 8.1km (카카오) / 차로 23분 · 약 8.1km (네이버)",
+            "id": "20261002-매콤-2",
+            "verified": true
+          },
+          {
+            "name": "아리산",
+            "cuisine": "중식",
+            "feature": "중식 대표 매콤 요리",
+            "price": "",
+            "distance": "차로 11분 · 약 3.8km (카카오) / 차로 11분 · 약 3.8km (네이버)",
+            "id": "20261002-매콤-3",
+            "verified": true
+          },
+          {
+            "name": "이비가짬뽕",
+            "cuisine": "중식",
+            "feature": "시원한 해물 짬뽕",
+            "price": "",
+            "distance": "차로 15분 · 약 5.2km (카카오) / 차로 15분 · 약 5.2km (네이버)",
+            "id": "20261002-매콤-4",
+            "verified": true
+          },
+          {
+            "name": "대패마켙",
+            "cuisine": "한식",
+            "feature": "매콤한 돼지고기 구이",
+            "price": "",
+            "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+            "id": "20261002-매콤-5",
+            "verified": true
+          }
+        ],
+        "가볍게": [
+          {
+            "name": "청춘상회",
+            "cuisine": "한식",
+            "feature": "가볍고 편안한 한식",
+            "price": "",
+            "distance": "차로 23분 · 약 8.1km (카카오) / 차로 23분 · 약 8.1km (네이버)",
+            "id": "20261002-가볍-1",
+            "verified": true
+          },
+          {
+            "name": "티피콴",
+            "cuisine": "베트남",
+            "feature": "상큼한 국물의 쌀국수",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+            "id": "20261002-가볍-2",
+            "verified": true
+          },
+          {
+            "name": "미카도스시",
+            "cuisine": "일식",
+            "feature": "신선한 초밥과 우동",
+            "price": "",
+            "distance": "차로 15분 · 약 5.2km (카카오) / 차로 15분 · 약 5.2km (네이버)",
+            "id": "20261002-가볍-3",
+            "verified": true
+          },
+          {
+            "name": "고봉민김밥",
+            "cuisine": "분식",
+            "feature": "간편하고 가벼운 김밥",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+            "id": "20261002-가볍-4",
+            "verified": true
+          },
+          {
+            "name": "하루엔소담",
+            "cuisine": "일식",
+            "feature": "부드러운 돈까스와 우동",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-가볍-5",
+            "verified": true
+          }
+        ],
+        "든든하게": [
+          {
+            "name": "한그릇에담다",
+            "cuisine": "한식",
+            "feature": "푸짐한 한식 정식",
+            "price": "",
+            "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+            "id": "20261002-든든-1",
+            "verified": true
+          },
+          {
+            "name": "단풍돈",
+            "cuisine": "한식",
+            "feature": "풍성한 돈까스 정식",
+            "price": "",
+            "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+            "id": "20261002-든든-2",
+            "verified": true
+          },
+          {
+            "name": "돈아식당",
+            "cuisine": "한식",
+            "feature": "든든한 국밥과 반찬",
+            "price": "",
+            "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+            "id": "20261002-든든-3",
+            "verified": true
+          },
+          {
+            "name": "본가누룽지삼계탕",
+            "cuisine": "한식",
+            "feature": "영양 가득한 삼계탕",
+            "price": "",
+            "distance": "차로 15분 · 약 5.4km (카카오) / 차로 15분 · 약 5.4km (네이버)",
+            "id": "20261002-든든-4",
+            "verified": true
+          },
+          {
+            "name": "달하촌이가",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 6분 · 약 2.2km (카카오)",
+            "id": "20261002-든든-5",
+            "verified": true
+          }
+        ],
+        "일식": [
+          {
+            "name": "하루엔소담",
+            "cuisine": "일식",
+            "feature": "담백한 일식 돈까스",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-일식-1",
+            "verified": true
+          },
+          {
+            "name": "명스시",
+            "cuisine": "일식",
+            "feature": "정성스러운 초밥",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+            "id": "20261002-일식-2",
+            "verified": true
+          },
+          {
+            "name": "이가스시&참치",
+            "cuisine": "일식",
+            "feature": "신선한 참치 요리",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-일식-3",
+            "verified": true
+          },
+          {
+            "name": "연참치",
+            "cuisine": "일식",
+            "feature": "참치 전문점의 신선함",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-일식-4",
+            "verified": true
+          },
+          {
+            "name": "서래원가든",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 7분 · 약 2.3km (카카오) / 차로 7분 · 약 2.3km (네이버)",
+            "id": "20261002-일식-5",
+            "verified": true
+          }
+        ],
+        "한식": [
+          {
+            "name": "달하촌이가",
+            "cuisine": "한식",
+            "feature": "편안한 국물 한식",
+            "price": "",
+            "distance": "차로 6분 · 약 2.2km (카카오)",
+            "id": "20261002-한식-1",
+            "verified": true
+          },
+          {
+            "name": "가로등식당",
+            "cuisine": "한식",
+            "feature": "정겨운 한식당의 맛",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-한식-2",
+            "verified": true
+          },
+          {
+            "name": "오리랑보리밥이랑",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 10분 · 약 3.5km (카카오) / 차로 10분 · 약 3.5km (네이버)",
+            "id": "20261002-한식-3",
+            "verified": true
+          },
+          {
+            "name": "토종가든",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 11분 · 약 4.0km (카카오) / 차로 11분 · 약 3.9km (네이버)",
+            "id": "20261002-한식-4",
+            "verified": true
+          },
+          {
+            "name": "엄마손회관뷔페",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 13분 · 약 4.5km (카카오) / 차로 13분 · 약 4.5km (네이버)",
+            "id": "20261002-한식-5",
+            "verified": true
+          }
+        ],
+        "고기": [
+          {
+            "name": "단풍돈",
+            "cuisine": "한식",
+            "feature": "고소한 돈까스 전문",
+            "price": "",
+            "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+            "id": "20261002-고기-1",
+            "verified": true
+          },
+          {
+            "name": "대패마켙",
+            "cuisine": "한식",
+            "feature": "돼지고기 구이의 정수",
+            "price": "",
+            "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+            "id": "20261002-고기-2",
+            "verified": true
+          },
+          {
+            "name": "제주숯불갈비",
+            "cuisine": "한식",
+            "feature": "숯불에 구운 신선한 갈비",
+            "price": "",
+            "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+            "id": "20261002-고기-3",
+            "verified": true
+          },
+          {
+            "name": "숯불구이전문점 한상",
+            "cuisine": "한식",
+            "feature": "숯불 구이의 참맛",
+            "price": "",
+            "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+            "id": "20261002-고기-4",
+            "verified": true
+          },
+          {
+            "name": "한마음정육식당",
+            "cuisine": "한식",
+            "feature": "신선한 고기의 정육식당",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-고기-5",
+            "verified": true
+          }
+        ],
+        "혼밥": [
+          {
+            "name": "가로등식당",
+            "cuisine": "한식",
+            "feature": "한 사람 고객 환영하는 분위기",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-혼밥-1",
+            "verified": true
+          },
+          {
+            "name": "고봉민김밥",
+            "cuisine": "분식",
+            "feature": "빠르고 간편한 한끼",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+            "id": "20261002-혼밥-2",
+            "verified": true
+          },
+          {
+            "name": "이가스시&참치",
+            "cuisine": "일식",
+            "feature": "혼자도 편하게 먹기",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-혼밥-3",
+            "verified": true
+          },
+          {
+            "name": "남도묵은지 정읍점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 14분 · 약 5.0km (카카오) / 차로 14분 · 약 5.0km (네이버)",
+            "id": "20261002-혼밥-4",
+            "verified": true
+          },
+          {
+            "name": "아글씨왕순대감자탕",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 14분 · 약 5.1km (카카오) / 차로 14분 · 약 5.1km (네이버)",
+            "id": "20261002-혼밥-5",
+            "verified": true
+          }
+        ],
+        "와인": [
+          {
+            "name": "한마음정육식당",
+            "cuisine": "한식",
+            "feature": "고기와 함께하는 음료",
+            "price": "",
+            "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+            "id": "20261002-와인-1",
+            "verified": true
+          },
+          {
+            "name": "제주숯불갈비",
+            "cuisine": "한식",
+            "feature": "갈비와 곁들이는 분위기",
+            "price": "",
+            "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+            "id": "20261002-와인-2",
+            "verified": true
+          },
+          {
+            "name": "잔",
+            "cuisine": "술집",
+            "feature": "분위기 있는 주점",
+            "price": "",
+            "distance": "차로 16분 · 약 5.6km (카카오) / 차로 76분 · 약 26.6km (네이버)",
+            "id": "20261002-와인-3",
+            "verified": true
+          },
+          {
+            "name": "역전할머니맥주",
+            "cuisine": "술집",
+            "feature": "맥주 페어링 가능",
+            "price": "",
+            "distance": "차로 23분 · 약 8.0km (카카오) / 차로 23분 · 약 8.0km (네이버)",
+            "id": "20261002-와인-4",
+            "verified": true
+          },
+          {
+            "name": "초원식당",
+            "cuisine": "한식",
+            "feature": "한식과 술의 조화",
+            "price": "",
+            "distance": "차로 16분 · 약 5.4km (카카오) / 차로 16분 · 약 5.4km (네이버)",
+            "id": "20261002-와인-5",
+            "verified": true
+          }
+        ],
+        "임원": [
+          {
+            "name": "태평회관",
+            "cuisine": "한식",
+            "feature": "격식 있는 한식당",
+            "price": "",
+            "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+            "id": "20261002-임원-1",
+            "verified": true
+          },
+          {
+            "name": "한국관",
+            "cuisine": "한식",
+            "feature": "정중한 한식 정식",
+            "price": "",
+            "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+            "id": "20261002-임원-2",
+            "verified": true
+          },
+          {
+            "name": "정읍식당",
+            "cuisine": "한식",
+            "feature": "오래된 신뢰의 식당",
+            "price": "",
+            "distance": "차로 17분 · 약 5.8km (카카오) / 차로 17분 · 약 5.8km (네이버)",
+            "id": "20261002-임원-3",
+            "verified": true
+          },
+          {
+            "name": "청평식당",
+            "cuisine": "한식",
+            "feature": "정성스러운 상차림",
+            "price": "",
+            "distance": "차로 23분 · 약 8.0km (카카오) / 차로 23분 · 약 8.0km (네이버)",
+            "id": "20261002-임원-4",
+            "verified": true
+          },
+          {
+            "name": "산골냉면전문점",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "차로 15분 · 약 5.1km (카카오) / 차로 15분 · 약 5.1km (네이버)",
+            "id": "20261002-임원-5",
+            "verified": true
+          }
+        ]
+      },
+      "meals": {
+        "저녁": {
+          "restaurants": [
+            {
+              "name": "한그릇에담다",
+              "cuisine": "한식",
+              "feature": "정갈한 상차림 · 저녁 모임에 무난한 분위기",
+              "price": "보통",
+              "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+              "id": "20261002-D-1",
+              "verified": true
+            },
+            {
+              "name": "달하촌이가",
+              "cuisine": "한식",
+              "feature": "전통 한정식 · 푸근하고 편안한 맛",
+              "price": "보통",
+              "distance": "차로 6분 · 약 2.2km (카카오)",
+              "id": "20261002-D-2",
+              "verified": true
+            },
+            {
+              "name": "신정마루",
+              "cuisine": "한식",
+              "feature": "숯불 요리 전문 · 회식 분위기 좋음",
+              "price": "보통",
+              "distance": "차로 7분 · 약 2.5km (카카오) / 차로 7분 · 약 2.5km (네이버)",
+              "id": "20261002-D-3",
+              "verified": true
+            },
+            {
+              "name": "계돈탄날",
+              "cuisine": "한식",
+              "feature": "숯불구이 · 신선한 고기 본연의 맛",
+              "price": "보통",
+              "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+              "id": "20261002-D-4",
+              "verified": true
+            },
+            {
+              "name": "청춘상회 상동점",
+              "cuisine": "한식",
+              "feature": "가볍고 다양한 메뉴 · 편한 혼밥도 가능",
+              "price": "저렴",
+              "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+              "id": "20261002-D-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "이화담",
+              "cuisine": "한식",
+              "feature": "전통 만두전골 · 가족 모임에 좋음",
+              "price": "보통",
+              "distance": "차로 18분 · 약 6.4km (카카오) / 차로 18분 · 약 6.4km (네이버)",
+              "tag": "검색유명",
+              "id": "20261002-D-x2",
+              "verified": true
+            },
+            {
+              "name": "보안식당",
+              "cuisine": "한식",
+              "feature": "비빔쫄면 명가 · TV 소개된 맛집",
+              "price": "저렴",
+              "distance": "차로 19분 · 약 6.8km (카카오) / 차로 19분 · 약 6.8km (네이버)",
+              "tag": "신규맛집",
+              "id": "20261002-D-x3",
+              "verified": true
+            }
+          ],
+          "by_condition": {
+            "해장 필요": [
+              {
+                "name": "신가네 정읍국밥",
+                "cuisine": "국밥",
+                "feature": "진한 국물 · 든든한 해장국밥",
+                "price": "저렴",
+                "distance": "차로 24분 · 약 8.6km (카카오) / 차로 24분 · 약 8.6km (네이버)",
+                "id": "20261002-D-해장-1",
+                "verified": true
+              },
+              {
+                "name": "아글씨왕순대감자탕",
+                "cuisine": "감자탕",
+                "feature": "깊은 국물 · 푸근한 순대전골",
+                "price": "보통",
+                "distance": "차로 14분 · 약 5.1km (카카오) / 차로 14분 · 약 5.1km (네이버)",
+                "id": "20261002-D-해장-2",
+                "verified": true
+              },
+              {
+                "name": "태평회관",
+                "cuisine": "한식",
+                "feature": "국물 요리 · 깔끔한 해장국",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+                "id": "20261002-D-해장-3",
+                "verified": true
+              },
+              {
+                "name": "정읍식당",
+                "cuisine": "한식",
+                "feature": "로컬 정통 · 아침 국밥 대표점",
+                "price": "저렴",
+                "distance": "차로 17분 · 약 5.8km (카카오) / 차로 17분 · 약 5.8km (네이버)",
+                "id": "20261002-D-해장-4",
+                "verified": true
+              },
+              {
+                "name": "한마음정육식당 전북정읍점",
+                "cuisine": "국밥",
+                "feature": "육수 진하고 풍미 진한 음식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+                "id": "20261002-D-해장-5",
+                "verified": true
+              }
+            ],
+            "매콤하게": [
+              {
+                "name": "이비가짬뽕 정읍점",
+                "cuisine": "중식",
+                "feature": "감칠맛 짜장 · 매운 짬뽕",
+                "price": "저렴",
+                "distance": "차로 15분 · 약 5.2km (카카오) / 차로 15분 · 약 5.2km (네이버)",
+                "id": "20261002-D-매콤-1",
+                "verified": true
+              },
+              {
+                "name": "도야짬뽕 상동점",
+                "cuisine": "중식",
+                "feature": "깊고 진한 국물 · 매콤한 맛",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-매콤-2",
+                "verified": true
+              },
+              {
+                "name": "아리산",
+                "cuisine": "중식",
+                "feature": "정읍 짜장면 맛집 · 매콤한 팔보채",
+                "price": "저렴",
+                "distance": "차로 11분 · 약 3.8km (카카오) / 차로 11분 · 약 3.8km (네이버)",
+                "id": "20261002-D-매콤-3",
+                "verified": true
+              },
+              {
+                "name": "역전할머니맥주 정읍상동점",
+                "cuisine": "한식",
+                "feature": "매운 안주 · 시원한 맥주 곁반찬",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.4km (카카오) / 차로 15분 · 약 5.4km (네이버)",
+                "id": "20261002-D-매콤-4",
+                "verified": true
+              },
+              {
+                "name": "자금성",
+                "cuisine": "중식",
+                "feature": "중식 정찬 · 매운 계절요리",
+                "price": "저렴",
+                "distance": "차로 15분 · 약 5.4km (카카오) / 차로 15분 · 약 5.4km (네이버)",
+                "id": "20261002-D-매콤-5",
+                "verified": true
+              }
+            ],
+            "가볍게": [
+              {
+                "name": "티피콴 베트남쌀국수",
+                "cuisine": "양식",
+                "feature": "시원한 국수 · 가벼운 베트남 음식",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-가볍-1",
+                "verified": true
+              },
+              {
+                "name": "청춘상회 상동점",
+                "cuisine": "한식",
+                "feature": "편한 분위기 · 부담없는 한끼",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-가볍-2",
+                "verified": true
+              },
+              {
+                "name": "간이역 상동역점",
+                "cuisine": "주점",
+                "feature": "가벼운 안주 · 편한 분위기",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.5km (카카오)",
+                "id": "20261002-D-가볍-3",
+                "verified": true
+              },
+              {
+                "name": "고봉민김밥인 정읍상동점",
+                "cuisine": "분식",
+                "feature": "간단한 한끼 · 빠른 한식",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-가볍-4",
+                "verified": true
+              },
+              {
+                "name": "누구나홀딱반한닭 정읍상동점",
+                "cuisine": "치킨",
+                "feature": "바삭한 치킨 · 부담없는 야식",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-가볍-5",
+                "verified": true
+              }
+            ],
+            "든든하게": [
+              {
+                "name": "돈아식당",
+                "cuisine": "한식",
+                "feature": "뜨끈한 국밥 · 푸근한 한끼",
+                "price": "저렴",
+                "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+                "id": "20261002-D-든든-1",
+                "verified": true
+              },
+              {
+                "name": "단풍돈",
+                "cuisine": "한식",
+                "feature": "돼지고기 전문 · 든든한 밥상",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+                "id": "20261002-D-든든-2",
+                "verified": true
+              },
+              {
+                "name": "초원식당",
+                "cuisine": "한식",
+                "feature": "푸짐한 상차림 · 든든한 정식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.4km (카카오) / 차로 16분 · 약 5.4km (네이버)",
+                "id": "20261002-D-든든-3",
+                "verified": true
+              },
+              {
+                "name": "본가누룽지삼계탕",
+                "cuisine": "한식",
+                "feature": "영양 가득한 삼계탕 · 따뜻한 끓임",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.4km (카카오) / 차로 15분 · 약 5.4km (네이버)",
+                "id": "20261002-D-든든-4",
+                "verified": true
+              },
+              {
+                "name": "금강산유황오리",
+                "cuisine": "한식",
+                "feature": "오리 요리 전문 · 건강한 맛",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.4km (카카오) / 차로 16분 · 약 5.4km (네이버)",
+                "id": "20261002-D-든든-5",
+                "verified": true
+              }
+            ],
+            "일식": [
+              {
+                "name": "미카도스시 전북정읍점",
+                "cuisine": "일식",
+                "feature": "신선한 회 · 정통 일본식 스시",
+                "price": "비쌈",
+                "distance": "차로 15분 · 약 5.2km (카카오) / 차로 15분 · 약 5.2km (네이버)",
+                "id": "20261002-D-일식-1",
+                "verified": true
+              },
+              {
+                "name": "미미초밥",
+                "cuisine": "일식",
+                "feature": "정갈한 초밥 · 가벼운 일식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-일식-2",
+                "verified": true
+              },
+              {
+                "name": "돈페 정읍점",
+                "cuisine": "일식",
+                "feature": "돈카스와 덮밥 · 캐주얼한 일식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-일식-3",
+                "verified": true
+              },
+              {
+                "name": "명스시",
+                "cuisine": "일식",
+                "feature": "신선한 회 · 깔끔한 일본음식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-일식-4",
+                "verified": true
+              },
+              {
+                "name": "이가스시&참치 본점",
+                "cuisine": "일식",
+                "feature": "참치 전문 · 신선한 해산물",
+                "price": "비쌈",
+                "distance": "차로 16분 · 약 5.7km (카카오)",
+                "id": "20261002-D-일식-5",
+                "verified": true
+              }
+            ],
+            "한식": [
+              {
+                "name": "오리랑보리밥이랑",
+                "cuisine": "한식",
+                "feature": "오리 보리밥 · 건강한 한끼",
+                "price": "보통",
+                "distance": "차로 10분 · 약 3.5km (카카오) / 차로 10분 · 약 3.5km (네이버)",
+                "id": "20261002-D-한식-1",
+                "verified": true
+              },
+              {
+                "name": "한그릇에담다",
+                "cuisine": "한식",
+                "feature": "정갈한 상차림 · 깔끔한 한끼",
+                "price": "보통",
+                "distance": "차로 5분 · 약 1.7km (카카오) / 차로 5분 · 약 1.7km (네이버)",
+                "id": "20261002-D-한식-2",
+                "verified": true
+              },
+              {
+                "name": "신정마루",
+                "cuisine": "한식",
+                "feature": "숯불 고기 · 회식 좋은 분위기",
+                "price": "보통",
+                "distance": "차로 7분 · 약 2.5km (카카오) / 차로 7분 · 약 2.5km (네이버)",
+                "id": "20261002-D-한식-3",
+                "verified": true
+              },
+              {
+                "name": "서래원가든",
+                "cuisine": "한식",
+                "feature": "정통 한정식 · 푸근한 맛",
+                "price": "보통",
+                "distance": "차로 7분 · 약 2.3km (카카오) / 차로 7분 · 약 2.3km (네이버)",
+                "id": "20261002-D-한식-4",
+                "verified": true
+              },
+              {
+                "name": "제주숯불갈비",
+                "cuisine": "한식",
+                "feature": "숯불갈비 · 구수한 고기맛",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+                "id": "20261002-D-한식-5",
+                "verified": true
+              }
+            ],
+            "고기": [
+              {
+                "name": "단풍돈",
+                "cuisine": "한식",
+                "feature": "돼지고기 · 푸짐한 구성",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+                "id": "20261002-D-고기-1",
+                "verified": true
+              },
+              {
+                "name": "대패마켙 정읍점",
+                "cuisine": "한식",
+                "feature": "돼지고기 마켓 · 신선한 정육",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.3km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+                "id": "20261002-D-고기-2",
+                "verified": true
+              },
+              {
+                "name": "오리랑보리밥이랑",
+                "cuisine": "한식",
+                "feature": "오리 요리 · 건강한 고기음식",
+                "price": "보통",
+                "distance": "차로 10분 · 약 3.5km (카카오) / 차로 10분 · 약 3.5km (네이버)",
+                "id": "20261002-D-고기-3",
+                "verified": true
+              },
+              {
+                "name": "숯불구이전문점 한상",
+                "cuisine": "한식",
+                "feature": "숯불구이 · 고기 맛에 충실",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+                "id": "20261002-D-고기-4",
+                "verified": true
+              },
+              {
+                "name": "제주숯불갈비",
+                "cuisine": "한식",
+                "feature": "제주산 갈비 · 고소한 구이",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+                "id": "20261002-D-고기-5",
+                "verified": true
+              }
+            ],
+            "혼밥": [
+              {
+                "name": "가로등식당",
+                "cuisine": "한식",
+                "feature": "혼밥 편한 분위기 · 정갈한 식사",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+                "id": "20261002-D-혼밥-1",
+                "verified": true
+              },
+              {
+                "name": "이가스시&참치 본점",
+                "cuisine": "일식",
+                "feature": "카운터석 · 혼밥하기 좋음",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.7km (카카오)",
+                "id": "20261002-D-혼밥-2",
+                "verified": true
+              },
+              {
+                "name": "하루엔소담",
+                "cuisine": "일식",
+                "feature": "가볍고 담백한 · 혼밥 좋음",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.7km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+                "id": "20261002-D-혼밥-3",
+                "verified": true
+              },
+              {
+                "name": "고봉민김밥인 정읍상동점",
+                "cuisine": "분식",
+                "feature": "빠른 한끼 · 혼자 편한 식사",
+                "price": "저렴",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.6km (네이버)",
+                "id": "20261002-D-혼밥-4",
+                "verified": true
+              },
+              {
+                "name": "명가한식더뷔페",
+                "cuisine": "뷔페",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 6분 · 약 2.1km (카카오) / 차로 6분 · 약 2.1km (네이버)",
+                "id": "20261002-D-혼밥-5",
+                "verified": true
+              }
+            ],
+            "와인": [
+              {
+                "name": "다시,올",
+                "cuisine": "한식",
+                "feature": "와인 페어링 · 세련된 분위기",
+                "price": "비쌈",
+                "distance": "차로 18분 · 약 6.4km (카카오) / 차로 18분 · 약 6.4km (네이버)",
+                "id": "20261002-D-와인-1",
+                "verified": true
+              },
+              {
+                "name": "토종가든",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 11분 · 약 4.0km (카카오) / 차로 11분 · 약 3.9km (네이버)",
+                "id": "20261002-D-와인-2",
+                "verified": true
+              },
+              {
+                "name": "엄마손회관뷔페",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 13분 · 약 4.5km (카카오) / 차로 13분 · 약 4.5km (네이버)",
+                "id": "20261002-D-와인-3",
+                "verified": true
+              },
+              {
+                "name": "남도묵은지 정읍점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 14분 · 약 5.0km (카카오) / 차로 14분 · 약 5.0km (네이버)",
+                "id": "20261002-D-와인-4",
+                "verified": true
+              },
+              {
+                "name": "산골냉면전문점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 15분 · 약 5.1km (카카오) / 차로 15분 · 약 5.1km (네이버)",
+                "id": "20261002-D-와인-5",
+                "verified": true
+              }
+            ],
+            "임원": [
+              {
+                "name": "태평회관",
+                "cuisine": "한식",
+                "feature": "격식 있는 분위기 · 깔끔한 정식",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+                "id": "20261002-D-임원-1",
+                "verified": true
+              },
+              {
+                "name": "한국관",
+                "cuisine": "한식",
+                "feature": "전통 한정식 · 접대 가능",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.8km (카카오) / 차로 16분 · 약 5.8km (네이버)",
+                "id": "20261002-D-임원-2",
+                "verified": true
+              },
+              {
+                "name": "가로등식당",
+                "cuisine": "한식",
+                "feature": "조용한 분위기 · 접대용으로 무난",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.6km (카카오) / 차로 16분 · 약 5.7km (네이버)",
+                "id": "20261002-D-임원-3",
+                "verified": true
+              },
+              {
+                "name": "초원식당",
+                "cuisine": "한식",
+                "feature": "넉넉한 상차림 · 정중한 서빙",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.4km (카카오) / 차로 16분 · 약 5.4km (네이버)",
+                "id": "20261002-D-임원-4",
+                "verified": true
+              },
+              {
+                "name": "청면옥",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "차로 16분 · 약 5.5km (카카오) / 차로 16분 · 약 5.5km (네이버)",
+                "id": "20261002-D-임원-5",
+                "verified": true
+              }
+            ]
+          }
+        },
+        "술집": {
+          "restaurants": [
+            {
+              "name": "안주제일",
+              "cuisine": "술집",
+              "feature": "신선한 안주와 다양한 주류, 편한 분위기의 로컬 술집",
+              "price": "보통",
+              "distance": "차로 7분 · 약 2.3km (카카오) / 차로 7분 · 약 2.3km (네이버)",
+              "id": "20261002-B-1",
+              "verified": true
+            },
+            {
+              "name": "귀연오리닭",
+              "cuisine": "한식",
+              "feature": "오리와 닭 숯불구이, 술 안주로 최고의 육질과 풍미",
+              "price": "보통",
+              "distance": "차로 10분 · 약 3.6km (카카오) / 차로 10분 · 약 3.6km (네이버)",
+              "id": "20261002-B-2",
+              "verified": true
+            },
+            {
+              "name": "내장산맷돌순두부",
+              "cuisine": "한식",
+              "feature": "부드러운 순두부와 김치, 따뜻한 국물 요리의 묘미",
+              "price": "저렴",
+              "distance": "차로 10분 · 약 3.5km (카카오) / 차로 10분 · 약 3.5km (네이버)",
+              "id": "20261002-B-3",
+              "verified": true
+            },
+            {
+              "name": "내장산민속가든",
+              "cuisine": "한식",
+              "feature": "토종 야채와 밥상 가득한 반찬, 정통 한식 한끼와 술의 조화",
+              "price": "보통",
+              "distance": "차로 11분 · 약 3.7km (카카오)",
+              "id": "20261002-B-4",
+              "verified": true
+            },
+            {
+              "name": "솔가숯불갈비 정읍점",
+              "cuisine": "육류·고기요리",
+              "feature": "프리미엄 한우갈비 숯불구이, 술 한잔의 품격을 더하는 명물",
+              "price": "비쌈",
+              "distance": "차로 15분 · 약 5.4km (카카오) / 차로 15분 · 약 5.3km (네이버)",
+              "id": "20261002-B-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "달초롱",
+              "cuisine": "일식",
+              "feature": "신선한 회와 일본식 전주먹이, 고급스러운 저녁 시간",
+              "price": "비쌈",
+              "distance": "차로 10분 · 약 3.4km (카카오) / 차로 10분 · 약 3.4km (네이버)",
+              "tag": "근처유명",
+              "id": "20261002-B-x1",
+              "verified": true
+            },
+            {
+              "name": "빛가람국밥 정읍점",
+              "cuisine": "한식",
+              "feature": "전주식 국밥의 깊은 맛, 술 뒤 해장에 제격인 대중적 명성",
+              "price": "저렴",
+              "distance": "차로 6분 · 약 2.0km (카카오)",
+              "tag": "검색유명",
+              "id": "20261002-B-x2",
+              "verified": true
+            },
+            {
+              "name": "돈가스톡 본점",
+              "cuisine": "돈가스",
+              "feature": "바삭한 돈까스와 소스의 조화, 술 안주로 인기 높은 신상 메뉴",
+              "price": "보통",
+              "distance": "차로 14분 · 약 5.0km (카카오) / 차로 14분 · 약 5.0km (네이버)",
+              "tag": "신규맛집",
+              "id": "20261002-B-x3",
+              "verified": true
+            }
+          ]
+        }
+      }
+    },
+    {
       "date": "2026-10-01",
       "comment": "맑은 날씨에 따뜻한 한끼, JB금융의 혁신 추진을 축하하며",
       "message": "오늘은 맑은 날씨에 포근한 봄 기운이 느껴지니, 신선한 채소와 함께 즐길 수 있는 서래원가든의 돌솥비빔밥이나 화덕갈비 정읍점의 정성스러운 구이 요리를 추천드립니다. 한편 JB금융그룹이 그룹 공통 AI 플랫폼 구축을 통해 계열사 업무에 AI 에이전트를 적용하는 등 디지털 혁신을 가속화하고 있으니, 점심시간에 이러한 소식을 함께 나누며 격려하시기 바랍니다.",
