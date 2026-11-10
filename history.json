@@ -1,6 +1,1216 @@
 {
   "recommendations": [
     {
+      "date": "2026-11-10",
+      "comment": "맑은 날씨에 주가 상승으로 기분 좋은 날, 특별한 메뉴로 축하의 점심을 즐겨보세요.",
+      "message": "오늘은 쌀쌀한 날씨이므로 따뜻한 국물 요리인 용호동낙지 여의도직영점의 낙지탕이나 신안홍탁의 보양식을 추천드립니다. 한편, 당사가 전북·광주은행과 함께 지방금융 최초로 AI 콜센터를 구축하는 등 혁신적인 변화를 추진 중이니 많은 관심 부탁드립니다.",
+      "weather": "맑음 8°C (최저 2° / 최고 11°)",
+      "news": [
+        {
+          "title": "JB금융, 전북·광주銀 통합 'AI 콜센터' 깐다…지방금융 첫 사례",
+          "link": "https://www.newsway.co.kr/news/view?ud=2026110914533866459",
+          "focus": true
+        },
+        {
+          "title": "핀다, 저축은행 인수 후 첫 공채…AI·준법 등 19개 직무 모집",
+          "link": "https://sateconomy.co.kr/news/view/1065577815053046",
+          "focus": true
+        },
+        {
+          "title": "핀다 '저축은행 인수' 이후 첫 공개채용 실시, 23일까지 서류 접수",
+          "link": "https://www.businesspost.co.kr/BP?command=article_view&num=451556",
+          "focus": false
+        }
+      ],
+      "restaurants": [
+        {
+          "name": "독도참치앤전복 여의도점",
+          "cuisine": "한식",
+          "feature": "신선한 회와 전복 코스 · 고급감 있는 특선",
+          "price": "비쌈",
+          "distance": "도보 1분 (카카오)",
+          "id": "20261110-1",
+          "verified": true
+        },
+        {
+          "name": "신안홍탁",
+          "cuisine": "한식",
+          "feature": "홍탁 정식 · 정갈한 한정식의 품격",
+          "price": "비쌈",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20261110-2",
+          "verified": true
+        },
+        {
+          "name": "본보야지",
+          "cuisine": "양식",
+          "feature": "파스타·리조또 · 가볍고 세련된 유럽식",
+          "price": "보통",
+          "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+          "id": "20261110-3",
+          "verified": true
+        },
+        {
+          "name": "용호동낙지 여의도직영점",
+          "cuisine": "한식",
+          "feature": "낙지볶음 특선 · 통통한 식감의 활기",
+          "price": "보통",
+          "distance": "도보 2분 (카카오)",
+          "id": "20261110-4",
+          "verified": true
+        },
+        {
+          "name": "캘리스랩 여의도IFC점",
+          "cuisine": "한식",
+          "feature": "정성 있는 건강 도시락 · 균형 잡힌 맛",
+          "price": "보통",
+          "distance": "도보 3분 (카카오)",
+          "id": "20261110-5",
+          "verified": true
+        }
+      ],
+      "extras": [
+        {
+          "name": "고우가 여의도점",
+          "cuisine": "한식",
+          "feature": "한우 오마카세 · 조용한 룸에서의 특별한 경험",
+          "price": "비쌈",
+          "distance": "도보 12분 (카카오) / 도보 12분 (네이버)",
+          "tag": "근처유명",
+          "id": "20261110-x1",
+          "verified": true
+        },
+        {
+          "name": "정인면옥 본점",
+          "cuisine": "한식",
+          "feature": "미쉐린 선정 평양냉면 · 52년 전통",
+          "price": "저렴",
+          "distance": "차로 3분 · 약 0.9km (카카오) / 차로 3분 · 약 0.9km (네이버)",
+          "tag": "검색유명",
+          "id": "20261110-x2",
+          "verified": true
+        },
+        {
+          "name": "타마",
+          "cuisine": "일식",
+          "feature": "프리미엄 장어덮밥 · 녹는 식감의 신상",
+          "price": "보통",
+          "distance": "도보 10분 (카카오) / 도보 10분 (네이버)",
+          "tag": "신규맛집",
+          "id": "20261110-x3",
+          "verified": true
+        }
+      ],
+      "by_condition": {
+        "해장 필요": [
+          {
+            "name": "제주은희네해장국 여의도역점",
+            "cuisine": "한식",
+            "feature": "깔끔한 국물 · 당김증 해결",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-해장-1",
+            "verified": true
+          },
+          {
+            "name": "백암순대국",
+            "cuisine": "한식",
+            "feature": "진한 국물 · 든든한 순대",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-해장-2",
+            "verified": true
+          },
+          {
+            "name": "육전국밥 여의도역점",
+            "cuisine": "한식",
+            "feature": "고소한 국밥 · 위로가 되는 맛",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-해장-3",
+            "verified": true
+          },
+          {
+            "name": "강창구찹쌀진순대 여의도2호점",
+            "cuisine": "한식",
+            "feature": "찹쌀순대 · 도톰한 식감",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-해장-4",
+            "verified": true
+          },
+          {
+            "name": "다솔식당",
+            "cuisine": "한식",
+            "feature": "국밥 & 순대국 · 로컬 감성",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-해장-5",
+            "verified": true
+          }
+        ],
+        "매콤하게": [
+          {
+            "name": "마유유마라탕 더현대서울점",
+            "cuisine": "중식",
+            "feature": "마라의 얼얼함 · 중독성 있는 맛",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-매콤-1",
+            "verified": true
+          },
+          {
+            "name": "사천화가 더현대서울점",
+            "cuisine": "중식",
+            "feature": "사천식 얼얼함 · 빠른 회전",
+            "price": "보통",
+            "distance": "거리 미확인",
+            "id": "20261110-매콤-2",
+            "verified": false
+          },
+          {
+            "name": "훠궈야 여의도IFC몰점",
+            "cuisine": "중식",
+            "feature": "마라 훠궈 · 얼얼한 국물",
+            "price": "비쌈",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-매콤-3",
+            "verified": true
+          },
+          {
+            "name": "신안홍탁",
+            "cuisine": "한식",
+            "feature": "홍탁의 깊은 맛 · 은은한 매콤함",
+            "price": "비쌈",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20261110-매콤-4",
+            "verified": true
+          },
+          {
+            "name": "용호동낙지 여의도직영점",
+            "cuisine": "한식",
+            "feature": "낙지볶음 · 얼큼한 맛",
+            "price": "보통",
+            "distance": "도보 2분 (카카오)",
+            "id": "20261110-매콤-5",
+            "verified": true
+          }
+        ],
+        "가볍게": [
+          {
+            "name": "본보야지",
+            "cuisine": "양식",
+            "feature": "파스타·리조또 · 가벼운 점심",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20261110-가볍-1",
+            "verified": true
+          },
+          {
+            "name": "콘래드서울 아트리오",
+            "cuisine": "양식",
+            "feature": "정갈한 코스 · 우아한 분위기",
+            "price": "비쌈",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-가볍-2",
+            "verified": true
+          },
+          {
+            "name": "진가와 여의도점",
+            "cuisine": "일식",
+            "feature": "일식 정식 · 가볍고 정성 있는",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-가볍-3",
+            "verified": true
+          },
+          {
+            "name": "포포유",
+            "cuisine": "아시아음식",
+            "feature": "베트남 쌀국수 · 상큼한 맛",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오)",
+            "id": "20261110-가볍-4",
+            "verified": true
+          },
+          {
+            "name": "알라보 여의도점",
+            "cuisine": "샐러드",
+            "feature": "신선한 샐러드 · 건강한 점심",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-가볍-5",
+            "verified": true
+          }
+        ],
+        "든든하게": [
+          {
+            "name": "육전국밥 여의도역점",
+            "cuisine": "한식",
+            "feature": "고기 국밥 · 든든한 한 끼",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-든든-1",
+            "verified": true
+          },
+          {
+            "name": "강창구찹쌀진순대 여의도2호점",
+            "cuisine": "한식",
+            "feature": "순대·국밥 · 끼니 채우는 맛",
+            "price": "저렴",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-든든-2",
+            "verified": true
+          },
+          {
+            "name": "미미담 여의도브라이튼점",
+            "cuisine": "한식",
+            "feature": "갈비탕·국밥 · 든든한 영양",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-든든-3",
+            "verified": true
+          },
+          {
+            "name": "여의도삼계탕 여의도BNK타워점",
+            "cuisine": "한식",
+            "feature": "보양 삼계탕 · 체력 보충",
+            "price": "보통",
+            "distance": "도보 4분 (카카오)",
+            "id": "20261110-든든-4",
+            "verified": true
+          },
+          {
+            "name": "해화동",
+            "cuisine": "한식",
+            "feature": "정식 한식 · 든든한 기본",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20261110-든든-5",
+            "verified": true
+          }
+        ],
+        "일식": [
+          {
+            "name": "진가와 여의도점",
+            "cuisine": "일식",
+            "feature": "일식 정식 · 정성 있는 구성",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-일식-1",
+            "verified": true
+          },
+          {
+            "name": "돈대리돈까스백반",
+            "cuisine": "일식",
+            "feature": "돈까스·백반 · 바삭한 식감",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-일식-2",
+            "verified": true
+          },
+          {
+            "name": "온미동",
+            "cuisine": "일식",
+            "feature": "우동·덮밥 · 따뜻한 점심",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-일식-3",
+            "verified": true
+          },
+          {
+            "name": "타마",
+            "cuisine": "일식",
+            "feature": "장어덮밥 · 녹는 식감",
+            "price": "보통",
+            "distance": "도보 10분 (카카오) / 도보 10분 (네이버)",
+            "id": "20261110-일식-4",
+            "verified": true
+          },
+          {
+            "name": "오복수산 씨티플라자 여의도점",
+            "cuisine": "일식",
+            "feature": "회 정식 · 신선한 해산물",
+            "price": "비쌈",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-일식-5",
+            "verified": true
+          }
+        ],
+        "한식": [
+          {
+            "name": "해화동",
+            "cuisine": "한식",
+            "feature": "정갈한 반찬 · 기본의 맛",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20261110-한식-1",
+            "verified": true
+          },
+          {
+            "name": "전주식당",
+            "cuisine": "한식",
+            "feature": "비빔밥·국밥 · 남도 정취",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+            "id": "20261110-한식-2",
+            "verified": true
+          },
+          {
+            "name": "정인면옥 본점",
+            "cuisine": "한식",
+            "feature": "평양냉면 · 미쉐린 선정",
+            "price": "저렴",
+            "distance": "차로 3분 · 약 0.9km (카카오) / 차로 3분 · 약 0.9km (네이버)",
+            "id": "20261110-한식-3",
+            "verified": true
+          },
+          {
+            "name": "마마된장 여의도IFC몰점",
+            "cuisine": "한식",
+            "feature": "된장찌개·국 · 간편한 점심",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-한식-4",
+            "verified": true
+          },
+          {
+            "name": "화동활어복",
+            "cuisine": "한식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 1분 (카카오)",
+            "id": "20261110-한식-5",
+            "verified": true
+          }
+        ],
+        "고기": [
+          {
+            "name": "여의도삼계탕 여의도BNK타워점",
+            "cuisine": "한식",
+            "feature": "보양 삼계탕 · 부드러운 고기",
+            "price": "보통",
+            "distance": "도보 4분 (카카오)",
+            "id": "20261110-고기-1",
+            "verified": true
+          },
+          {
+            "name": "대송참숯 여의도점",
+            "cuisine": "한식",
+            "feature": "참숯구이 · 향긋한 맛",
+            "price": "비쌈",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-고기-2",
+            "verified": true
+          },
+          {
+            "name": "독도참치앤전복 여의도점",
+            "cuisine": "한식",
+            "feature": "특선 회·전복 · 프리미엄",
+            "price": "비쌈",
+            "distance": "도보 1분 (카카오)",
+            "id": "20261110-고기-3",
+            "verified": true
+          },
+          {
+            "name": "명보정",
+            "cuisine": "한식",
+            "feature": "소고기·구이 · 고급 한우",
+            "price": "비쌈",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20261110-고기-4",
+            "verified": true
+          },
+          {
+            "name": "오늘은즉떡",
+            "cuisine": "분식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 1분 (카카오) / 도보 14분 (네이버)",
+            "id": "20261110-고기-5",
+            "verified": true
+          }
+        ],
+        "혼밥": [
+          {
+            "name": "다솔식당",
+            "cuisine": "한식",
+            "feature": "백반·국밥 · 편하게 즐기기",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-혼밥-1",
+            "verified": true
+          },
+          {
+            "name": "온미동",
+            "cuisine": "일식",
+            "feature": "우동·덮밥 · 혼자 즐기기",
+            "price": "저렴",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-혼밥-2",
+            "verified": true
+          },
+          {
+            "name": "오늘은즉떡",
+            "cuisine": "분식",
+            "feature": "떡볶이·국수 · 간편한 점심",
+            "price": "저렴",
+            "distance": "도보 1분 (카카오) / 도보 14분 (네이버)",
+            "id": "20261110-혼밥-3",
+            "verified": true
+          },
+          {
+            "name": "포포유",
+            "cuisine": "아시아음식",
+            "feature": "쌀국수 · 가볍고 혼밥 최고",
+            "price": "저렴",
+            "distance": "도보 3분 (카카오)",
+            "id": "20261110-혼밥-4",
+            "verified": true
+          },
+          {
+            "name": "아티제 여의도점",
+            "cuisine": "간식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+            "id": "20261110-혼밥-5",
+            "verified": true
+          }
+        ],
+        "와인": [
+          {
+            "name": "콘래드서울 아트리오",
+            "cuisine": "양식",
+            "feature": "와인·코스 · 우아한 분위기",
+            "price": "비쌈",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-와인-1",
+            "verified": true
+          },
+          {
+            "name": "더스테이크하우스 여의도IFC점",
+            "cuisine": "양식",
+            "feature": "스테이크·와인 · 고급 분위기",
+            "price": "비쌈",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-와인-2",
+            "verified": true
+          },
+          {
+            "name": "번패티번 더현대 서울점",
+            "cuisine": "양식",
+            "feature": "버거·와인 · 캐주얼 에어",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-와인-3",
+            "verified": true
+          },
+          {
+            "name": "온더보더 여의도IFC점",
+            "cuisine": "양식",
+            "feature": "파스타·와인 · 편안함",
+            "price": "보통",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-와인-4",
+            "verified": true
+          },
+          {
+            "name": "삿뽀로블랙 IFC점",
+            "cuisine": "일식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-와인-5",
+            "verified": true
+          }
+        ],
+        "임원": [
+          {
+            "name": "고우가 여의도점",
+            "cuisine": "한식",
+            "feature": "한우 오마카세 · 조용한 룸",
+            "price": "비쌈",
+            "distance": "도보 12분 (카카오) / 도보 12분 (네이버)",
+            "id": "20261110-임원-1",
+            "verified": true
+          },
+          {
+            "name": "대동문",
+            "cuisine": "한식",
+            "feature": "고급 한정식 · 비즈니스 룸",
+            "price": "비쌈",
+            "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+            "id": "20261110-임원-2",
+            "verified": true
+          },
+          {
+            "name": "더스테이크하우스 여의도IFC점",
+            "cuisine": "양식",
+            "feature": "프리미엄 스테이크 · 접대 최고",
+            "price": "비쌈",
+            "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+            "id": "20261110-임원-3",
+            "verified": true
+          },
+          {
+            "name": "히바린 여의도IFC몰점",
+            "cuisine": "일식",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-임원-4",
+            "verified": true
+          },
+          {
+            "name": "그라놀로지 여의도IFC점",
+            "cuisine": "카페",
+            "feature": "",
+            "price": "보통",
+            "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+            "id": "20261110-임원-5",
+            "verified": true
+          }
+        ]
+      },
+      "meals": {
+        "저녁": {
+          "restaurants": [
+            {
+              "name": "독도참치앤전복 여의도점",
+              "cuisine": "한식",
+              "feature": "신선한 활어·전복 · 프리미엄 회식 분위기",
+              "price": "비쌈",
+              "distance": "도보 1분 (카카오)",
+              "id": "20261110-D-1",
+              "verified": true
+            },
+            {
+              "name": "본보야지",
+              "cuisine": "양식",
+              "feature": "정통 이탈리아 파스타 · 가벼운 저녁",
+              "price": "보통",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20261110-D-2",
+              "verified": true
+            },
+            {
+              "name": "온미동",
+              "cuisine": "일식",
+              "feature": "신선한 오마카세 · 격식 있는 분위기",
+              "price": "비쌈",
+              "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+              "id": "20261110-D-3",
+              "verified": true
+            },
+            {
+              "name": "콘래드서울 아트리오",
+              "cuisine": "양식",
+              "feature": "화덕피자·이탈리아 요리 · 고급스러운 저녁",
+              "price": "비쌈",
+              "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+              "id": "20261110-D-4",
+              "verified": true
+            },
+            {
+              "name": "사천화가 더현대서울",
+              "cuisine": "중식",
+              "feature": "현지식 사천 요리 · 빠른 회전",
+              "price": "보통",
+              "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+              "id": "20261110-D-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "향토",
+              "cuisine": "한식",
+              "feature": "문어보쌈·매생이탕 · 전통 감성 회식",
+              "price": "보통",
+              "distance": "도보 5분 (카카오) / 도보 4분 (네이버)",
+              "tag": "근처유명",
+              "id": "20261110-D-x1",
+              "verified": true
+            },
+            {
+              "name": "르뵈프",
+              "cuisine": "양식",
+              "feature": "스테이크 코스·와인 페어링 · 세련된 분위기",
+              "price": "보통",
+              "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+              "tag": "검색유명",
+              "id": "20261110-D-x2",
+              "verified": true
+            },
+            {
+              "name": "올리페페 여의도점",
+              "cuisine": "양식",
+              "feature": "화덕피자·이탈리아 와인 · 트렌디한 신규",
+              "price": "비쌈",
+              "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+              "tag": "신규맛집",
+              "id": "20261110-D-x3",
+              "verified": true
+            }
+          ],
+          "by_condition": {
+            "해장 필요": [
+              {
+                "name": "신안홍탁",
+                "cuisine": "한식",
+                "feature": "든든한 국물 요리",
+                "price": "저렴",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-해장-1",
+                "verified": true
+              },
+              {
+                "name": "다솔식당",
+                "cuisine": "한식",
+                "feature": "정감 있는 가정식",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-해장-2",
+                "verified": true
+              },
+              {
+                "name": "육전국밥 여의도역점",
+                "cuisine": "한식",
+                "feature": "구수한 국밥",
+                "price": "저렴",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-해장-3",
+                "verified": true
+              },
+              {
+                "name": "강창구찹쌀진순대 여의도2호점",
+                "cuisine": "한식",
+                "feature": "수육과 순대국",
+                "price": "저렴",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-해장-4",
+                "verified": true
+              },
+              {
+                "name": "여의도삼계탕 여의도BNK타워점",
+                "cuisine": "한식",
+                "feature": "영양 있는 삼계탕",
+                "price": "보통",
+                "distance": "도보 4분 (카카오)",
+                "id": "20261110-D-해장-5",
+                "verified": true
+              }
+            ],
+            "매콤하게": [
+              {
+                "name": "사천화가 더현대서울",
+                "cuisine": "중식",
+                "feature": "얼얼한 사천식 맛",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-매콤-1",
+                "verified": true
+              },
+              {
+                "name": "훠궈야 여의도IFC몰점",
+                "cuisine": "중식",
+                "feature": "매운 훠궈 국물",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-매콤-2",
+                "verified": true
+              },
+              {
+                "name": "마유유마라탕 더현대서울점",
+                "cuisine": "중식",
+                "feature": "마라향 자극적",
+                "price": "저렴",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-매콤-3",
+                "verified": true
+              },
+              {
+                "name": "여의도양꼬치",
+                "cuisine": "중식",
+                "feature": "양꼬치 매콤함",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20261110-D-매콤-4",
+                "verified": true
+              },
+              {
+                "name": "포포유",
+                "cuisine": "아시아음식",
+                "feature": "동남아 향신료",
+                "price": "보통",
+                "distance": "도보 3분 (카카오)",
+                "id": "20261110-D-매콤-5",
+                "verified": true
+              }
+            ],
+            "가볍게": [
+              {
+                "name": "본보야지",
+                "cuisine": "양식",
+                "feature": "가벼운 파스타",
+                "price": "보통",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-가볍-1",
+                "verified": true
+              },
+              {
+                "name": "진가와 여의도점",
+                "cuisine": "일식",
+                "feature": "담백한 일식 국물",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-가볍-2",
+                "verified": true
+              },
+              {
+                "name": "온미동",
+                "cuisine": "일식",
+                "feature": "신선 생생한 회",
+                "price": "비쌈",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-가볍-3",
+                "verified": true
+              },
+              {
+                "name": "알로하포케 IFC몰점",
+                "cuisine": "양식",
+                "feature": "하와이안 포케",
+                "price": "보통",
+                "distance": "도보 4분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-가볍-4",
+                "verified": true
+              },
+              {
+                "name": "테이스팅룸 IFC몰",
+                "cuisine": "양식",
+                "feature": "세련된 이탈리안",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-가볍-5",
+                "verified": true
+              }
+            ],
+            "든든하게": [
+              {
+                "name": "미미담 여의도브라이튼점",
+                "cuisine": "한식",
+                "feature": "푸짐한 한우",
+                "price": "비쌈",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-든든-1",
+                "verified": true
+              },
+              {
+                "name": "강창구찹쌀진순대 여의도2호점",
+                "cuisine": "한식",
+                "feature": "든든한 순대국",
+                "price": "저렴",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-든든-2",
+                "verified": true
+              },
+              {
+                "name": "육전국밥 여의도역점",
+                "cuisine": "한식",
+                "feature": "소푸하는 국밥",
+                "price": "저렴",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-든든-3",
+                "verified": true
+              },
+              {
+                "name": "대동문",
+                "cuisine": "한식",
+                "feature": "정통 소고기 요리",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20261110-D-든든-4",
+                "verified": true
+              },
+              {
+                "name": "신안홍탁",
+                "cuisine": "한식",
+                "feature": "국물 있는 밥",
+                "price": "저렴",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-든든-5",
+                "verified": true
+              }
+            ],
+            "일식": [
+              {
+                "name": "진가와 여의도점",
+                "cuisine": "일식",
+                "feature": "담백한 정식",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-일식-1",
+                "verified": true
+              },
+              {
+                "name": "오복수산 씨티플라자 여의도점",
+                "cuisine": "일식",
+                "feature": "신선 해산물 카이센",
+                "price": "비쌈",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-일식-2",
+                "verified": true
+              },
+              {
+                "name": "돈대리돈까스백반",
+                "cuisine": "일식",
+                "feature": "바삭한 돈까스",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-일식-3",
+                "verified": true
+              },
+              {
+                "name": "히바린 여의도IFC몰점",
+                "cuisine": "일식",
+                "feature": "세련된 일식",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-일식-4",
+                "verified": true
+              },
+              {
+                "name": "화동활어복",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 1분 (카카오)",
+                "id": "20261110-D-일식-5",
+                "verified": true
+              }
+            ],
+            "한식": [
+              {
+                "name": "해화동",
+                "cuisine": "한식",
+                "feature": "노포의 깊은 맛",
+                "price": "보통",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-한식-1",
+                "verified": true
+              },
+              {
+                "name": "전주식당",
+                "cuisine": "한식",
+                "feature": "정겨운 가정식",
+                "price": "저렴",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-한식-2",
+                "verified": true
+              },
+              {
+                "name": "다솔식당",
+                "cuisine": "한식",
+                "feature": "손맛 나는 밥",
+                "price": "저렴",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-한식-3",
+                "verified": true
+              },
+              {
+                "name": "대동문",
+                "cuisine": "한식",
+                "feature": "정통 소고기 반찬",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+                "id": "20261110-D-한식-4",
+                "verified": true
+              },
+              {
+                "name": "오늘은즉떡",
+                "cuisine": "분식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 1분 (카카오) / 도보 14분 (네이버)",
+                "id": "20261110-D-한식-5",
+                "verified": true
+              }
+            ],
+            "고기": [
+              {
+                "name": "독도참치앤전복 여의도점",
+                "cuisine": "한식",
+                "feature": "활어·전복 명가",
+                "price": "비쌈",
+                "distance": "도보 1분 (카카오)",
+                "id": "20261110-D-고기-1",
+                "verified": true
+              },
+              {
+                "name": "미미담 여의도브라이튼점",
+                "cuisine": "한식",
+                "feature": "상질한 한우 고기",
+                "price": "비쌈",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-고기-2",
+                "verified": true
+              },
+              {
+                "name": "용호동낙지 여의도직영점",
+                "cuisine": "한식",
+                "feature": "쫄깃한 낙지 요리",
+                "price": "보통",
+                "distance": "도보 2분 (카카오)",
+                "id": "20261110-D-고기-3",
+                "verified": true
+              },
+              {
+                "name": "여의도삼계탕 여의도BNK타워점",
+                "cuisine": "한식",
+                "feature": "영양 닭고기",
+                "price": "보통",
+                "distance": "도보 4분 (카카오)",
+                "id": "20261110-D-고기-4",
+                "verified": true
+              },
+              {
+                "name": "아티제 여의도점",
+                "cuisine": "간식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 2분 (카카오) / 도보 2분 (네이버)",
+                "id": "20261110-D-고기-5",
+                "verified": true
+              }
+            ],
+            "혼밥": [
+              {
+                "name": "전주식당",
+                "cuisine": "한식",
+                "feature": "빠른 회전율",
+                "price": "저렴",
+                "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+                "id": "20261110-D-혼밥-1",
+                "verified": true
+              },
+              {
+                "name": "오늘은즉떡",
+                "cuisine": "분식",
+                "feature": "간단한 분식",
+                "price": "저렴",
+                "distance": "도보 1분 (카카오) / 도보 14분 (네이버)",
+                "id": "20261110-D-혼밥-2",
+                "verified": true
+              },
+              {
+                "name": "삿뽀로블랙 IFC점",
+                "cuisine": "일식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-혼밥-3",
+                "verified": true
+              },
+              {
+                "name": "캘리스랩 여의도IFC점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오)",
+                "id": "20261110-D-혼밥-4",
+                "verified": true
+              },
+              {
+                "name": "마마된장 여의도IFC몰점",
+                "cuisine": "한식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-혼밥-5",
+                "verified": true
+              }
+            ],
+            "와인": [
+              {
+                "name": "올리페페 여의도점",
+                "cuisine": "양식",
+                "feature": "이탈리아 와인 선택",
+                "price": "비쌈",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-와인-1",
+                "verified": true
+              },
+              {
+                "name": "콘래드서울 아트리오",
+                "cuisine": "양식",
+                "feature": "프리미엄 와인 매칭",
+                "price": "비쌈",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-와인-2",
+                "verified": true
+              },
+              {
+                "name": "테이스팅룸 IFC몰",
+                "cuisine": "양식",
+                "feature": "와인 페어링 명가",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-와인-3",
+                "verified": true
+              },
+              {
+                "name": "르뵈프",
+                "cuisine": "양식",
+                "feature": "저가 와인 풍부",
+                "price": "보통",
+                "distance": "도보 6분 (카카오) / 도보 6분 (네이버)",
+                "id": "20261110-D-와인-4",
+                "verified": true
+              },
+              {
+                "name": "그라놀로지 여의도IFC점",
+                "cuisine": "카페",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-와인-5",
+                "verified": true
+              }
+            ],
+            "임원": [
+              {
+                "name": "올리페페 여의도점",
+                "cuisine": "양식",
+                "feature": "세련된 피아짜 분위기",
+                "price": "비쌈",
+                "distance": "도보 4분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-임원-1",
+                "verified": true
+              },
+              {
+                "name": "향토",
+                "cuisine": "한식",
+                "feature": "조용한 한식 회식",
+                "price": "보통",
+                "distance": "도보 5분 (카카오) / 도보 4분 (네이버)",
+                "id": "20261110-D-임원-2",
+                "verified": true
+              },
+              {
+                "name": "오미식당",
+                "cuisine": "일식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-임원-3",
+                "verified": true
+              },
+              {
+                "name": "서래함박 더현대서울",
+                "cuisine": "양식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오)",
+                "id": "20261110-D-임원-4",
+                "verified": true
+              },
+              {
+                "name": "여의도왕돈까스",
+                "cuisine": "일식",
+                "feature": "",
+                "price": "보통",
+                "distance": "도보 3분 (카카오) / 도보 3분 (네이버)",
+                "id": "20261110-D-임원-5",
+                "verified": true
+              }
+            ]
+          }
+        },
+        "술집": {
+          "restaurants": [
+            {
+              "name": "오키보루",
+              "cuisine": "일식",
+              "feature": "신선한 회·일본식 요리, 술 한잔 가능",
+              "price": "보통",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20261110-B-1",
+              "verified": true
+            },
+            {
+              "name": "블루코스트",
+              "cuisine": "일식",
+              "feature": "카이센동·생선회, 일식 분위기에서 술",
+              "price": "보통",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20261110-B-2",
+              "verified": true
+            },
+            {
+              "name": "온멘",
+              "cuisine": "일식",
+              "feature": "우동·덮밥, 편한 분위기의 일식당",
+              "price": "저렴",
+              "distance": "도보 1분 (카카오) / 도보 1분 (네이버)",
+              "id": "20261110-B-3",
+              "verified": true
+            },
+            {
+              "name": "스아게",
+              "cuisine": "일식",
+              "feature": "일본식 요리, 소수 인원 술자리에 적당",
+              "price": "보통",
+              "distance": "도보 14분 (카카오) / 도보 10분 (네이버)",
+              "id": "20261110-B-4",
+              "verified": true
+            },
+            {
+              "name": "커리파파하우스",
+              "cuisine": "일식",
+              "feature": "일본식 정식, 점심·저녁 술 가능",
+              "price": "보통",
+              "distance": "도보 1분 (카카오) / 도보 2분 (네이버)",
+              "id": "20261110-B-5",
+              "verified": true
+            }
+          ],
+          "extras": [
+            {
+              "name": "꼴깍포차",
+              "cuisine": "포차",
+              "feature": "대학가 포차 느낌, 여의도 중심의 포장마차",
+              "price": "저렴",
+              "distance": "도보 9분 (네이버)",
+              "tag": "근처유명",
+              "id": "20261110-B-x1",
+              "verified": true
+            },
+            {
+              "name": "와인주막차차",
+              "cuisine": "와인바",
+              "feature": "무제한 와인, 치즈김치전·맛있는 안주",
+              "price": "보통",
+              "distance": "도보 5분 (카카오) / 도보 5분 (네이버)",
+              "tag": "검색유명",
+              "id": "20261110-B-x2",
+              "verified": true
+            },
+            {
+              "name": "여의도포차",
+              "cuisine": "포차·오마카세",
+              "feature": "1인 3만원 포차 오마카세, 신상 인기",
+              "price": "저렴",
+              "distance": "도보 9분 (카카오) / 도보 8분 (네이버)",
+              "tag": "신규맛집",
+              "id": "20261110-B-x3",
+              "verified": true
+            }
+          ]
+        }
+      }
+    },
+    {
       "date": "2026-11-09",
       "comment": "흐린 날씨 속에서 따뜻한 국물과 정성스러운 음식이 가장 위로가 될 것 같습니다. AI와 M&A로 미래를 준비하는 JB금융의 결단만큼, 여러분도 오늘 점심으로 든든하고 신선한 한끼를 챙기세요.",
       "message": "오늘은 기온이 8도로 쌀쌀하니 따뜻한 국물 요리인 칠산꽃게장이나 삿뽀로블랙의 진한 국수를 추천드립니다. JB금융이 AI 지분투자와 M&A를 통해 미래수익원을 차별화하고 있는 만큼, 든든한 점심으로 오후 업무에 집중하시기 바랍니다.",
